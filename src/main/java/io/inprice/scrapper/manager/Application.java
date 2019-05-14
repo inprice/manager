@@ -2,10 +2,10 @@ package io.inprice.scrapper.manager;
 
 import io.inprice.scrapper.common.config.Config;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
-import io.inprice.scrapper.common.helpers.ThreadPools;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import io.inprice.scrapper.manager.helpers.Global;
+import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
 
 import java.io.IOException;
@@ -44,7 +44,7 @@ public class Application {
 			try {
 				log.info("Thread pool is shutting down...");
 				ThreadPools.MASTER_POOL.shutdown();
-				ThreadPools.MASTER_POOL.awaitTermination(Config.TIME_FOR_TPOOL_TERMINATION, TimeUnit.MILLISECONDS);
+				ThreadPools.MASTER_POOL.awaitTermination(Config.WAITING_TIME_FOR_AWAIT_TERMINATION, TimeUnit.MILLISECONDS);
 				log.info("Thread pool is shut down.");
 			} catch (InterruptedException e) {
 				log.info("Thread pool termination is interrupted.");
