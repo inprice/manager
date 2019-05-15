@@ -5,7 +5,9 @@ import com.zaxxer.hikari.HikariDataSource;
 import io.inprice.scrapper.common.config.Config;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class DBUtils {
 
@@ -35,7 +37,30 @@ public class DBUtils {
         return ds.getConnection();
     }
 
-    public static void close() {
+    public static Connection getTransactionalConnection() throws SQLException {
+        Connection con = ds.getConnection();
+        con.setAutoCommit(false);
+        return con;
+    }
+
+    public static void rollback(Connection con) {
+        try {
+            con.rollback();
+        } catch (SQLException ex) {
+            //
+        }
+    }
+
+    public static void close(Connection con, Statement pst) {
+        try {
+            pst.close();
+            con.close();
+        } catch (SQLException ex) {
+            //
+        }
+    }
+
+    public static void shutdown() {
         ds.close();
     }
 

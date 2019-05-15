@@ -2,14 +2,14 @@ package io.inprice.scrapper.manager.helpers;
 
 import io.inprice.scrapper.common.config.Config;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ThreadPools {
 
 	public static final ExecutorService MASTER_POOL;
+
+	public static final ExecutorService PRICE_CHANGE_POOL;
+	public static final ExecutorService STATUS_CHANGE_POOL;
 
 	static {
 		MASTER_POOL = new ThreadPoolExecutor(
@@ -19,6 +19,9 @@ public class ThreadPools {
 			TimeUnit.MILLISECONDS,
 			new LinkedBlockingQueue<>()
 		);
+
+		PRICE_CHANGE_POOL = Executors.newFixedThreadPool(1);
+		STATUS_CHANGE_POOL = Executors.newFixedThreadPool(1);
 	}
 
 }

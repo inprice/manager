@@ -1,6 +1,8 @@
 package io.inprice.scrapper.manager.scheduled.task;
 
 import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.common.helpers.Converter;
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
@@ -9,6 +11,7 @@ import io.inprice.scrapper.manager.repository.Links;
 import io.inprice.scrapper.manager.scheduled.Task;
 import org.quartz.*;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -16,14 +19,16 @@ import java.util.List;
  */
 public abstract class AbstractLinkHandlerTask implements Task {
 
-    private static final Logger log = new Logger(AbstractLinkHandlerTask.class);
+    private static final Logger log = new Logger("LinkHandlerTask");
 
     private final LinkStatus linkStatus;
     private final String crontab;
     private final String queueName;
+
+    private boolean willRetryBeIncremented;
+    private int retryLimit;
     private int problemCount = 0;
 
-    private volatile int cycle = 0;
     private volatile boolean isRunning = false;
 
     public AbstractLinkHandlerTask(LinkStatus status, String crontab, String queueName) {
@@ -32,7 +37,13 @@ public abstract class AbstractLinkHandlerTask implements Task {
         this.queueName = queueName;
     }
 
-    abstract void handleLinks(List<Link> linksList);
+    public AbstractLinkHandlerTask(LinkStatus linkStatus, String crontab, String queueName, boolean willRetryBeIncremented, int retryLimit) {
+        this.linkStatus = linkStatus;
+        this.crontab = crontab;
+        this.queueName = queueName;
+        this.willRetryBeIncremented = willRetryBeIncremented;
+        this.retryLimit = retryLimit;
+    }
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
@@ -41,15 +52,17 @@ public abstract class AbstractLinkHandlerTask implements Task {
             return;
         }
 
+        int cycle = 0;
+
         synchronized (log) {
-            cycle++;
+            cycle = incCycle();
             isRunning = true;
             problemCount = 0;
         }
 
-        log.info("%s link handler is starting for %d cycle...", linkStatus, cycle);
+        log.info("%s link handler is starting for cycle %d...", linkStatus, cycle);
 
-        List<Link> links = Links.getLinks(linkStatus, cycle);
+        List<Link> links = getLinks();
         if (links.size() == 0) {
             log.info("There is no suitable %s link.", linkStatus);
         } else {
@@ -64,7 +77,7 @@ public abstract class AbstractLinkHandlerTask implements Task {
                     idListSB.append(ps.getId());
                 }
 
-                boolean isUpdated = Links.updateCycleValues(linkStatus, cycle, idListSB.toString());
+                boolean isUpdated = updateLinks(idListSB.toString());
 
                 if (isUpdated) {
                     handleLinks(links);
@@ -82,14 +95,31 @@ public abstract class AbstractLinkHandlerTask implements Task {
                     }
                 }
 
-                if (Global.isRunning) {
-                    links = Links.getLinks(linkStatus, cycle);
-                }
+                if (Global.isRunning) links = getLinks();
             }
         }
         log.info("%s Link Handler is completed cycle %d.", linkStatus, cycle);
 
         isRunning = false;
+    }
+
+    List<Link> getLinks() {
+        return Links.getLinks(getLinkStatus(), getCycle());
+    }
+
+    void handleLinks(List<Link> linksList) {
+        for (Link link: linksList) {
+            try {
+                RabbitMQ.getChannel().basicPublish(Config.RABBITMQ_LINK_EXCHANGE, getQueueName(), null, Converter.fromObject(link));
+            } catch (IOException e) {
+                boolean shouldBeStopped = incProblemCount(e);
+                if (shouldBeStopped) break;
+            }
+        }
+    }
+
+    private boolean updateLinks(String idList) {
+        return Links.updateCycleValues(linkStatus, getCycle(), idList, willRetryBeIncremented());
     }
 
     @Override
@@ -121,15 +151,31 @@ public abstract class AbstractLinkHandlerTask implements Task {
         return linkStatus;
     }
 
-    int getCycle() {
-        return cycle;
-    }
-
     String getCrontab() {
         return crontab;
     }
 
     String getQueueName() {
         return queueName;
+    }
+
+    int getRetryLimit() {
+        return retryLimit;
+    }
+
+    boolean willRetryBeIncremented() {
+        return willRetryBeIncremented;
+    }
+
+    private int incCycle() {
+        Integer val = Global.linkStatusCycleMap.get(getLinkStatus());
+        if (val == null) val = 0;
+        ++val;
+        Global.linkStatusCycleMap.put(getLinkStatus(), val);
+        return val;
+    }
+
+    int getCycle() {
+        return Global.linkStatusCycleMap.get(getLinkStatus());
     }
 }

@@ -3,6 +3,8 @@ package io.inprice.scrapper.manager;
 import io.inprice.scrapper.common.config.Config;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.logging.Logger;
+import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
+import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -25,7 +27,11 @@ public class Application {
 	public static void main(String[] args) {
 		new Thread(() -> {
 			Global.isRunning = true;
+
 			TaskManager.start();
+			StatusChangeConsumer.start();
+			PriceChangeConsumer.start();
+
 		}, "task-manager").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -51,7 +57,7 @@ public class Application {
 			}
 
 			log.info("DB connection is closing...");
-			DBUtils.close();
+			DBUtils.shutdown();
 			log.info("DB Connection is closed.");
 
 			shutdown();
