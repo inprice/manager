@@ -7,7 +7,6 @@ import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.config.Config;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
-import io.inprice.scrapper.common.info.LinkStatusChange;
 import io.inprice.scrapper.common.info.PriceChange;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -15,12 +14,12 @@ import io.inprice.scrapper.manager.repository.Links;
 
 import java.io.IOException;
 
-public class PriceChangeConsumer {
+public class LinkPriceChangeConsumer {
 
-	private static final Logger log = new Logger(PriceChangeConsumer.class);
+	private static final Logger log = new Logger(LinkPriceChangeConsumer.class);
 
 	public static void start() {
-		log.info("PriceChangeConsumer is running.");
+		log.info("LinkPriceChangeConsumer is running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override

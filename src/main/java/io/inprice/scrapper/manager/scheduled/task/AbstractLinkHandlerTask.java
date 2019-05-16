@@ -151,10 +151,6 @@ public abstract class AbstractLinkHandlerTask implements Task {
         return linkStatus;
     }
 
-    String getCrontab() {
-        return crontab;
-    }
-
     String getQueueName() {
         return queueName;
     }

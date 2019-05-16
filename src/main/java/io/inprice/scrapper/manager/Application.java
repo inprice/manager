@@ -3,12 +3,15 @@ package io.inprice.scrapper.manager;
 import io.inprice.scrapper.common.config.Config;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
+import io.inprice.scrapper.manager.consumer.LinkPriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import io.inprice.scrapper.manager.helpers.Global;
+import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
+import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdateTask;
+import org.quartz.JobExecutionException;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +33,7 @@ public class Application {
 
 			TaskManager.start();
 			StatusChangeConsumer.start();
-			PriceChangeConsumer.start();
+			LinkPriceChangeConsumer.start();
 
 		}, "task-manager").start();
 
@@ -38,6 +41,12 @@ public class Application {
 			Global.isRunning = false;
 
 			TaskManager.stop();
+
+			completeOngoingJobs();
+
+			log.info("Redis connection is closing...");
+			RedisClient.shutdown();
+			log.info("Redis is closed.");
 
 			try {
 				log.info("RabbitMQ connection is closing...");
@@ -66,6 +75,18 @@ public class Application {
 
 	public static void shutdown() {
 		log.info("TaskManager is shut down.");
+	}
+
+	private static void completeOngoingJobs() {
+		//for product price updater
+		while (Global.isProductUpdaterRunning) {
+			try {
+				log.warn("Waiting for Product Price Updater to complete its job...");
+				Thread.sleep(1000L);
+			} catch (InterruptedException e) {
+				break;
+			}
+		}
 	}
 
 }

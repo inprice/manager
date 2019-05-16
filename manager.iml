@@ -10,8 +10,33 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: io.inprice.scrapper:common:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: com.rabbitmq:amqp-client:5.7.0" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.26" level="project" />
+    <orderEntry type="library" name="Maven: org.redisson:redisson:3.10.2" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-common:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-codec:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-buffer:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-transport:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-resolver:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-resolver-dns:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-codec-dns:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-handler:4.1.33.Final" level="project" />
+    <orderEntry type="library" name="Maven: javax.cache:cache-api:1.0.0" level="project" />
+    <orderEntry type="library" name="Maven: io.projectreactor:reactor-core:3.2.3.RELEASE" level="project" />
+    <orderEntry type="library" name="Maven: org.reactivestreams:reactive-streams:1.0.2" level="project" />
+    <orderEntry type="library" name="Maven: io.reactivex.rxjava2:rxjava:2.1.13" level="project" />
+    <orderEntry type="library" name="Maven: de.ruedigermoeller:fst:2.56" level="project" />
+    <orderEntry type="library" name="Maven: org.javassist:javassist:3.21.0-GA" level="project" />
+    <orderEntry type="library" name="Maven: org.objenesis:objenesis:2.5.1" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8" level="project" />
+    <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.23" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.9.8" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.9.8" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.9.0" level="project" />
+    <orderEntry type="library" name="Maven: net.bytebuddy:byte-buddy:1.9.6" level="project" />
+    <orderEntry type="library" name="Maven: org.jodd:jodd-bean:3.7.1" level="project" />
+    <orderEntry type="library" name="Maven: org.jodd:jodd-core:3.7.1" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-nop:1.7.26" level="project" />
     <orderEntry type="library" name="Maven: mysql:mysql-connector-java:8.0.15" level="project" />
     <orderEntry type="library" name="Maven: com.google.protobuf:protobuf-java:3.6.1" level="project" />
@@ -21,6 +46,5 @@
     <orderEntry type="library" name="Maven: com.mchange:mchange-commons-java:0.2.15" level="project" />
     <orderEntry type="library" name="Maven: com.zaxxer:HikariCP-java7:2.4.13" level="project" />
     <orderEntry type="library" name="Maven: org.jsoup:jsoup:1.11.3" level="project" />
-    <orderEntry type="library" name="Maven: io.inprice.scrapper:common:1.0.0" level="project" />
   </component>
 </module>

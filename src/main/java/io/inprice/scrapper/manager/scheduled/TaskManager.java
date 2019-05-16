@@ -6,6 +6,7 @@ import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.manager.scheduled.task.CommonLinkHandlerTask;
 import io.inprice.scrapper.manager.scheduled.task.FailedLinkHandlerTask;
 import io.inprice.scrapper.manager.scheduled.task.NewLinkHandlerTask;
+import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdateTask;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -22,6 +23,7 @@ public class TaskManager {
             log.info("TaskManager is up.");
 
             loadTask(new NewLinkHandlerTask());
+            loadTask(new ProductPriceUpdateTask());
 
             loadTask(
                 new CommonLinkHandlerTask(

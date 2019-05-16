@@ -3,14 +3,18 @@ package io.inprice.scrapper.manager.repository;
 import io.inprice.scrapper.common.config.Config;
 import io.inprice.scrapper.common.info.LinkStatusChange;
 import io.inprice.scrapper.common.info.PriceChange;
+import io.inprice.scrapper.common.info.ProductPriceInfo;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.manager.helpers.DBUtils;
+import io.inprice.scrapper.manager.helpers.RedisClient;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Links {
 
@@ -61,6 +65,17 @@ public class Links {
         return findAll(query);
     }
 
+    public static List<Link> getSellerPriceList(ProductPriceInfo ppi) {
+        final String query = String.format(
+                "select * from link " +
+                "where product_id = %d " +
+                "  and status = '%s' " +
+                "order by price",
+                ppi.getProductId(), LinkStatus.ACTIVE);
+
+        return findAll(query);
+    }
+
     public static boolean setSiteAndWebsiteClassName(Long linkId, Long siteId, String websiteClassName) {
         return executeQuery(
             String.format(
@@ -97,7 +112,7 @@ public class Links {
     }
 
     public static boolean changePrice(PriceChange change) {
-        return executeBatchQueries(new String[] {
+        boolean result = executeBatchQueries(new String[] {
 
             String.format(
                 "insert into link_price " +
@@ -115,7 +130,12 @@ public class Links {
             }, String.format("Failed to change price. Link Id: %d, Price: %f", change.getLinkId(), change.getNewPrice())
 
         );
-        //TODO: linkin min, avg ve max fiyatlarla position bilgileri bu kisimda update edilmeli!!!
+
+        if (result) {
+            RedisClient.addProductPriceInfo(new ProductPriceInfo(change.getProductId(), change.getNewPrice()));
+        }
+
+        return result;
     }
 
     private static List<Link> findAll(String query) {
