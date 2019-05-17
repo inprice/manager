@@ -7,6 +7,8 @@ import io.inprice.scrapper.common.info.ProductPriceInfo;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.models.Product;
+import io.inprice.scrapper.common.models.Site;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 
@@ -31,13 +33,29 @@ public class Products {
 
             String.format(
                 "update product " +
-                "set price = %f, position = %d, min_seller = '%s', max_seller = '%s', min_price = %f, avg_price = %f, max_price = %f " +
+                "set price = %f, position = %d, min_seller = '%s', max_seller = '%s', min_price = %f, avg_price = %f, max_price = %f, last_update = now() " +
                 "where product_id = %d ",
                 ppi.getPrice(), position, minSeller, maxSeller, minPrice, avgPrice, maxPrice, ppi.getProductId())
 
             }, String.format("Failed to update product price. Product Id: %d, Price: %f", ppi.getProductId(), ppi.getPrice())
 
         );
+    }
+
+    public static Product findById(Long id) {
+        final String query = String.format("select * from product where id = %d ", id);
+
+        Product result = null;
+        try (Connection con = DBUtils.getConnection();
+             PreparedStatement pst = con.prepareStatement(query);
+             ResultSet rs = pst.executeQuery()) {
+
+            if (rs.next()) result = map(rs);
+        } catch (Exception e) {
+            log.error("Failed to find Product by id: " + id, e);
+        }
+
+        return result;
     }
 
     private static boolean executeBatchQueries(String[] queries, String errorMessage) {
@@ -70,6 +88,28 @@ public class Products {
             DBUtils.close(con, sta);
             return result;
         }
+    }
+
+    private static Product map(ResultSet rs) throws SQLException {
+        Product model = new Product();
+        model.setId(rs.getLong("id"));
+        model.setActive(rs.getBoolean("active"));
+        model.setName(rs.getString("name"));
+        model.setCode(rs.getString("code"));
+        model.setBrand(rs.getString("brand"));
+        model.setCategory(rs.getString("category"));
+        model.setPrice(rs.getBigDecimal("price"));
+        model.setPosition(rs.getInt("position"));
+        model.setLastUpdate(rs.getDate("last_update"));
+        model.setMinSeller(rs.getString("min_seller"));
+        model.setMaxSeller(rs.getString("max_seller"));
+        model.setMinPrice(rs.getBigDecimal("min_price"));
+        model.setAvgPrice(rs.getBigDecimal("avg_price"));
+        model.setMaxPrice(rs.getBigDecimal("max_price"));
+
+        model.setCustomerPlanId(rs.getLong("customer_plan_id"));
+
+        return model;
     }
 
 }

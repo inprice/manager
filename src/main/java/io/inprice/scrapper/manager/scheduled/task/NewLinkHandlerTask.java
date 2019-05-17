@@ -20,8 +20,8 @@ public class NewLinkHandlerTask extends AbstractLinkHandlerTask {
     }
 
     @Override
-    void handleLinks(List<Link> linksList) {
-        for (Link link: linksList) {
+    void handleLinks(List<Link> linkList) {
+        for (Link link: linkList) {
             String note = null;
             LinkStatus newStatus = link.getStatus();
             if (SiteFinder.isValidURL(link.getUrl())) {

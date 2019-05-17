@@ -10,8 +10,6 @@ import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
-import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdateTask;
-import org.quartz.JobExecutionException;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +27,7 @@ public class Application {
 
 	public static void main(String[] args) {
 		new Thread(() -> {
-			Global.isRunning = true;
+			Global.isApplicationRunning = true;
 
 			TaskManager.start();
 			StatusChangeConsumer.start();
@@ -38,7 +36,7 @@ public class Application {
 		}, "task-manager").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			Global.isRunning = false;
+			Global.isApplicationRunning = false;
 
 			TaskManager.stop();
 

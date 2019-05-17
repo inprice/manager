@@ -65,13 +65,13 @@ public class Links {
         return findAll(query);
     }
 
-    public static List<Link> getSellerPriceList(ProductPriceInfo ppi) {
+    public static List<Link> getActiveSellerPriceList(ProductPriceInfo ppi) {
         final String query = String.format(
                 "select * from link " +
                 "where product_id = %d " +
-                "  and status = '%s' " +
+                "  and status in (%s) " +
                 "order by price",
-                ppi.getProductId(), LinkStatus.ACTIVE);
+                ppi.getProductId(), LinkStatus.getJoinedPositives());
 
         return findAll(query);
     }
@@ -91,13 +91,13 @@ public class Links {
     public static boolean changeStatus(LinkStatusChange change) {
         final String notePart = (change.getNote() != null ? ", note = '" + change.getNote() +"' " : "");
 
-        return executeBatchQueries(new String[] {
+        boolean result = executeBatchQueries(new String[] {
 
             String.format(
                 "insert into link_history " +
                 "(link_id, status, http_status) " +
                 "values " +
-                "(%d, %s, %d);",
+                "(%d, '%s', %d);",
                 change.getLinkId(), change.getNewStatus().name(), change.getHttpStatus()),
 
             String.format(
@@ -109,6 +109,15 @@ public class Links {
             }, String.format("Failed to change status. Link Id: %d, Old Status: %s, New Status: %s", change.getLinkId(), change.getOldStatus(), change.getNewStatus())
 
         );
+
+        if (result
+        && LinkStatus.ACTIVE.equals(change.getOldStatus())
+        && ! LinkStatus.ACTIVE.equals(change.getNewStatus())
+        && ! change.getNewStatus().isNeutral()) {
+            RedisClient.addProductPriceInfo(new ProductPriceInfo(change.getProductId()));
+        }
+
+        return result;
     }
 
     public static boolean changePrice(PriceChange change) {

@@ -67,7 +67,7 @@ public abstract class AbstractLinkHandlerTask implements Task {
             log.info("There is no suitable %s link.", linkStatus);
         } else {
 
-            while (Global.isRunning && links.size() > 0) {
+            while (Global.isApplicationRunning && links.size() > 0) {
                 log.info("%d %s links will be evaluated in cycle %d", links.size(), linkStatus, cycle);
 
                 //joining ids
@@ -95,7 +95,7 @@ public abstract class AbstractLinkHandlerTask implements Task {
                     }
                 }
 
-                if (Global.isRunning) links = getLinks();
+                if (Global.isApplicationRunning) links = getLinks();
             }
         }
         log.info("%s Link Handler is completed cycle %d.", linkStatus, cycle);
