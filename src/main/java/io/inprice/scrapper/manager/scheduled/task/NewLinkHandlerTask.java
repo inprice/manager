@@ -45,8 +45,8 @@ public class NewLinkHandlerTask extends AbstractLinkHandlerTask {
                 if (newStatus.equals(link.getStatus())) {
                     RabbitMQ.getChannel().basicPublish(Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_NEW_LINKS_QUEUE, null, Converter.fromObject(link));
                 } else {
+                    link.setNote(note);
                     LinkStatusChange change = new LinkStatusChange(link, newStatus);
-                    change.setNote(note);
                     RabbitMQ.getChannel().basicPublish(Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE, null, Converter.fromObject(change));
                 }
             } catch (IOException e) {

@@ -45,6 +45,8 @@ public abstract class AbstractLinkHandlerTask implements Task {
         this.retryLimit = retryLimit;
     }
 
+    abstract void handleLinks(List<Link> linksList);
+
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
         if (isRunning) {
@@ -105,17 +107,6 @@ public abstract class AbstractLinkHandlerTask implements Task {
 
     List<Link> getLinks() {
         return Links.getLinks(getLinkStatus(), getCycle());
-    }
-
-    void handleLinks(List<Link> linksList) {
-        for (Link link: linksList) {
-            try {
-                RabbitMQ.getChannel().basicPublish(Config.RABBITMQ_LINK_EXCHANGE, getQueueName(), null, Converter.fromObject(link));
-            } catch (IOException e) {
-                boolean shouldBeStopped = incProblemCount(e);
-                if (shouldBeStopped) break;
-            }
-        }
     }
 
     private boolean updateLinks(String idList) {
