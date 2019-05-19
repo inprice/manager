@@ -1,6 +1,6 @@
 package io.inprice.scrapper.manager.scheduled.task;
 
-import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.common.info.ProductPriceInfo;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.models.Link;
@@ -15,14 +15,14 @@ import org.quartz.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-public class ProductPriceUpdateTask implements Task {
+public class ProductPriceUpdater implements Task {
 
-    private static final Logger log = new Logger(ProductPriceUpdateTask.class);
+    private static final Logger log = new Logger(ProductPriceUpdater.class);
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
         if (Global.isProductUpdaterRunning) {
-            log.warn("Product Price Updater is triggered but a previous task hasn't finished yet!");
+            log.warn("Product Price Updater is triggered but a previous publishers hasn't finished yet!");
             return;
         }
 
@@ -37,7 +37,7 @@ public class ProductPriceUpdateTask implements Task {
             if (ppi == null) break;
 
             BigDecimal basePrice = ppi.getPrice();
-            if (basePrice == null) { //if not price changing but just status change happened!!!
+            if (basePrice == null) {
                 Product product = Products.findById(ppi.getProductId());
                 if (product != null) {
                     basePrice = product.getPrice();
@@ -53,7 +53,7 @@ public class ProductPriceUpdateTask implements Task {
             BigDecimal avgPrice = basePrice;
             BigDecimal maxPrice = basePrice;
 
-            final List<Link> linkList = Links.getActiveSellerPriceList(ppi);
+            final List<Link> linkList = Links.findActiveSellerPriceList(ppi);
             final int count = linkList.size();
             if (count > 0) {
                 minSeller = linkList.get(0).getSeller();

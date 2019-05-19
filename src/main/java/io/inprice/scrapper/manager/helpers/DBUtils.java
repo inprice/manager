@@ -2,14 +2,18 @@ package io.inprice.scrapper.manager.helpers;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.common.helpers.ModelMapper;
+import io.inprice.scrapper.common.logging.Logger;
+import io.inprice.scrapper.common.models.Model;
+import io.inprice.scrapper.manager.config.Config;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DBUtils {
+
+    private static final Logger log = new Logger(DBUtils.class);
 
     private static final HikariDataSource ds;
 
@@ -43,9 +47,25 @@ public class DBUtils {
         return con;
     }
 
+    public static void commit(Connection con) {
+        try {
+            con.commit();
+        } catch (SQLException ex) {
+            //
+        }
+    }
+
     public static void rollback(Connection con) {
         try {
             con.rollback();
+        } catch (SQLException ex) {
+            //
+        }
+    }
+
+    public static void close(Connection con) {
+        try {
+            con.close();
         } catch (SQLException ex) {
             //
         }
@@ -58,6 +78,135 @@ public class DBUtils {
         } catch (SQLException ex) {
             //
         }
+    }
+
+    public static <M extends Model> M findSingle(String query, ModelMapper<M> mapper) {
+        List<M> result = findMultiple(query, mapper);
+
+        if (result != null && result.size() > 0)
+            return result.get(0);
+        else
+            return null;
+    }
+
+    public static <M extends Model> List<M> findMultiple(String query, ModelMapper<M> mapper) {
+        List<M> result = new ArrayList<>();
+        try (Connection con = DBUtils.getConnection();
+             PreparedStatement pst = con.prepareStatement(query);
+             ResultSet rs = pst.executeQuery()) {
+
+            while (rs.next()) {
+                result.add(mapper.map(rs));
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch models", e);
+        }
+
+        return result;
+    }
+
+    /**
+     * For single executions with a continual transaction
+     *
+     * @param query
+     * @param errorMessage
+     * @return
+     */
+    public static boolean executeQuery(Connection con, String query, String errorMessage) {
+        if (con == null) {
+            return DBUtils.executeQuery(query, errorMessage);
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(query)) {
+            int affected = pst.executeUpdate();
+            return affected > 0;
+        } catch (Exception e) {
+            log.error(errorMessage, e);
+        }
+        return false;
+    }
+
+    /**
+     * For single executions without any continual transaction
+     *
+     * @param query
+     * @param errorMessage
+     * @return
+     */
+    public static boolean executeQuery(String query, String errorMessage) {
+        try (Connection con = DBUtils.getConnection();
+             PreparedStatement pst = con.prepareStatement(query)) {
+
+            int affected = pst.executeUpdate();
+            return affected > 0;
+        } catch (Exception e) {
+            log.error(errorMessage, e);
+        }
+        return false;
+    }
+
+    public static boolean executeBatchQueries(Connection con, String[] queries, String errorMessage) {
+        if (con == null) {
+            return DBUtils.executeBatchQueries(queries, errorMessage);
+        }
+
+        boolean result = false;
+
+        try (Statement sta = con.createStatement()) {
+            for (String query: queries) {
+                sta.addBatch(query);
+            }
+
+            int[] affected = sta.executeBatch();
+
+            result = true;
+            for (int aff: affected) {
+                if (aff < 1) return false;
+            }
+        } catch (SQLException e) {
+            log.error(errorMessage, e);
+        }
+        return result;
+    }
+
+    /**
+     * For batch executions without any continual transaction
+     *
+     * @param queries
+     * @param errorMessage
+     * @return
+     */
+    public static boolean executeBatchQueries(String[] queries, String errorMessage) {
+        boolean result = false;
+
+        Connection con = null;
+        Statement sta = null;
+        try {
+            con = DBUtils.getTransactionalConnection();
+            sta = con.createStatement();
+
+            for (String query: queries) {
+                sta.addBatch(query);
+            }
+
+            int[] affected = sta.executeBatch();
+
+            result = true;
+            for (int aff: affected) {
+                if (aff < 1) {
+                    DBUtils.rollback(con);
+                    result = false;
+                    break;
+                }
+            }
+            DBUtils.commit(con);
+        } catch (SQLException e) {
+            DBUtils.rollback(con);
+            log.error(errorMessage, e);
+        } finally {
+            DBUtils.close(con, sta);
+        }
+        return result;
     }
 
     public static void shutdown() {

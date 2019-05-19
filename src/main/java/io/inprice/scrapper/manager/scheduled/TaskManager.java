@@ -1,12 +1,12 @@
 package io.inprice.scrapper.manager.scheduled;
 
-import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.common.meta.LinkStatus;
-import io.inprice.scrapper.manager.scheduled.task.CommonLinkHandlerTask;
-import io.inprice.scrapper.manager.scheduled.task.FailedLinkHandlerTask;
-import io.inprice.scrapper.manager.scheduled.task.NewLinkHandlerTask;
-import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdateTask;
+import io.inprice.scrapper.common.meta.Status;
+import io.inprice.scrapper.manager.scheduled.publishers.CommonLinkPublisher;
+import io.inprice.scrapper.manager.scheduled.publishers.FailedLinkPublisher;
+import io.inprice.scrapper.manager.scheduled.publishers.NewLinkPublisher;
+import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdater;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -22,48 +22,39 @@ public class TaskManager {
             scheduler.start();
             log.info("TaskManager is up.");
 
-            loadTask(new NewLinkHandlerTask());
-            loadTask(new ProductPriceUpdateTask());
+            loadTask(new ProductPriceUpdater());
+            loadTask(new NewLinkPublisher());
 
             loadTask(
-                new CommonLinkHandlerTask(
-                    LinkStatus.ACTIVE,
+                new CommonLinkPublisher(
+                    Status.ACTIVE,
                     Config.CRONTAB_FOR_ACTIVE_LINKS,
                     Config.RABBITMQ_ACTIVE_LINKS_QUEUE
                 )
             );
 
             loadTask(
-                new CommonLinkHandlerTask(
-                    LinkStatus.SOCKET_ERROR,
+                new CommonLinkPublisher(
+                    Status.SOCKET_ERROR,
                     Config.CRONTAB_FOR_SOCKET_ERRORS,
-                    Config.RABBITMQ_SOCKET_ERRORS_QUEUE
+                    Config.RABBITMQ_FAILED_LINKS_QUEUE
                 )
             );
 
             loadTask(
-                new FailedLinkHandlerTask(
-                    LinkStatus.INTERNAL_ERROR,
-                    Config.CRONTAB_FOR_INTERNAL_ERRORS,
-                    Config.RABBITMQ_INTERNAL_ERRORS_QUEUE,
-                    Config.RETRY_LIMIT_FOR_FAILED_LINKS_G1
-                )
-            );
-
-            loadTask(
-                new FailedLinkHandlerTask(
-                    LinkStatus.NETWORK_ERROR,
+                new FailedLinkPublisher(
+                    Status.NETWORK_ERROR,
                     Config.CRONTAB_FOR_NETWORK_ERRORS,
-                    Config.RABBITMQ_NETWORK_ERRORS_QUEUE,
+                    Config.RABBITMQ_FAILED_LINKS_QUEUE,
                     Config.RETRY_LIMIT_FOR_FAILED_LINKS_G1
                 )
             );
 
             loadTask(
-                new FailedLinkHandlerTask(
-                    LinkStatus.UNAVAILABLE,
+                new FailedLinkPublisher(
+                    Status.UNAVAILABLE,
                     Config.CRONTAB_FOR_UNAVAILABLE_LINKS,
-                    Config.RABBITMQ_UNAVAILABLE_LINKS_QUEUE,
+                    Config.RABBITMQ_FAILED_LINKS_QUEUE,
                     Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3
                 )
             );

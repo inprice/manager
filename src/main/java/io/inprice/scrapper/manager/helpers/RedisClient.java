@@ -15,8 +15,8 @@ public class RedisClient {
 		Config config = new Config();
 		config
 			.useSingleServer()
-			.setAddress(String.format("redis://%s:%d", io.inprice.scrapper.common.config.Config.REDIS_HOST, io.inprice.scrapper.common.config.Config.REDIS_PORT))
-			.setPassword(io.inprice.scrapper.common.config.Config.REDIS_PASSWORD);
+			.setAddress(String.format("redis://%s:%d", io.inprice.scrapper.manager.config.Config.REDIS_HOST, io.inprice.scrapper.manager.config.Config.REDIS_PORT))
+			.setPassword(io.inprice.scrapper.manager.config.Config.REDIS_PASSWORD);
 
 		client = Redisson.create(config);
 

@@ -4,10 +4,10 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
-import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.common.helpers.RabbitMQ;
-import io.inprice.scrapper.common.info.LinkStatusChange;
+import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.Links;
@@ -19,25 +19,25 @@ public class StatusChangeConsumer {
 	private static final Logger log = new Logger(StatusChangeConsumer.class);
 
 	public static void start() {
-		log.info("StatusChangeConsumer is running.");
+		log.info("Status change consumer is running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, final byte[] body) {
 				try {
 					ThreadPools.STATUS_CHANGE_POOL.submit(() -> {
-						LinkStatusChange change = Converter.toObject(body);
+						StatusChange change = Converter.toObject(body);
 						if (change != null) {
-							boolean isOK = Links.changeStatus(change);
+							boolean isOK = Links.changeStatus(null, change);
 							if (! isOK) {
 								log.error("DB problem while changing LinkStatus!");
 							}
 						} else {
-							log.error("LinkStatusChange is null!");
+							log.error("Status change object is null!");
 						}
 					});
 				} catch (Exception e) {
-					log.error("Error in submitting Tasks into ThreadPool", e);
+					log.error("Failed to submit a task into ThreadPool", e);
 				}
 			}
 		};

@@ -1,6 +1,6 @@
 package io.inprice.scrapper.manager.helpers;
 
-import io.inprice.scrapper.common.config.Config;
+import io.inprice.scrapper.manager.config.Config;
 
 import java.util.concurrent.*;
 
@@ -10,6 +10,7 @@ public class ThreadPools {
 
 	public static final ExecutorService PRICE_CHANGE_POOL;
 	public static final ExecutorService STATUS_CHANGE_POOL;
+	public static final ExecutorService ACTIVATED_LINKS_POOL;
 
 	static {
 		MASTER_POOL = new ThreadPoolExecutor(
@@ -22,6 +23,7 @@ public class ThreadPools {
 
 		PRICE_CHANGE_POOL = Executors.newFixedThreadPool(1);
 		STATUS_CHANGE_POOL = Executors.newFixedThreadPool(1);
+		ACTIVATED_LINKS_POOL = Executors.newFixedThreadPool(2);
 	}
 
 }

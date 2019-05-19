@@ -1,8 +1,7 @@
 package io.inprice.scrapper.manager;
 
-import io.inprice.scrapper.common.config.Config;
-import io.inprice.scrapper.common.helpers.RabbitMQ;
-import io.inprice.scrapper.common.logging.Logger;
+import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.consumer.LinkPriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.helpers.DBUtils;
@@ -10,6 +9,7 @@ import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
+import io.inprice.scrapper.common.logging.Logger;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -33,7 +33,7 @@ public class Application {
 			StatusChangeConsumer.start();
 			LinkPriceChangeConsumer.start();
 
-		}, "task-manager").start();
+		}, "publishers-manager").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			Global.isApplicationRunning = false;

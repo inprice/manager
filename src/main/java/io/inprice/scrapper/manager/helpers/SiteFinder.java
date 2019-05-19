@@ -55,9 +55,7 @@ public class SiteFinder {
                 if (sitesByDomain == null) {
                     List<Site> siteList = Sites.getAll();
                     sitesByDomain = new TreeMap<>(Collections.reverseOrder());
-                    siteList.forEach(site -> {
-                        sitesByDomain.put(site.getDomain(), site);
-                    });
+                    siteList.forEach(site -> sitesByDomain.put(site.getDomain(), site));
                 }
             }
         }

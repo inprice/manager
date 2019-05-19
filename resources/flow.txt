@@ -1,0 +1,137 @@
+NEW
+    - Kendi tetikleyicisi var: NewLinkHandlerTask
+	- Api kanalı ile ilk defa kaydedilen linkler bu statüde kaydedilirler.
+	- Periodik olarak tetiklenen zamanlayıcı ile veritabanından bu durumdaki linkler toplanarak kontrolden geçirilirler.
+	- Kontrol esnasında URL bilgisine bakılarak hangi siteye ait olduğu bulunur
+	- Herhangi bir sorun yoksa RABBITMQ_NEW_LINKS_QUEUE kanalı ile Worker tarafına gonderilir
+	- Sorun olursa RABBITMQ_STATUS_CHANGE_QUEUE ya gönderilmeden önce
+	    a) veritabanına kayıt esnasında sorun oluşursa Status.INTERNAL_ERROR olarak setlenir
+	    b) sitesi bulunamazsa Status.BE_IMPLEMENTED olarak
+	    c) uygunsuz bir url e sahipse Status.IMPROPER olarak setlenir
+    - Akış
+        manager to worker  --> RABBITMQ_NEW_LINKS_QUEUE     :: sorunsuz durumda worker verileri çekip işlesin diye,
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: sorun olması durumunda manager durumunu değiştirsin diye
+
+ACTIVE
+    - Kendi tetikleyicisi var: CommonLinkHandler(Status.ACTIVE)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Herhangi bir kontrol yapılmadan doğrudan RABBITMQ_ACTIVE_LINKS_QUEUE kanalı ile Worker tarafına gonderilirler
+    - Akış
+        manager to worker --> RABBITMQ_ACTIVE_LINKS_QUEUE  :: worker verileri çekip işlesin diye,
+
+BE_IMPLEMENTED
+    - Kendi başına tetiklenmez
+    - NEW statüsündeyken site bilgisi bulunamayan linkler bu duruma geçirilirler.
+    - Bu durumdaki linkler developer tarafından ele alınacaktır. Link sitesinin implementasyonu yapıldıktan sonra manuel olarak NEW statusune setlenir.
+    - Akış
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
+WONT_BE_IMPLEMENTED
+    - Kendi başına tetiklenmez, bu duruma geçişe developer karar verir.
+    - Sadece NEW statüsünden bu duruma geçilebilir.
+    - Bu durumdaki linkler hiçbir zaman ele alınmayacaktır.
+    - Akış
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
+IMPROPER
+    - Kendi başına tetiklenmez
+    - Sadece NEW statüsünden bu duruma geçilebilir
+    - asdf, ftp://doysa.com, null... vb hatalı URL bilgisine sahip NEW durumundaki linkler bu duruma çekilirler.
+    - Bu durumdaki linkler kullanıcının itirazı durumunda developer tarafından incelenerek ya BE_IMPLEMENTED ya da WONT_BE_IMPLEMENTED durumuna geçirilir.
+    - Akış
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
+UNAVAILABLE
+    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.UNAVAILABLE)
+    - ACTIVE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan linkler bu duruma getirilir.
+    - Parametrik bir gün sayısı kadar kontrol edilir.
+    - Stok miktarı değişmezse bu durumda kalırlar,
+    - Worker, stoğun miktarında pozitif bir değişim görürse bir önceki durumlarına (Link.previousStatus) geçirilmek üzere manager e gönderir.
+    - Akış
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE     :: worker tarafında bir link UNAVAILABLE durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_UNAVAILABLE_LINKS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+
+SOCKET_ERROR
+    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.SOCKET_ERROR)
+    - Linklerin ait oldukları siteler tarafından erişim engeli olduğu zaman bu sorun ile karşılaşılır.
+    - Bu durumdaki linkler sürekli olarak denetlenirler.
+    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (Link.previousStatus) geçirilirler.
+    - Akış
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link SOCKET_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_SOCKET_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+
+NETWORK_ERROR
+    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.NETWORK_ERROR)
+    - Http Status kodu 400 ve üzeri olan linkler bu duruma çekilirler.
+    - Bu durumdaki linkler belli aralıklarla parametrik bir gün sayısı kadar denetlenirler.
+    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (Link.previousStatus) geçirilirler.
+    - Akış
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE  :: worker tarafında bir link NETWORK_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_NETWORK_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+
+CLASS_PROBLEM ve INTERNAL_ERROR
+    - Her iki durum da kendi başına tetiklenmez
+    - NEW durumundaki linkler ilk kez ele alınırken bu sorunlar ortaya çıkabilir.
+    - Bu durumdaki linkler developer tarafından ele alınır ve manuel olarak Link.previousStatus durumuna getirilirler.
+    - Akış
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE   :: worker tarafında bir link CLASS_PROBLEM veya INTERNAL_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_INTERNAL_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+
+PAUSED
+    - Kendi başına tetiklenmez
+    - Kullanıcı tarafından istenilen linkler bu duruma getirilebilir.
+    - Manager bu durumdaki linkleri pass geçecektir.
+    - Kullanıcı manuel olarak tekrar eski haline (Link.previousStatus) getirebilir
+    - Akış
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
+Notlar
+    1) Bir durumdan diğerine geçişlerde mutlaka
+        RABBITMQ_STATUS_CHANGE_QUEUE
+       kullanılır.
+
+    2) ACTIVE ve NEW durumunda olan linkler için fiyat değişikliği gözlemlenirse
+        RABBITMQ_PRICE_CHANGE_QUEUE
+       kullanılarak ilerlenir
+
+
+---------------------------------------------
+ProductPriceUpdater
+---------------------------------------------
+Bu zamanlanmış görev Redis kanalı ile çalışır. Redis üzerinde bulunan bir Set üzerinde biriktirilen ürün fiyat değişimleri
+periyodik olarak bu task ile ele alınıp ürünlerin fiyat değişimleri özel olarak ele alınır.
+
+
+---------------------------------------------
+RABBITMQ_STATUS_CHANGE_QUEUE
+---------------------------------------------
+Publisher: Manager ve Worker
+Consumer: Manager (StatusChangeConsumer)
+
+---------------------------------------------
+RABBITMQ_NEW_LINKS_QUEUE
+---------------------------------------------
+Publisher: Manager
+Consumer: Worker (NewLinkConsumer)
+
+---------------------------------------------
+RABBITMQ_ACTIVE_LINKS_QUEUE
+---------------------------------------------
+Publisher: Manager
+Consumer: Worker (ActiveLinkConsumer)
+
+---------------------------------------------
+RABBITMQ_PRICE_CHANGE_QUEUE
+---------------------------------------------
+Publisher: Worker
+Consumer: Manager (LinkPriceChangeConsumer)
+
+---------------------------------------------
+RABBITMQ_SOCKET_ERRORS_QUEUE;
+RABBITMQ_INTERNAL_ERRORS_QUEUE;
+RABBITMQ_NETWORK_ERRORS_QUEUE;
+RABBITMQ_UNAVAILABLE_LINKS_QUEUE;
+RABBITMQ_STATUS_CHANGE_QUEUE;
+---------------------------------------------
+Publisher: Worker
+Consumer: Manager (StatusChangeConsumer)
