@@ -46,7 +46,6 @@ public class RabbitMQ {
 
 						channel.queueBind(Config.RABBITMQ_STATUS_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, "");
 						channel.queueBind(Config.RABBITMQ_PRICE_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, "");
-						channel.queueBind(Config.RABBITMQ_ACTIVE_LINKS_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, "");
 					} catch (Exception e) {
 						log.error("Error in opening RabbitMQ channel", e);
 					}
