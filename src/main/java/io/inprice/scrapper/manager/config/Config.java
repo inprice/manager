@@ -14,19 +14,20 @@ public class Config {
 
 	// Queues
 	public static final String RABBITMQ_NEW_LINKS_QUEUE;
-	public static final String RABBITMQ_ACTIVE_LINKS_QUEUE;
+	public static final String RABBITMQ_AVAILABLE_LINKS_QUEUE;
 	public static final String RABBITMQ_FAILED_LINKS_QUEUE;
 
 	public static final String RABBITMQ_STATUS_CHANGE_QUEUE;
 	public static final String RABBITMQ_PRICE_CHANGE_QUEUE;
-	public static final String RABBITMQ_ACTIVATED_LINKS_QUEUE;
 
 	// Crontabs
 	public static final String CRONTAB_FOR_NEW_LINKS;
-	public static final String CRONTAB_FOR_ACTIVE_LINKS;
-	public static final String CRONTAB_FOR_UNAVAILABLE_LINKS;
+	public static final String CRONTAB_FOR_RENEWED_LINKS;
+	public static final String CRONTAB_FOR_AVAILABLE_LINKS;
+	public static final String CRONTAB_FOR_OUT_OF_STOCK_LINKS;
 	public static final String CRONTAB_FOR_SOCKET_ERRORS;
 	public static final String CRONTAB_FOR_NETWORK_ERRORS;
+	public static final String CRONTAB_FOR_RESUMED_LINKS;
 
 	public static final String CRONTAB_FOR_PRODUCT_PRICE_UPDATE;
 
@@ -53,6 +54,7 @@ public class Config {
 	// Retry limits
 	public static final int RETRY_LIMIT_FOR_QUEUE_PROBLEMS;
 	public static final int RETRY_LIMIT_FOR_FAILED_LINKS_G1;
+	public static final int RETRY_LIMIT_FOR_FAILED_LINKS_G2;
 	public static final int RETRY_LIMIT_FOR_FAILED_LINKS_G3;
 
 	static {
@@ -66,23 +68,24 @@ public class Config {
 
 		//minutely
 		RABBITMQ_NEW_LINKS_QUEUE = getOrDefault("RABBITMQ_NEW_LINKS_QUEUE", "new-links");
-		RABBITMQ_ACTIVE_LINKS_QUEUE = getOrDefault("RABBITMQ_ACTIVE_LINKS_QUEUE", "active-links");
-		RABBITMQ_FAILED_LINKS_QUEUE = getOrDefault("RABBITMQ_FAILED_LINKS_QUEUE", "socket-errors");
+		RABBITMQ_AVAILABLE_LINKS_QUEUE = getOrDefault("RABBITMQ_AVAILABLE_LINKS_QUEUE", "available-links");
+		RABBITMQ_FAILED_LINKS_QUEUE = getOrDefault("RABBITMQ_FAILED_LINKS_QUEUE", "failed-links");
 
 		//different
 		RABBITMQ_STATUS_CHANGE_QUEUE = getOrDefault("RABBITMQ_STATUS_CHANGE_QUEUE", "status-change");
 		RABBITMQ_PRICE_CHANGE_QUEUE = getOrDefault("RABBITMQ_PRICE_CHANGE_QUEUE", "price-change");
-		RABBITMQ_ACTIVATED_LINKS_QUEUE = getOrDefault("RABBITMQ_ACTIVATED_LINKS_QUEUE", "activated-links");
 
 		//minutely
 		CRONTAB_FOR_NEW_LINKS = getOrDefault("CRONTAB_FOR_NEW_LINKS", "0 */3 * * * ?");
 		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "0 */5 * * * ?");
-		CRONTAB_FOR_SOCKET_ERRORS = getOrDefault("CRONTAB_FOR_SOCKET_ERRORS", "0 */11 * * * ?");
+		CRONTAB_FOR_RESUMED_LINKS = getOrDefault("CRONTAB_FOR_RESUMED_LINKS", "0 */13 * * * ?");
+		CRONTAB_FOR_SOCKET_ERRORS = getOrDefault("CRONTAB_FOR_SOCKET_ERRORS", "0 */17 * * * ?");
 
 		//hourly
-		CRONTAB_FOR_NETWORK_ERRORS = getOrDefault("CRONTAB_FOR_NETWORK_ERRORS", "0 0 */2 * * ?");
-		CRONTAB_FOR_ACTIVE_LINKS = getOrDefault("CRONTAB_FOR_ACTIVE_LINKS", "0 0 */3 * * ?");
-		CRONTAB_FOR_UNAVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_UNAVAILABLE_LINKS", "0 0 */7 * * ?");
+		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "0 0 */1 * * ?");
+		CRONTAB_FOR_NETWORK_ERRORS = getOrDefault("CRONTAB_FOR_NETWORK_ERRORS", "0 0 */3 * * ?");
+		CRONTAB_FOR_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_AVAILABLE_LINKS", "0 0 */6 * * ?");
+		CRONTAB_FOR_OUT_OF_STOCK_LINKS = getOrDefault("CRONTAB_FOR_OUT_OF_STOCK_LINKS", "0 0 */7 * * ?");
 
 		TPOOLS_MASTER_CAPACITY = getOrDefault("TPOOLS_MASTER_CAPACITY", 2);
 
@@ -103,6 +106,7 @@ public class Config {
 		RETRY_LIMIT_FOR_QUEUE_PROBLEMS = getOrDefault("RL_QUEUE_PROBLEMS", 3);
 
 		RETRY_LIMIT_FOR_FAILED_LINKS_G1 = getOrDefault("RL_FAILED_LINKS_G1", 3);
+		RETRY_LIMIT_FOR_FAILED_LINKS_G2 = getOrDefault("RL_FAILED_LINKS_G1", 5);
 		RETRY_LIMIT_FOR_FAILED_LINKS_G3 = getOrDefault("RL_FAILED_LINKS_G3", 10);
 	}
 

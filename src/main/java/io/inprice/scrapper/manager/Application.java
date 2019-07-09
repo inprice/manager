@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager;
 
 import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.consumer.AvailableLinksConsumer;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.consumer.LinkPriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
@@ -30,6 +31,7 @@ public class Application {
 			Global.isApplicationRunning = true;
 
 			TaskManager.start();
+			AvailableLinksConsumer.start();
 			StatusChangeConsumer.start();
 			LinkPriceChangeConsumer.start();
 

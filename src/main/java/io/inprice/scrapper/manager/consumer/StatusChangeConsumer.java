@@ -37,7 +37,7 @@ public class StatusChangeConsumer {
 						}
 					});
 				} catch (Exception e) {
-					log.error("Failed to submit a task into ThreadPool", e);
+					log.error("Failed to submit a tasks into ThreadPool", e);
 				}
 			}
 		};

@@ -6,9 +6,9 @@ import io.inprice.scrapper.manager.repository.Links;
 
 import java.util.List;
 
-public class FailedLinkPublisher extends AbstractLinkPublisher {
+public class FailedLinksPublisher extends AbstractLinkPublisher {
 
-    public FailedLinkPublisher(Status status, String cron, String queueName, int retryLimit) {
+    public FailedLinksPublisher(Status status, String cron, String queueName, int retryLimit) {
         super(status, cron, queueName, true, retryLimit);
     }
 

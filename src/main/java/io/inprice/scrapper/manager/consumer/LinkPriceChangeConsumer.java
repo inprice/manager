@@ -19,7 +19,7 @@ public class LinkPriceChangeConsumer {
 	private static final Logger log = new Logger(LinkPriceChangeConsumer.class);
 
 	public static void start() {
-		log.info("Link price change consumer is running.");
+		log.info("Link price change consumer is up and running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override

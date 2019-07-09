@@ -10,7 +10,7 @@ public class ThreadPools {
 
 	public static final ExecutorService PRICE_CHANGE_POOL;
 	public static final ExecutorService STATUS_CHANGE_POOL;
-	public static final ExecutorService ACTIVATED_LINKS_POOL;
+	public static final ExecutorService AVAILABLE_LINKS_POOL;
 
 	static {
 		MASTER_POOL = new ThreadPoolExecutor(
@@ -23,7 +23,7 @@ public class ThreadPools {
 
 		PRICE_CHANGE_POOL = Executors.newFixedThreadPool(1);
 		STATUS_CHANGE_POOL = Executors.newFixedThreadPool(1);
-		ACTIVATED_LINKS_POOL = Executors.newFixedThreadPool(2);
+		AVAILABLE_LINKS_POOL = Executors.newFixedThreadPool(2);
 	}
 
 }

@@ -4,9 +4,10 @@ import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.manager.scheduled.publishers.CommonLinkPublisher;
-import io.inprice.scrapper.manager.scheduled.publishers.FailedLinkPublisher;
-import io.inprice.scrapper.manager.scheduled.publishers.NewLinkPublisher;
-import io.inprice.scrapper.manager.scheduled.task.ProductPriceUpdater;
+import io.inprice.scrapper.manager.scheduled.publishers.FailedLinksPublisher;
+import io.inprice.scrapper.manager.scheduled.publishers.NewLinksPublisher;
+import io.inprice.scrapper.manager.scheduled.publishers.ResumedLinksPublisher;
+import io.inprice.scrapper.manager.scheduled.tasks.ProductPriceUpdater;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -23,26 +24,28 @@ public class TaskManager {
             log.info("TaskManager is up.");
 
             loadTask(new ProductPriceUpdater());
-            loadTask(new NewLinkPublisher());
+
+            loadTask(new NewLinksPublisher());
+            loadTask(new ResumedLinksPublisher());
 
             loadTask(
                 new CommonLinkPublisher(
-                    Status.ACTIVE,
-                    Config.CRONTAB_FOR_ACTIVE_LINKS,
-                    Config.RABBITMQ_ACTIVE_LINKS_QUEUE
+                    Status.AVAILABLE,
+                    Config.CRONTAB_FOR_AVAILABLE_LINKS,
+                    Config.RABBITMQ_AVAILABLE_LINKS_QUEUE
                 )
             );
 
             loadTask(
                 new CommonLinkPublisher(
-                    Status.SOCKET_ERROR,
-                    Config.CRONTAB_FOR_SOCKET_ERRORS,
-                    Config.RABBITMQ_FAILED_LINKS_QUEUE
+                    Status.RENEWED,
+                    Config.CRONTAB_FOR_RENEWED_LINKS,
+                    Config.RABBITMQ_AVAILABLE_LINKS_QUEUE
                 )
             );
 
             loadTask(
-                new FailedLinkPublisher(
+                new FailedLinksPublisher(
                     Status.NETWORK_ERROR,
                     Config.CRONTAB_FOR_NETWORK_ERRORS,
                     Config.RABBITMQ_FAILED_LINKS_QUEUE,
@@ -51,9 +54,18 @@ public class TaskManager {
             );
 
             loadTask(
-                new FailedLinkPublisher(
-                    Status.UNAVAILABLE,
-                    Config.CRONTAB_FOR_UNAVAILABLE_LINKS,
+                new FailedLinksPublisher(
+                    Status.SOCKET_ERROR,
+                    Config.CRONTAB_FOR_SOCKET_ERRORS,
+                    Config.RABBITMQ_FAILED_LINKS_QUEUE,
+                    Config.RETRY_LIMIT_FOR_FAILED_LINKS_G2
+                )
+            );
+
+            loadTask(
+                new FailedLinksPublisher(
+                    Status.OUT_OF_STOCK,
+                    Config.CRONTAB_FOR_OUT_OF_STOCK_LINKS,
                     Config.RABBITMQ_FAILED_LINKS_QUEUE,
                     Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3
                 )

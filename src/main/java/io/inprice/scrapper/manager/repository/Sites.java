@@ -23,13 +23,6 @@ public class Sites {
             model.setActive(rs.getBoolean("active"));
             model.setName(rs.getString("name"));
             model.setDomain(rs.getString("domain"));
-            model.setUrl(rs.getString("url"));
-            model.setLogo(rs.getString("logo"));
-            model.setLogoMini(rs.getString("logo_mini"));
-            model.setCurrencyCode(rs.getString("currency_code"));
-            model.setCurrencySymbol(rs.getString("currency_symbol"));
-            model.setThousandSeparator(rs.getString("thousand_separator"));
-            model.setDecimalSeparator(rs.getString("decimal_separator"));
             model.setClassName(rs.getString("class_name"));
             model.setInsertAt(rs.getDate("insert_at"));
 

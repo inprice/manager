@@ -1,34 +1,35 @@
 NEW
-    - Kendi tetikleyicisi var: NewLinkHandlerTask
-	- Api kanalı ile ilk defa kaydedilen linkler bu statüde kaydedilirler.
+    - Kendi tetikleyicisi var: NewLinkPublisher
+	- İlk defa kaydedilen linkler bu statüyü alırlar.
 	- Periodik olarak tetiklenen zamanlayıcı ile veritabanından bu durumdaki linkler toplanarak kontrolden geçirilirler.
 	- Kontrol esnasında URL bilgisine bakılarak hangi siteye ait olduğu bulunur
 	- Herhangi bir sorun yoksa RABBITMQ_NEW_LINKS_QUEUE kanalı ile Worker tarafına gonderilir
 	- Sorun olursa RABBITMQ_STATUS_CHANGE_QUEUE ya gönderilmeden önce
-	    a) veritabanına kayıt esnasında sorun oluşursa Status.INTERNAL_ERROR olarak setlenir
-	    b) sitesi bulunamazsa Status.BE_IMPLEMENTED olarak
+	    a) veritabanına kayıt esnasında sorun oluşmuşsa Status.INTERNAL_ERROR olarak,
+	    b) sitesi bulunamazsa Status.BE_IMPLEMENTED olarak,
 	    c) uygunsuz bir url e sahipse Status.IMPROPER olarak setlenir
     - Akış
         manager to worker  --> RABBITMQ_NEW_LINKS_QUEUE     :: sorunsuz durumda worker verileri çekip işlesin diye,
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: sorun olması durumunda manager durumunu değiştirsin diye
 
-ACTIVE
-    - Kendi tetikleyicisi var: CommonLinkHandler(Status.ACTIVE)
+AVAILABLE
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.AVAILABLE)
     - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
-    - Herhangi bir kontrol yapılmadan doğrudan RABBITMQ_ACTIVE_LINKS_QUEUE kanalı ile Worker tarafına gonderilirler
+    - Herhangi bir kontrol yapılmadan doğrudan RABBITMQ_AVAILABLE_LINKS_QUEUE kanalı ile Worker tarafına gonderilirler
     - Akış
-        manager to worker --> RABBITMQ_ACTIVE_LINKS_QUEUE  :: worker verileri çekip işlesin diye,
+        manager to worker --> RABBITMQ_AVAILABLE_LINKS_QUEUE  :: worker verileri çekip işlesin diye,
 
 BE_IMPLEMENTED
     - Kendi başına tetiklenmez
-    - NEW statüsündeyken site bilgisi bulunamayan linkler bu duruma geçirilirler.
-    - Bu durumdaki linkler developer tarafından ele alınacaktır. Link sitesinin implementasyonu yapıldıktan sonra manuel olarak NEW statusune setlenir.
+    - NEW statüsündeyken site bilgisi bulunamayan/eşleşmeyen linkler bu duruma geçirilirler.
+    - Bu durumdaki linkler developer tarafından ele alınacaktır.
+    - Link sitesinin implementasyonu yapıldıktan sonra manuel olarak NEW statusune geçirilir.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 WONT_BE_IMPLEMENTED
     - Kendi başına tetiklenmez, bu duruma geçişe developer karar verir.
-    - Sadece NEW statüsünden bu duruma geçilebilir.
+    - Daha çok NEW statüsünden bu duruma geçilebilir.
     - Bu durumdaki linkler hiçbir zaman ele alınmayacaktır.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
@@ -41,33 +42,33 @@ IMPROPER
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
-UNAVAILABLE
-    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.UNAVAILABLE)
-    - ACTIVE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan linkler bu duruma getirilir.
+OUT_OF_STOCK
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.OUT_OF_STOCK)
+    - AVAILABLE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan ya da satışı durdurulmuş linkler bu duruma getirilir.
     - Parametrik bir gün sayısı kadar kontrol edilir.
-    - Stok miktarı değişmezse bu durumda kalırlar,
-    - Worker, stoğun miktarında pozitif bir değişim görürse bir önceki durumlarına (Link.previousStatus) geçirilmek üzere manager e gönderir.
+    - Stok miktarı ya da erişilebilirlik durumu değişmezse bu durumda kalır,
+    - Worker, stoğun miktarında pozitif bir değişim ya da artık erişilebilir olduğunu görürse bir önceki durumuna (Link.previousStatus) geçirilmek üzere manager e gönderir.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE     :: worker tarafında bir link UNAVAILABLE durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_UNAVAILABLE_LINKS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link UNAVAILABLE durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 SOCKET_ERROR
-    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.SOCKET_ERROR)
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.SOCKET_ERROR)
     - Linklerin ait oldukları siteler tarafından erişim engeli olduğu zaman bu sorun ile karşılaşılır.
     - Bu durumdaki linkler sürekli olarak denetlenirler.
     - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (Link.previousStatus) geçirilirler.
     - Akış
         worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link SOCKET_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_SOCKET_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 NETWORK_ERROR
-    - Kendi tetikleyicisi var: FailedLinkHandlerTask(Status.NETWORK_ERROR)
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.NETWORK_ERROR)
     - Http Status kodu 400 ve üzeri olan linkler bu duruma çekilirler.
     - Bu durumdaki linkler belli aralıklarla parametrik bir gün sayısı kadar denetlenirler.
     - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (Link.previousStatus) geçirilirler.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE  :: worker tarafında bir link NETWORK_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_NETWORK_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link NETWORK_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 CLASS_PROBLEM ve INTERNAL_ERROR
     - Her iki durum da kendi başına tetiklenmez
@@ -75,7 +76,6 @@ CLASS_PROBLEM ve INTERNAL_ERROR
     - Bu durumdaki linkler developer tarafından ele alınır ve manuel olarak Link.previousStatus durumuna getirilirler.
     - Akış
         worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE   :: worker tarafında bir link CLASS_PROBLEM veya INTERNAL_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_INTERNAL_ERRORS_QUEUE :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 PAUSED
     - Kendi başına tetiklenmez
@@ -85,12 +85,19 @@ PAUSED
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
+RESUMED
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.RESUMED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Manager tarafından bir önceki durumlarına getirilirler
+    - Akış
+        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
 Notlar
     1) Bir durumdan diğerine geçişlerde mutlaka
         RABBITMQ_STATUS_CHANGE_QUEUE
        kullanılır.
 
-    2) ACTIVE ve NEW durumunda olan linkler için fiyat değişikliği gözlemlenirse
+    2) AVAILABLE ve NEW durumunda olan linkler için fiyat değişikliği gözlemlenirse
         RABBITMQ_PRICE_CHANGE_QUEUE
        kullanılarak ilerlenir
 
@@ -115,7 +122,7 @@ Publisher: Manager
 Consumer: Worker (NewLinkConsumer)
 
 ---------------------------------------------
-RABBITMQ_ACTIVE_LINKS_QUEUE
+RABBITMQ_AVAILABLE_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Manager
 Consumer: Worker (ActiveLinkConsumer)
@@ -127,11 +134,7 @@ Publisher: Worker
 Consumer: Manager (LinkPriceChangeConsumer)
 
 ---------------------------------------------
-RABBITMQ_SOCKET_ERRORS_QUEUE;
-RABBITMQ_INTERNAL_ERRORS_QUEUE;
-RABBITMQ_NETWORK_ERRORS_QUEUE;
-RABBITMQ_UNAVAILABLE_LINKS_QUEUE;
-RABBITMQ_STATUS_CHANGE_QUEUE;
+RABBITMQ_FAILED_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Worker
 Consumer: Manager (StatusChangeConsumer)

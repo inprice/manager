@@ -13,9 +13,9 @@ import io.inprice.scrapper.manager.repository.Links;
 import java.io.IOException;
 import java.util.List;
 
-public class NewLinkPublisher extends AbstractLinkPublisher {
+public class NewLinksPublisher extends AbstractLinkPublisher {
 
-    public NewLinkPublisher() {
+    public NewLinksPublisher() {
         super(Status.NEW, Config.CRONTAB_FOR_NEW_LINKS, Config.RABBITMQ_NEW_LINKS_QUEUE);
     }
 

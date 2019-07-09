@@ -95,7 +95,7 @@ public class Links {
     }
 
     /**
-     * A link which is in NEW status becomes ACTIVE with the help of this method.
+     * A link which is in NEW status becomes AVAILABLE with the help of this method.
      * This method does several database operations, please see below;
      *
      *  - All the basic information of the link is set first
@@ -104,9 +104,9 @@ public class Links {
      *  - Specs of the link are added
      *
      * @param link
-     * @return
+     * @return boolean
      */
-    public static boolean activate(Link link) {
+    public static boolean makeAvailable(Link link) {
         Connection con = null;
         try {
             con = DBUtils.getTransactionalConnection();
@@ -115,24 +115,31 @@ public class Links {
                 con,
                 String.format(
                     "update link " +
-                    "set activated = true, title = '%s', code = '%s', brand = '%s', seller = '%s', shipment = '%s', price = %f, " +
+                    "set name = '%s', sku = '%s', brand = '%s', seller = '%s', shipment = '%s', price = %f, " +
                         "status = '%s', previous_status = '%s', last_check = now() " +
                     "where link_id = %d ",
-                    link.getTitle(), link.getCode(), link.getBrand(), link.getSeller(), link.getShipment(),
+                    link.getName(), link.getSku(), link.getBrand(), link.getSeller(), link.getShipment(),
                         link.getPrice(), link.getStatus().name(), link.getPreviousStatus().name(), link.getId()),
 
-                String.format("Failed to set an activated link. Link Id: %d", link.getId())
+                String.format("Failed to make a link available. Link Id: %d", link.getId())
             );
 
             if (res1) {
                 link.setStatus(link.getPreviousStatus());
 
-                boolean res2 = changeStatus(con, new StatusChange(link, Status.ACTIVE));
+                boolean res2 = changeStatus(con, new StatusChange(link, Status.AVAILABLE));
                 if (res2) {
                     PriceChange change = new PriceChange(link.getId(), link.getProductId(), link.getPrice());
                     change.setLinkOnly(true);
                     boolean res3 = changePrice(con, change);
                     if (res3 && link.getSpecList() != null && link.getSpecList().size() > 0) {
+
+                        DBUtils.executeQuery(
+                            con,
+                            String.format("delete from link_spec where link_id = %d ", link.getId()),
+                            String.format("Failed to delete link specs. Link Id: %d", link.getId())
+                        );
+
                         String[] queries = new String[link.getSpecList().size()];
                         for (int i = 0; i < queries.length; i++) {
                             LinkSpec spec = link.getSpecList().get(i);
@@ -157,7 +164,7 @@ public class Links {
             }
         } catch (SQLException e) {
             DBUtils.rollback(con);
-            log.error("Failed to activate a link. Link Id: " + link.getId(), e);
+            log.error("Failed to make available a link. Link Id: " + link.getId(), e);
         } finally {
             DBUtils.close(con);
         }
@@ -186,8 +193,8 @@ public class Links {
         );
 
         if (result
-        && Status.ACTIVE.equals(change.getLink().getStatus())
-        && ! Status.ACTIVE.equals(change.getNewStatus())
+        && Status.AVAILABLE.equals(change.getLink().getStatus())
+        && ! Status.AVAILABLE.equals(change.getNewStatus())
         && ! change.getNewStatus().isNeutral()) {
             RedisClient.addProductPriceInfo(new ProductPriceInfo(change.getLink().getProductId(), change.getLink().getProductPrice()));
         }
@@ -230,9 +237,8 @@ public class Links {
         try {
             Link model = new Link(rs.getString("url"));
             model.setId(rs.getLong("id"));
-            model.setActivated(rs.getBoolean("activated"));
-            model.setTitle(rs.getString("title"));
-            model.setCode(rs.getString("code"));
+            model.setName(rs.getString("name"));
+            model.setSku(rs.getString("sku"));
             model.setBrand(rs.getString("brand"));
             model.setSeller(rs.getString("seller"));
             model.setShipment(rs.getString("shipment"));

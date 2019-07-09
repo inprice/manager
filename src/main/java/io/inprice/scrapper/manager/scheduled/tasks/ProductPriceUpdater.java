@@ -1,4 +1,4 @@
-package io.inprice.scrapper.manager.scheduled.task;
+package io.inprice.scrapper.manager.scheduled.tasks;
 
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.common.info.ProductPriceInfo;
