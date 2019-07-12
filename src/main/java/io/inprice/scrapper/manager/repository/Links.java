@@ -1,97 +1,63 @@
 package io.inprice.scrapper.manager.repository;
 
-import io.inprice.scrapper.common.helpers.ModelMapper;
-import io.inprice.scrapper.common.models.LinkSpec;
-import io.inprice.scrapper.common.models.Model;
-import io.inprice.scrapper.manager.config.Config;
-import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.info.PriceChange;
 import io.inprice.scrapper.common.info.ProductPriceInfo;
+import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.models.LinkSpec;
+import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.DBUtils;
-import io.inprice.scrapper.manager.helpers.RedisClient;
 
-import java.math.BigDecimal;
-import java.sql.*;
-import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 public class Links {
 
     private static final Logger log = new Logger(Links.class);
 
-    public static synchronized boolean updateCycleValues(Status status, int cycle, String ids, boolean willRetryBeIncremented) {
-        final String incrementPart = (willRetryBeIncremented ? ", retry = retry + 1" : "");
-
-        return DBUtils.executeQuery(
-            String.format(
-                "update link " +
-                "set cycle = %d, last_check = now() " + incrementPart +
-                "where status = '%s' " +
-                "  and cycle <> %d " +
-                "  and id in (%s) ",
-                cycle, status.name(), cycle, ids),
-
-            String.format("Failed to change %s links cycle %d", status.name(), cycle)
-        );
-    }
-
-    public static List<Link> getLinks(Status status, int cycle) {
+    public static List<Link> getLinks(Status status) {
         final String query = String.format(
                 "select *, p.price as product_price from link " +
                 "inner join customer_plan as cp on cp.id = customer_plan_id " +
                 "inner join product as p on p.id = product_id " +
                 "where status = '%s'" +
-                "  and cycle <> %d " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
                 "limit %d ",
-                status.name(), cycle, Config.DB_FETCH_LIMIT);
+                status.name(), Config.DB_FETCH_LIMIT);
 
         return findAll(query);
     }
 
-    public static List<Link> getFailedLinks(Status status, int cycle, int retryLimit) {
+    public static List<Link> getFailedLinks(Status status, int retryLimit) {
         final String query = String.format(
                 "select *, p.price as product_price from link " +
                 "inner join customer_plan as cp on cp.id = customer_plan_id " +
                 "inner join product as p on p.id = product_id " +
                 "where status = '%s'" +
-                "  and cycle <> %d " +
-                "  and retry <  %d " +
+                "  and retry < %d " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
                 "limit %d ",
-                status.name(), cycle, retryLimit, Config.DB_FETCH_LIMIT);
+                status.name(), retryLimit, Config.DB_FETCH_LIMIT);
 
         return findAll(query);
     }
 
-    public static List<Link> findActiveSellerPriceList(ProductPriceInfo ppi) {
+    public static List<Link> findActiveSellerPriceList(Long productId) {
         final String query = String.format(
                 "select *, p.price as product_price from link " +
                 "inner join product as p on p.id = product_id " +
                 "where product_id = %d " +
                 "  and status in (%s) " +
                 "order by price",
-                ppi.getProductId(), Status.getJoinedPositives());
+                productId, Status.getJoinedPositives());
 
         return findAll(query);
-    }
-
-    public static boolean setSiteAndWebsiteClassName(Long linkId, Long siteId, String websiteClassName) {
-        return DBUtils.executeQuery(
-            String.format(
-                "update link " +
-                "set site_id = %d, website_class_name = '%s', last_update = now() " +
-                "where link_id = %d ",
-                siteId, websiteClassName, linkId),
-
-            String.format("Failed to set site_id and website_class_name. Link Id: %d, Site Id: %d, Class Name: %s", linkId, siteId, websiteClassName)
-        );
     }
 
     /**
@@ -116,10 +82,12 @@ public class Links {
                 String.format(
                     "update link " +
                     "set name = '%s', sku = '%s', brand = '%s', seller = '%s', shipment = '%s', price = %f, " +
-                        "status = '%s', previous_status = '%s', last_check = now() " +
+                        "status = '%s', previous_status = '%s', site_id = %d, website_class_name = '%s', last_update = now() " +
                     "where link_id = %d ",
                     link.getName(), link.getSku(), link.getBrand(), link.getSeller(), link.getShipment(),
-                        link.getPrice(), link.getStatus().name(), link.getPreviousStatus().name(), link.getId()),
+                        link.getPrice(), link.getStatus().name(), link.getPreviousStatus().name(),
+                        link.getSiteId(), link.getWebsiteClassName(),
+                        link.getId()),
 
                 String.format("Failed to make a link available. Link Id: %d", link.getId())
             );
@@ -185,25 +153,18 @@ public class Links {
 
                 String.format(
                     "update link " +
-                    "set status = '%s', previous_status = '%s', http_status = %d " +
+                    "set status = '%s', previous_status = '%s', http_status = %d, last_update = now() " +
                     "where link_id = %d ",
                     change.getNewStatus().name(), change.getLink().getStatus().name(), change.getLink().getHttpStatus(), change.getLink().getId())
             }, String.format("Failed to change status. Link Id: %d, Old Status: %s, New Status: %s", change.getLink().getId(), change.getLink().getStatus(), change.getNewStatus())
 
         );
 
-        if (result
-        && Status.AVAILABLE.equals(change.getLink().getStatus())
-        && ! Status.AVAILABLE.equals(change.getNewStatus())
-        && ! change.getNewStatus().isNeutral()) {
-            RedisClient.addProductPriceInfo(new ProductPriceInfo(change.getLink().getProductId(), change.getLink().getProductPrice()));
-        }
-
         return result;
     }
 
     public static boolean changePrice(Connection con, PriceChange change) {
-        boolean result = DBUtils.executeBatchQueries(
+        return DBUtils.executeBatchQueries(
             con,
             new String[] {
                 String.format(
@@ -221,12 +182,6 @@ public class Links {
             }, String.format("Failed to change price. Link Id: %d, Price: %f", change.getLinkId(), change.getNewPrice())
 
         );
-
-        if (result && ! change.isLinkOnly()) {
-            RedisClient.addProductPriceInfo(new ProductPriceInfo(change.getProductId(), change.getNewPrice()));
-        }
-
-        return result;
     }
 
     private static List<Link> findAll(String query) {
@@ -243,9 +198,7 @@ public class Links {
             model.setSeller(rs.getString("seller"));
             model.setShipment(rs.getString("shipment"));
             model.setPrice(rs.getBigDecimal("price"));
-            model.setLastCheck(rs.getDate("last_check"));
             model.setLastUpdate(rs.getDate("last_update"));
-            model.setCycle(rs.getInt("cycle"));
             model.setStatus(Status.valueOf(rs.getString("status")));
             model.setRetry(rs.getInt("retry"));
             model.setWebsiteClassName(rs.getString("website_class_name"));

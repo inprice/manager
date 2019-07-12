@@ -3,10 +3,12 @@ package io.inprice.scrapper.manager.helpers;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.concurrent.TimeoutException;
 
 public class RabbitMQ {
@@ -53,6 +55,16 @@ public class RabbitMQ {
 		}
 
 		return channel;
+	}
+
+	public static boolean publish(String queue, Serializable message) {
+		try {
+			channel.basicPublish(Config.RABBITMQ_LINK_EXCHANGE, queue, null, Converter.fromObject(message));
+			return true;
+		} catch (IOException e) {
+			log.error("Failed to send a message to queue", e);
+			return false;
+		}
 	}
 
 	public static void closeChannel() {

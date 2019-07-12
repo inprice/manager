@@ -42,8 +42,8 @@ IMPROPER
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
-OUT_OF_STOCK
-    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.OUT_OF_STOCK)
+NOT_AVAILABLE
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.NOT_AVAILABLE)
     - AVAILABLE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan ya da satışı durdurulmuş linkler bu duruma getirilir.
     - Parametrik bir gün sayısı kadar kontrol edilir.
     - Stok miktarı ya da erişilebilirlik durumu değişmezse bu durumda kalır,

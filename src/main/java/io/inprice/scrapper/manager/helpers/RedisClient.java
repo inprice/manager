@@ -9,7 +9,7 @@ import org.redisson.config.Config;
 public class RedisClient {
 
 	private static final RedissonClient client;
-	private static final RSet<ProductPriceInfo> productPriceInfoSet;
+	private static final RSet<ProductPriceInfo> priceChangingSet;
 
 	static {
 		Config config = new Config();
@@ -20,22 +20,22 @@ public class RedisClient {
 
 		client = Redisson.create(config);
 
-		productPriceInfoSet = client.getSet("PRODUCT-PRICE-INFO");
+		priceChangingSet = client.getSet("PRICE-CHANGING");
 	}
 
-	public static void addProductPriceInfo(ProductPriceInfo ppi) {
-		productPriceInfoSet.add(ppi);
+	public static void addPriceChanging(ProductPriceInfo ppi) {
+		priceChangingSet.add(ppi);
 	}
 
-	public static ProductPriceInfo pollProductPriceInfo() {
-		if (! productPriceInfoSet.isEmpty())
-			return productPriceInfoSet.removeRandom();
+	public static ProductPriceInfo pollPriceChanging() {
+		if (! priceChangingSet.isEmpty())
+			return priceChangingSet.removeRandom();
 		else
 			return null;
 	}
 
-	public static boolean isProductPriceInfoSetEmpty() {
-		return productPriceInfoSet.isEmpty();
+	public static boolean isPriceChangingSetEmpty() {
+		return priceChangingSet.isEmpty();
 	}
 
 	public static void shutdown() {

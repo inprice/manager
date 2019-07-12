@@ -24,7 +24,7 @@ public class Config {
 	public static final String CRONTAB_FOR_NEW_LINKS;
 	public static final String CRONTAB_FOR_RENEWED_LINKS;
 	public static final String CRONTAB_FOR_AVAILABLE_LINKS;
-	public static final String CRONTAB_FOR_OUT_OF_STOCK_LINKS;
+	public static final String CRONTAB_FOR_NOT_AVAILABLE_LINKS;
 	public static final String CRONTAB_FOR_SOCKET_ERRORS;
 	public static final String CRONTAB_FOR_NETWORK_ERRORS;
 	public static final String CRONTAB_FOR_RESUMED_LINKS;
@@ -77,15 +77,15 @@ public class Config {
 
 		//minutely
 		CRONTAB_FOR_NEW_LINKS = getOrDefault("CRONTAB_FOR_NEW_LINKS", "0 */3 * * * ?");
-		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "0 */5 * * * ?");
 		CRONTAB_FOR_RESUMED_LINKS = getOrDefault("CRONTAB_FOR_RESUMED_LINKS", "0 */13 * * * ?");
 		CRONTAB_FOR_SOCKET_ERRORS = getOrDefault("CRONTAB_FOR_SOCKET_ERRORS", "0 */17 * * * ?");
+		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "0 0 */1 * * ?");
 
 		//hourly
-		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "0 0 */1 * * ?");
+		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "0 30 * * * ?");
 		CRONTAB_FOR_NETWORK_ERRORS = getOrDefault("CRONTAB_FOR_NETWORK_ERRORS", "0 0 */3 * * ?");
 		CRONTAB_FOR_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_AVAILABLE_LINKS", "0 0 */6 * * ?");
-		CRONTAB_FOR_OUT_OF_STOCK_LINKS = getOrDefault("CRONTAB_FOR_OUT_OF_STOCK_LINKS", "0 0 */7 * * ?");
+		CRONTAB_FOR_NOT_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_NOT_AVAILABLE_LINKS", "0 0 */7 * * ?");
 
 		TPOOLS_MASTER_CAPACITY = getOrDefault("TPOOLS_MASTER_CAPACITY", 2);
 

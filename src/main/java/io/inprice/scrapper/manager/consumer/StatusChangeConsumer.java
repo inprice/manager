@@ -4,11 +4,14 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import io.inprice.scrapper.common.info.ProductPriceInfo;
+import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.logging.Logger;
+import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.Links;
 
@@ -29,8 +32,12 @@ public class StatusChangeConsumer {
 						StatusChange change = Converter.toObject(body);
 						if (change != null) {
 							boolean isOK = Links.changeStatus(null, change);
-							if (! isOK) {
-								log.error("DB problem while changing LinkStatus!");
+							if (isOK) {
+								if (Status.AVAILABLE.equals(change.getLink().getPreviousStatus())) {
+									RedisClient.addPriceChanging(new ProductPriceInfo(change.getLink().getProductId(), change.getLink().getProductPrice()));
+								}
+							} else {
+								log.error("DB problem while changing Link status!");
 							}
 						} else {
 							log.error("Status change object is null!");

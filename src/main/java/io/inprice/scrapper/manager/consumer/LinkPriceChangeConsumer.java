@@ -4,11 +4,13 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import io.inprice.scrapper.common.info.ProductPriceInfo;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.PriceChange;
 import io.inprice.scrapper.common.logging.Logger;
+import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.Links;
 
@@ -29,7 +31,9 @@ public class LinkPriceChangeConsumer {
 						PriceChange change = Converter.toObject(body);
 						if (change != null) {
 							boolean isOK = Links.changePrice(null, change);
-							if (! isOK) {
+							if (isOK) {
+								RedisClient.addPriceChanging(new ProductPriceInfo(change.getProductId(), change.getNewPrice()));
+							} else {
 								log.error("DB problem while changing Price!");
 							}
 						} else {

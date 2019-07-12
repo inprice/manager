@@ -1,4 +1,4 @@
-package io.inprice.scrapper.manager.scheduled.publishers;
+package io.inprice.scrapper.manager.scheduled.publisher;
 
 import io.inprice.scrapper.common.meta.Status;
 
