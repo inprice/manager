@@ -1,13 +1,9 @@
 package io.inprice.scrapper.manager.scheduled;
 
 import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.common.meta.Status;
-import io.inprice.scrapper.manager.config.Config;
-import io.inprice.scrapper.manager.scheduled.publisher.CommonLinkPublisher;
-import io.inprice.scrapper.manager.scheduled.publisher.FailedLinksPublisher;
-import io.inprice.scrapper.manager.scheduled.publisher.NewLinksPublisher;
-import io.inprice.scrapper.manager.scheduled.publisher.ResumedLinksPublisher;
-import io.inprice.scrapper.manager.scheduled.updater.PriceUpdater;
+import io.inprice.scrapper.manager.scheduled.publisher.NETWORK_ERROR_Publisher;
+import io.inprice.scrapper.manager.scheduled.publisher.NEW_Publisher;
+import io.inprice.scrapper.manager.scheduled.publisher.RENEWED_Publisher;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.impl.StdSchedulerFactory;
@@ -25,53 +21,16 @@ public class TaskManager {
 
             log.info("TaskManager is up.");
 
-            loadTask(new ResumedLinksPublisher());
-            loadTask(new PriceUpdater(Config.CRONTAB_FOR_PRODUCT_PRICE_UPDATE));
+//            loadTask(new PriceUpdater(Config.CRONTAB_FOR_PRODUCT_PRICE_UPDATE));
 
-            loadTask(
-                new NewLinksPublisher(
-                    Status.NEW,
-                    Config.CRONTAB_FOR_NEW_LINKS
-                )
-            );
-            loadTask(
-                new NewLinksPublisher(
-                    Status.RENEWED,
-                    Config.CRONTAB_FOR_RENEWED_LINKS
-                )
-            );
+            loadTask(new NEW_Publisher());
+//            loadTask(new RENEWED_Publisher());
+//            loadTask(new RESUMED_Publisher()); ???
+//            loadTask(new AVAILABLE_Publisher()); ???
+            loadTask(new NETWORK_ERROR_Publisher());
+//            loadTask(new SOCKET_ERROR_Publisher());
 
-            loadTask(
-                new CommonLinkPublisher(
-                    Status.AVAILABLE,
-                    Config.CRONTAB_FOR_AVAILABLE_LINKS,
-                    Config.RABBITMQ_AVAILABLE_LINKS_QUEUE
-                )
-            );
-
-            loadTask(
-                new FailedLinksPublisher(
-                    Status.NETWORK_ERROR,
-                    Config.CRONTAB_FOR_NETWORK_ERRORS,
-                    Config.RETRY_LIMIT_FOR_FAILED_LINKS_G1
-                )
-            );
-
-            loadTask(
-                new FailedLinksPublisher(
-                    Status.SOCKET_ERROR,
-                    Config.CRONTAB_FOR_SOCKET_ERRORS,
-                    Config.RETRY_LIMIT_FOR_FAILED_LINKS_G2
-                )
-            );
-
-            loadTask(
-                new FailedLinksPublisher(
-                    Status.NOT_AVAILABLE,
-                    Config.CRONTAB_FOR_NOT_AVAILABLE_LINKS,
-                    Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3
-                )
-            );
+//            loadTask(new NOT_AVAILABLE_Publisher()); ???
 
         } catch (SchedulerException e) {
             log.error("Error in starting TaskManager up", e);

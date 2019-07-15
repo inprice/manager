@@ -23,7 +23,7 @@ public class ThreadPools {
 
 		PRICE_CHANGE_POOL = Executors.newFixedThreadPool(1);
 		STATUS_CHANGE_POOL = Executors.newFixedThreadPool(1);
-		AVAILABLE_LINKS_POOL = Executors.newFixedThreadPool(2);
+		AVAILABLE_LINKS_POOL = Executors.newFixedThreadPool(1);
 	}
 
 }

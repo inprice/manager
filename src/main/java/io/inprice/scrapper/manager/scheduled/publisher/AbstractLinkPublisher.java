@@ -23,59 +23,75 @@ public abstract class AbstractLinkPublisher implements Task {
     private final String crontab;
     private final String queueName;
 
+    private final boolean increaseRetry;
+
     AbstractLinkPublisher(Status status, String crontab, String queueName) {
+        this(status, crontab, queueName, false);
+    }
+
+    AbstractLinkPublisher(Status status, String crontab, String queueName, boolean increaseRetry) {
         this.status = status;
         this.crontab = crontab;
         this.queueName = queueName;
+        this.increaseRetry = increaseRetry;
     }
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
-        synchronized (log) {
-            if (Global.isTaskRunning(status.name())) {
-                log.warn("%s Links Handler is already triggered and hasn't finished yet!", status);
-                return;
-            }
+        if (Global.isTaskRunning(status.name())) {
+            log.warn("%s Links Handler is already triggered and hasn't finished yet!", status);
+            return;
         }
-
         Global.setTaskRunningStatus(status.name(), true);
-        int counter = 0;
 
-        log.info("Link handler for %s status is starting...", status);
+        try {
+            List<Link> links = getLinks();
+            if (links.size() > 0) {
+                //chop list into DB_FETCH_LIMIT and handle them smaller blocks
+                if (links.size() > Config.DB_FETCH_LIMIT) {
+                    int start = 0;
+                    int stop = Config.DB_FETCH_LIMIT;
 
-        List<Link> links = getLinks();
-        if (links.size() == 0) {
-            log.info("There is no suitable link in %s status.", status);
-        } else {
-
-            counter += links.size();
-
-            while (Global.isApplicationRunning && links.size() > 0) {
-                log.info("%d of %s links are being handled...", links.size(), status);
-
-                handleLinks(links);
-
-                if (links.size() == Config.DB_FETCH_LIMIT) {
-                    try {
-                        Thread.sleep(Config.WAITING_TIME_FOR_GETTING_LINKS_FROM_DB);
-                    } catch (InterruptedException e) {
-                        //
+                    while (start < links.size()) {
+                        //TODO: this operation may be executed in an executor pool!!!
+                        List<Link> sublist = links.subList(start, stop);
+                        handleLinks(sublist);
+                        setLastCheckTime(links);
+                        try {
+                            Thread.sleep(Config.WAITING_TIME_FOR_GETTING_LINKS_FROM_DB);
+                        } catch (InterruptedException e) {
+                            //
+                        }
+                        start = stop;
+                        stop += Config.DB_FETCH_LIMIT;
                     }
-                }
 
-                if (Global.isApplicationRunning) links = getLinks();
-                counter += links.size();
+                } else {
+                    handleLinks(links);
+                    setLastCheckTime(links);
+                }
+                log.info("%d of %s link completed.", links.size(), status.name());
             }
+        } catch (Exception e) {
+            log.error("Failed to completed job!", e);
         }
-        log.info("Link Handler for %s status is completed. Total link count: %d", status, counter);
 
         Global.setTaskRunningStatus(status.name(), false);
     }
 
     void handleLinks(List<Link> linkList) {
-        for (Link link: linkList) {
+        for (Link link : linkList) {
             RabbitMQ.publish(queueName, link);
         }
+    }
+
+    private void setLastCheckTime(List<Link> linkList) {
+        StringBuilder sb = new StringBuilder();
+        for (Link link : linkList) {
+            if (sb.length() > 0) sb.append(",");
+            sb.append(link.getId());
+        }
+        Links.setLastCheckTime(sb.toString(), this.increaseRetry);
     }
 
     List<Link> getLinks() {

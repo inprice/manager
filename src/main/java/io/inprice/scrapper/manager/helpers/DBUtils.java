@@ -20,7 +20,7 @@ public class DBUtils {
     static{
         HikariConfig hConf = new HikariConfig();
 
-        hConf.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s", Config.DB_HOST, Config.DB_PORT, Config.DB_DATABASE));
+        hConf.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s?characterEncoding=utf8", Config.DB_HOST, Config.DB_PORT, Config.DB_DATABASE));
         hConf.setUsername(Config.DB_USERNAME);
         hConf.setPassword(Config.DB_PASSWORD);
         hConf.addDataSourceProperty("cachePrepStmts", "true");

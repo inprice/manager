@@ -11,20 +11,23 @@ import io.inprice.scrapper.manager.helpers.SiteFinder;
 import java.util.List;
 
 /**
- * Finds links in NEW and RENEWED status and sends them to collect data in Worker project
+ * Finds and handles NEW (and also RENEWED through inheritance) links
  *
  * @author mdpinar
  */
-public class NewLinksPublisher extends AbstractLinkPublisher {
+public class NEW_Publisher extends AbstractLinkPublisher {
 
-    public NewLinksPublisher(Status status, String crontab) {
-        super(status, crontab, Config.RABBITMQ_NEW_LINKS_QUEUE);
+    public NEW_Publisher() {
+        super(Status.NEW, Config.CRONTAB_FOR_NEW_LINKS, Config.RABBITMQ_NEW_LINKS_QUEUE);
+    }
+
+    public NEW_Publisher(Status status, String crontab, String queueName) {
+        super(status, crontab, queueName);
     }
 
     @Override
     void handleLinks(List<Link> linkList) {
         for (Link link: linkList) {
-
             Status problem = null;
 
             if (SiteFinder.isValidURL(link.getUrl())) {
@@ -43,7 +46,7 @@ public class NewLinksPublisher extends AbstractLinkPublisher {
                 RabbitMQ.publish(Config.RABBITMQ_NEW_LINKS_QUEUE, link); //the consumer class is in Worker, NewLinksConsumer
             } else {
                 StatusChange change = new StatusChange(link, problem);
-                RabbitMQ.publish(Config.RABBITMQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
+                RabbitMQ.publish(Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
             }
         }
     }

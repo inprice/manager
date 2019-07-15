@@ -7,12 +7,12 @@ import io.inprice.scrapper.manager.repository.Links;
 
 import java.util.List;
 
-public class FailedLinksPublisher extends AbstractLinkPublisher {
+class FailedLinksPublisher extends AbstractLinkPublisher {
 
     private int retryLimit;
 
-    public FailedLinksPublisher(Status status, String cron, int retryLimit) {
-        super(status, cron, Config.RABBITMQ_FAILED_LINKS_QUEUE);
+    FailedLinksPublisher(Status status, String cron, int retryLimit) {
+        super(status, cron, Config.RABBITMQ_FAILED_LINKS_QUEUE, true);
         this.retryLimit = retryLimit;
     }
 

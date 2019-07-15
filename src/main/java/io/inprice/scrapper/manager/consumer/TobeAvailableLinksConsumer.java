@@ -19,16 +19,16 @@ import java.io.IOException;
 /**
  * Consumer for links to be available
  */
-public class AvailableLinksConsumer {
+public class TobeAvailableLinksConsumer {
 
-	private static final Logger log = new Logger(AvailableLinksConsumer.class);
+	private static final Logger log = new Logger(TobeAvailableLinksConsumer.class);
 
 	public static void start() {
-		log.info("From [NEW, RENEWED] to AVAILABLE links consumer is up and running.");
+		log.info("To be AVAILABLE links consumer is up and running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override
-			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, final byte[] body) {
+			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
 				try {
 					ThreadPools.AVAILABLE_LINKS_POOL.submit(() -> {
 						Link link = Converter.toObject(body);
@@ -50,7 +50,7 @@ public class AvailableLinksConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_AVAILABLE_LINKS_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_TOBE_AVAILABLE_LINKS_QUEUE, true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue for getting links to make available.", e);
 		}

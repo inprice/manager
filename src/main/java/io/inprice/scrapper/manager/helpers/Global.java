@@ -1,15 +1,14 @@
 package io.inprice.scrapper.manager.helpers;
 
 import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Global {
 
     public static volatile boolean isApplicationRunning;
+    private static volatile Map<String, Boolean> runningTasksMap = new ConcurrentHashMap<>();
 
-    private static volatile Map<String, Boolean> runningTasksMap = new HashMap<>();
-
-    public static void setTaskRunningStatus(String taskName, Boolean status) {
+    public static void setTaskRunningStatus(String taskName, boolean status) {
         runningTasksMap.put(taskName, status);
     }
 
