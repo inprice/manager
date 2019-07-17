@@ -3,7 +3,7 @@ package io.inprice.scrapper.manager;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
-import io.inprice.scrapper.manager.consumer.LinkPriceChangeConsumer;
+import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.helpers.*;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
@@ -28,9 +28,9 @@ public class Application {
 			TaskManager.start();
 			TobeAvailableLinksConsumer.start();
 			StatusChangeConsumer.start();
-			LinkPriceChangeConsumer.start();
+			PriceChangeConsumer.start();
 
-		}, "publisher-manager").start();
+		}, "app").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			Global.isApplicationRunning = false;

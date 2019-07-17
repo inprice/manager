@@ -1,6 +1,5 @@
 package io.inprice.scrapper.manager.helpers;
 
-import io.inprice.scrapper.common.info.ProductPriceInfo;
 import org.redisson.Redisson;
 import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
@@ -9,7 +8,7 @@ import org.redisson.config.Config;
 public class RedisClient {
 
 	private static final RedissonClient client;
-	private static final RSet<ProductPriceInfo> priceChangingSet;
+	private static final RSet<Long> priceChangingProductsIdSet;
 
 	static {
 		Config config = new Config();
@@ -20,22 +19,22 @@ public class RedisClient {
 
 		client = Redisson.create(config);
 
-		priceChangingSet = client.getSet("PRICE-CHANGING");
+		priceChangingProductsIdSet = client.getSet("PRICE-CHANGING_PRODUCTS-ID");
 	}
 
-	public static void addPriceChanging(ProductPriceInfo ppi) {
-		priceChangingSet.add(ppi);
+	public static void addPriceChanging(Long id) {
+		priceChangingProductsIdSet.add(id);
 	}
 
-	public static ProductPriceInfo pollPriceChanging() {
-		if (! priceChangingSet.isEmpty())
-			return priceChangingSet.removeRandom();
+	public static Long pollPriceChanging() {
+		if (! priceChangingProductsIdSet.isEmpty())
+			return priceChangingProductsIdSet.removeRandom();
 		else
 			return null;
 	}
 
 	public static boolean isPriceChangingSetEmpty() {
-		return priceChangingSet.isEmpty();
+		return priceChangingProductsIdSet.isEmpty();
 	}
 
 	public static void shutdown() {

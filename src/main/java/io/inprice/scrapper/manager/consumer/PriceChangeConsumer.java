@@ -5,7 +5,6 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.common.info.ProductPriceInfo;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.PriceChange;
@@ -16,12 +15,12 @@ import io.inprice.scrapper.manager.repository.Links;
 
 import java.io.IOException;
 
-public class LinkPriceChangeConsumer {
+public class PriceChangeConsumer {
 
-	private static final Logger log = new Logger(LinkPriceChangeConsumer.class);
+	private static final Logger log = new Logger(PriceChangeConsumer.class);
 
 	public static void start() {
-		log.info("Link price change consumer is up and running.");
+		log.info("Price change consumer is up and running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override
@@ -32,12 +31,12 @@ public class LinkPriceChangeConsumer {
 						if (change != null) {
 							boolean isOK = Links.changePrice(change);
 							if (isOK) {
-								RedisClient.addPriceChanging(new ProductPriceInfo(change.getProductId(), change.getNewPrice()));
+								RedisClient.addPriceChanging(change.getProductId());
 							} else {
 								log.error("DB problem while changing Price!");
 							}
 						} else {
-							log.error("PriceChange is null!");
+							log.error("PriceChange object is null!");
 						}
 					});
 				} catch (Exception e) {

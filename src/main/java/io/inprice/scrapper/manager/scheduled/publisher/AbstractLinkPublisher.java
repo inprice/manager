@@ -13,7 +13,11 @@ import org.quartz.*;
 import java.util.List;
 
 /**
- * NEW LINKS, ACTIVE LINKS and the links which have SOCKET_ERROR are handled by this publisher
+ * This is a class containing common functions used by all the publishers.
+ * Since quartz needs to create publisher classes through their default (without args) constructors,
+ * in each publisher, please add a default constructor referencing this class's constructors.
+ *
+ * @author mdpinar
  */
 public abstract class AbstractLinkPublisher implements Task {
 
@@ -42,41 +46,41 @@ public abstract class AbstractLinkPublisher implements Task {
             log.warn("%s Links Handler is already triggered and hasn't finished yet!", status);
             return;
         }
-        Global.setTaskRunningStatus(status.name(), true);
 
         try {
+            Global.setTaskRunningStatus(status.name(), true);
+
+            int counter = 0;
             List<Link> links = getLinks();
-            if (links.size() > 0) {
-                //chop list into DB_FETCH_LIMIT and handle them smaller blocks
-                if (links.size() > Config.DB_FETCH_LIMIT) {
-                    int start = 0;
-                    int stop = Config.DB_FETCH_LIMIT;
 
-                    while (start < links.size()) {
-                        //TODO: this operation may be executed in an executor pool!!!
-                        List<Link> sublist = links.subList(start, stop);
-                        handleLinks(sublist);
-                        setLastCheckTime(links);
-                        try {
-                            Thread.sleep(Config.WAITING_TIME_FOR_GETTING_LINKS_FROM_DB);
-                        } catch (InterruptedException e) {
-                            //
-                        }
-                        start = stop;
-                        stop += Config.DB_FETCH_LIMIT;
+            while (links.size() > 0) {
+                counter += links.size();
+
+                handleLinks(links);
+                setLastCheckTime(links);
+
+                if (links.size() >= Config.DB_FETCH_LIMIT) {
+                    try {
+                        Thread.sleep(Config.WAITING_TIME_FOR_GETTING_LINKS_FROM_DB);
+                    } catch (InterruptedException ignored) {
                     }
-
+                    links = getLinks();
                 } else {
-                    handleLinks(links);
-                    setLastCheckTime(links);
+                    links.clear();
                 }
-                log.info("%d of %s link completed.", links.size(), status.name());
             }
+
+            if (counter > 0)
+                log.info("Task is completed. Status: %s, Number: %d", status.name(), counter);
+            else
+                log.info("No links in %s status found.", status.name());
+
         } catch (Exception e) {
-            log.error("Failed to completed job!", e);
+            log.error("Failed to completed task!", e);
+        } finally {
+            Global.setTaskRunningStatus(status.name(), false);
         }
 
-        Global.setTaskRunningStatus(status.name(), false);
     }
 
     void handleLinks(List<Link> linkList) {

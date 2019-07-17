@@ -28,7 +28,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
     @Override
     void handleLinks(List<Link> linkList) {
         for (Link link: linkList) {
-            Status problem = null;
+            Status oldStatus = link.getStatus();
 
             if (SiteFinder.isValidURL(link.getUrl())) {
                 Site site = SiteFinder.findSiteByUrl(link.getUrl());
@@ -36,16 +36,16 @@ public class NEW_Publisher extends AbstractLinkPublisher {
                     link.setSiteId(site.getId());
                     link.setWebsiteClassName(site.getClassName());
                 } else {
-                    problem = Status.BE_IMPLEMENTED;
+                    link.setStatus(Status.BE_IMPLEMENTED);
                 }
             } else {
-                problem = Status.IMPROPER;
+                link.setStatus(Status.IMPROPER);
             }
 
-            if (problem == null) {
+            if (link.getStatus().equals(oldStatus)) {
                 RabbitMQ.publish(Config.RABBITMQ_NEW_LINKS_QUEUE, link); //the consumer class is in Worker, NewLinksConsumer
             } else {
-                StatusChange change = new StatusChange(link, problem);
+                StatusChange change = new StatusChange(link, oldStatus);
                 RabbitMQ.publish(Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
             }
         }

@@ -6,6 +6,7 @@ import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkSpec;
+import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 
 import java.math.BigDecimal;
@@ -27,8 +28,9 @@ public class Links {
                 "where status = '%s' " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
-                "  and last_check < now() - interval 30 minute", //last check time must be older than 30 minutes
-                status.name());
+                "  and last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "limit %d",
+                status.name(), Config.DB_FETCH_LIMIT);
 
         return findAll(query);
     }
@@ -42,8 +44,9 @@ public class Links {
                 "  and link.retry < %d " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
-                "  and last_check < now() - interval 30 minute", //last check time must be older than 30 minutes
-                status.name(), retryLimit);
+                "  and last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "limit %d",
+                status.name(), retryLimit, Config.DB_FETCH_LIMIT);
 
         return findAll(query);
     }
@@ -169,6 +172,8 @@ public class Links {
             final String oldStatusName = change.getOldStatus().name();
             final String newStatusName = change.getLink().getStatus().name();
 
+            if (change.getLink().getHttpStatus() == null) change.getLink().setHttpStatus(0);
+
             final String q1 =
                 "update link " +
                 "set status=?, previous_status=?, http_status=?, last_update=now() " +
@@ -185,9 +190,6 @@ public class Links {
                 pst.setString(++i, newStatusName);
 
                 result = (pst.executeUpdate() > 0);
-            } catch (Exception e) {
-                log.error(String.format("Failed to change status at step 1. Link Id: %d, Old Status: %s, New Status: %s",
-                        change.getLink().getId(), oldStatusName, newStatusName), e);
             }
 
             if (result) {

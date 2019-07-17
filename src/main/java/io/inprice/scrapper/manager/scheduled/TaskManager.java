@@ -4,6 +4,7 @@ import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.scheduled.publisher.NETWORK_ERROR_Publisher;
 import io.inprice.scrapper.manager.scheduled.publisher.NEW_Publisher;
 import io.inprice.scrapper.manager.scheduled.publisher.RENEWED_Publisher;
+import io.inprice.scrapper.manager.scheduled.updater.PriceUpdater;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.impl.StdSchedulerFactory;
@@ -21,15 +22,14 @@ public class TaskManager {
 
             log.info("TaskManager is up.");
 
-//            loadTask(new PriceUpdater(Config.CRONTAB_FOR_PRODUCT_PRICE_UPDATE));
+            loadTask(new PriceUpdater());
 
-            loadTask(new NEW_Publisher());
+//            loadTask(new NEW_Publisher());
 //            loadTask(new RENEWED_Publisher());
 //            loadTask(new RESUMED_Publisher()); ???
 //            loadTask(new AVAILABLE_Publisher()); ???
-            loadTask(new NETWORK_ERROR_Publisher());
+//            loadTask(new NETWORK_ERROR_Publisher());
 //            loadTask(new SOCKET_ERROR_Publisher());
-
 //            loadTask(new NOT_AVAILABLE_Publisher()); ???
 
         } catch (SchedulerException e) {
