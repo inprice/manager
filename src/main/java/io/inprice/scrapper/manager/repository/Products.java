@@ -38,7 +38,7 @@ public class Products {
     public static List<ProductLinks> getProductLinks(Long productId) {
         return DBUtils.findMultiple(
             String.format(
-                "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, s.name as site_name " +
+                "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, s.domain as site_name " +
                 "from product as p " +
                 "inner join link as l on l.product_id = p.id " +
                 "inner join site as s on s.id = l.site_id " +

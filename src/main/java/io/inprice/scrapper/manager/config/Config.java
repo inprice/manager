@@ -20,10 +20,12 @@ public class Config {
 
 	public static final String RABBITMQ_STATUS_CHANGE_QUEUE;
 	public static final String RABBITMQ_PRICE_CHANGE_QUEUE;
+	public static final String RABBITMQ_DELETED_LINKS_QUEUE;
 
 	// Crontabs
 	public static final String CRONTAB_FOR_NEW_LINKS;
 	public static final String CRONTAB_FOR_RENEWED_LINKS;
+	public static final String CRONTAB_FOR_IMPLEMENTED_LINKS;
 	public static final String CRONTAB_FOR_AVAILABLE_LINKS;
 	public static final String CRONTAB_FOR_NOT_AVAILABLE_LINKS;
 	public static final String CRONTAB_FOR_SOCKET_ERRORS;
@@ -76,24 +78,27 @@ public class Config {
 		//different
 		RABBITMQ_STATUS_CHANGE_QUEUE = getOrDefault("RABBITMQ_STATUS_CHANGE_QUEUE", "status.change");
 		RABBITMQ_PRICE_CHANGE_QUEUE = getOrDefault("RABBITMQ_PRICE_CHANGE_QUEUE", "price.change");
+		RABBITMQ_DELETED_LINKS_QUEUE = getOrDefault("RABBITMQ_DELETED_LINKS_QUEUE", "deleted.links");
 
 		//minutely
-		CRONTAB_FOR_NEW_LINKS = getOrDefault("CRONTAB_FOR_NEW_LINKS", "*/35 * * * * ?");
+		CRONTAB_FOR_NEW_LINKS = getOrDefault("CRONTAB_FOR_NEW_LINKS", "*/5 * * * * ?");
 		CRONTAB_FOR_SOCKET_ERRORS = getOrDefault("CRONTAB_FOR_SOCKET_ERRORS", "*/5 * * * * ?");
 		CRONTAB_FOR_RESUMED_LINKS = getOrDefault("CRONTAB_FOR_RESUMED_LINKS", "0 */13 * * * ?");
-		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "*/7 * * * * ?");
+		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "*/8 * * * * ?");
+		CRONTAB_FOR_IMPLEMENTED_LINKS = getOrDefault("CRONTAB_FOR_IMPLEMENTED_LINKS", "*/5 * * * * ?");
 
 		//hourly
-		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "*/5 * * * * ?");
+		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "*/11 * * * * ?");
 		CRONTAB_FOR_NETWORK_ERRORS = getOrDefault("CRONTAB_FOR_NETWORK_ERRORS", "*/5 * * * * ?");
 		CRONTAB_FOR_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_AVAILABLE_LINKS", "*/5 * * * * ?");
-		CRONTAB_FOR_NOT_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_NOT_AVAILABLE_LINKS", "0 0 */8 * * ?");
+		CRONTAB_FOR_NOT_AVAILABLE_LINKS = getOrDefault("CRONTAB_FOR_NOT_AVAILABLE_LINKS", "*/11 * * * * ?");
 
 //		//minutely
 //		CRONTAB_FOR_NEW_LINKS = getOrDefault("CRONTAB_FOR_NEW_LINKS", "0 */3 * * * ?");
 //		CRONTAB_FOR_SOCKET_ERRORS = getOrDefault("CRONTAB_FOR_SOCKET_ERRORS", "0 */8 * * * ?");
 //		CRONTAB_FOR_RESUMED_LINKS = getOrDefault("CRONTAB_FOR_RESUMED_LINKS", "0 */13 * * * ?");
 //		CRONTAB_FOR_RENEWED_LINKS = getOrDefault("CRONTAB_FOR_RENEWED_LINKS", "0 */30 * * * ?");
+//		CRONTAB_FOR_IMPLEMENTED_LINKS = getOrDefault("CRONTAB_FOR_IMPLEMENTED_LINKS", "0 */30 * * * ?");
 //
 //		//hourly
 //		CRONTAB_FOR_PRODUCT_PRICE_UPDATE = getOrDefault("CRONTAB_FOR_PRODUCT_PRICE_UPDATE", "0 0 */1 * * ?");

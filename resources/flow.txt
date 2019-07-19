@@ -19,6 +19,14 @@ AVAILABLE
     - Akış
         manager to worker --> RABBITMQ_AVAILABLE_LINKS_QUEUE  :: worker verileri çekip işlesin diye,
 
+RENEWED
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.RENEWED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Tıpkı NEW linkler gibi değerlendirilmek üzere Worker tarafına gönderilir
+    - Kullanıcı ya da Admin linki bu duruma getirebilir
+    - Akış
+        manager to worker  --> RABBITMQ_NEW_LINKS_QUEUE     :: worker verileri çekip işlesin diye,
+
 BE_IMPLEMENTED
     - Kendi başına tetiklenmez
     - NEW statüsündeyken site bilgisi bulunamayan/eşleşmeyen linkler bu duruma geçirilirler.
@@ -26,6 +34,14 @@ BE_IMPLEMENTED
     - Link sitesinin implementasyonu yapıldıktan sonra manuel olarak NEW statusune geçirilir.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
+
+IMPLEMENTED
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.IMPLEMENTED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Tıpkı NEW linkler gibi değerlendirilmek üzere Worker tarafına gönderilir
+    - Henüz implemente edilmiş website lerin linkleri Admin tarafından bu duruma getirilir
+    - Akış
+        manager to worker  --> RABBITMQ_NEW_LINKS_QUEUE     :: worker verileri çekip işlesin diye,
 
 WONT_BE_IMPLEMENTED
     - Kendi başına tetiklenmez, bu duruma geçişe developer karar verir.
@@ -101,6 +117,8 @@ Notlar
         RABBITMQ_PRICE_CHANGE_QUEUE
        kullanılarak ilerlenir
 
+    3) Silinen linkler RABBITMQ_DELETED_LINKS_QUEUE kuyruğuna gönderilerek fiyatlama yapılması sağlanır
+
 
 ---------------------------------------------
 ProductPriceUpdater
@@ -132,6 +150,12 @@ RABBITMQ_PRICE_CHANGE_QUEUE
 ---------------------------------------------
 Publisher: Worker
 Consumer: Manager (LinkPriceChangeConsumer)
+
+---------------------------------------------
+RABBITMQ_DELETED_LINKS_QUEUE
+---------------------------------------------
+Publisher: Api
+Consumer: Manager (DeletedLinksConsumer)
 
 ---------------------------------------------
 RABBITMQ_FAILED_LINKS_QUEUE

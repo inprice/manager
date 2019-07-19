@@ -10,6 +10,7 @@ import io.inprice.scrapper.manager.scheduled.Task;
 import org.quartz.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public class PriceUpdater implements Task {
@@ -50,11 +51,11 @@ public class PriceUpdater implements Task {
 
                         BigDecimal total = BigDecimal.ZERO;
                         for (ProductLinks pl : prodLinks) {
-                            total.add(pl.getLinkPrice());
+                            total = total.add(pl.getLinkPrice());
                         }
 
                         if (total.compareTo(BigDecimal.ZERO) > 0) {
-                            avgPrice = total.divide(BigDecimal.valueOf(prodLinks.size()));
+                            avgPrice = total.divide(BigDecimal.valueOf(prodLinks.size()), 2, BigDecimal.ROUND_HALF_UP);
                         }
 
                         int position = 4;//average
@@ -62,6 +63,7 @@ public class PriceUpdater implements Task {
 
                         if (basePrice.compareTo(minPrice) < 0) {            //the lowest
                             position = 1;
+                            minSeller = "You";
                         } else if (basePrice.compareTo(minPrice) == 0) {    //lower
                             position = 2;
                         } else if (basePrice.compareTo(avgPrice) < 0) {     //between lower and average
@@ -72,6 +74,7 @@ public class PriceUpdater implements Task {
                             position = 6;
                         } else if (basePrice.compareTo(maxPrice) > 0) {     //the highest
                             position = 7;
+                            maxSeller = "You";
                         }
 
                         Products.updatePrice(productId, basePrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice);

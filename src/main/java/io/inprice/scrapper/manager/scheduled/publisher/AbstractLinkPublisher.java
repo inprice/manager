@@ -43,11 +43,12 @@ public abstract class AbstractLinkPublisher implements Task {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
         if (Global.isTaskRunning(status.name())) {
-            log.warn("%s Links Handler is already triggered and hasn't finished yet!", status);
+            log.warn("%s link handler is already triggered and hasn't finished yet!", status);
             return;
         }
 
         try {
+            long startTime = System.currentTimeMillis();
             Global.setTaskRunningStatus(status.name(), true);
 
             int counter = 0;
@@ -71,12 +72,12 @@ public abstract class AbstractLinkPublisher implements Task {
             }
 
             if (counter > 0)
-                log.info("Task is completed. Status: %s, Number: %d", status.name(), counter);
+                log.info("%s link(s) is handled successfully. Number: %d, Time: %d", status.name(), counter, (System.currentTimeMillis() - startTime));
             else
-                log.info("No links in %s status found.", status.name());
+                log.info("No link in %s status found.", status.name());
 
         } catch (Exception e) {
-            log.error("Failed to completed task!", e);
+            log.error("Failed to completed %s task!", e, status.name());
         } finally {
             Global.setTaskRunningStatus(status.name(), false);
         }

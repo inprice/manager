@@ -71,7 +71,7 @@ public class DBUtils {
         }
     }
 
-    public static void close(Connection con, Statement pst) {
+    private static void close(Connection con, Statement pst) {
         try {
             pst.close();
             con.close();
@@ -108,9 +108,6 @@ public class DBUtils {
     /**
      * For single executions with a continual transaction
      *
-     * @param query
-     * @param errorMessage
-     * @return
      */
     public static boolean executeQuery(Connection con, String query, String errorMessage) {
         if (con == null) {
@@ -129,9 +126,6 @@ public class DBUtils {
     /**
      * For single executions without any continual transaction
      *
-     * @param query
-     * @param errorMessage
-     * @return
      */
     public static boolean executeQuery(String query, String errorMessage) {
         try (Connection con = DBUtils.getConnection();
@@ -172,9 +166,6 @@ public class DBUtils {
     /**
      * For batch executions without any continual transaction
      *
-     * @param queries
-     * @param errorMessage
-     * @return
      */
     public static boolean executeBatchQueries(String[] queries, String errorMessage) {
         boolean result = false;

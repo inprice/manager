@@ -7,7 +7,6 @@ import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
@@ -32,9 +31,7 @@ public class StatusChangeConsumer {
 						if (change != null) {
 							boolean isOK = Links.changeStatus(change);
 							if (isOK) {
-								if (Status.AVAILABLE.equals(change.getLink().getPreviousStatus())) {
-									RedisClient.addPriceChanging(change.getLink().getProductId());
-								}
+								RedisClient.addPriceChanging(change.getLink().getProductId());
 							} else {
 								log.error("DB problem while changing Link status!");
 							}

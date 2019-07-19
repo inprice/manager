@@ -1,6 +1,6 @@
 package io.inprice.scrapper.manager.repository;
 
-import io.inprice.scrapper.common.info.PriceChange;
+import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
@@ -25,10 +25,10 @@ public class Links {
                 "select *, p.price as product_price from link " +
                 "inner join customer_plan as cp on cp.id = customer_plan_id " +
                 "inner join product as p on p.id = product_id " +
-                "where status = '%s' " +
+                "where link.status = '%s' " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
-                "  and last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "  and link.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
                 status.name(), Config.DB_FETCH_LIMIT);
 
@@ -40,25 +40,13 @@ public class Links {
                 "select *, p.price as product_price from link " +
                 "inner join customer_plan as cp on cp.id = customer_plan_id " +
                 "inner join product as p on p.id = product_id " +
-                "where status = '%s' " +
+                "where link.status = '%s' " +
                 "  and link.retry < %d " +
                 "  and cp.active = true " +
                 "  and cp.due_date >= now() " +
-                "  and last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "  and link.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
                 status.name(), retryLimit, Config.DB_FETCH_LIMIT);
-
-        return findAll(query);
-    }
-
-    public static List<Link> findActiveSellerPriceList(Long productId) {
-        final String query = String.format(
-                "select *, p.price as product_price from link " +
-                "inner join product as p on p.id = product_id " +
-                "where product_id = %d " +
-                "  and status in (%s) " +
-                "order by price",
-                productId, Status.getJoinedPositives());
 
         return findAll(query);
     }
@@ -215,7 +203,7 @@ public class Links {
         return result;
     }
 
-    public static boolean changePrice(PriceChange change) {
+    public static boolean changePrice(PriceUpdateInfo change) {
         boolean result = false;
 
         Connection con = null;

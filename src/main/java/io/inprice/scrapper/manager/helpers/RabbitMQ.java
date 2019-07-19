@@ -39,6 +39,7 @@ public class RabbitMQ {
 
 						channel.queueDeclare(Config.RABBITMQ_STATUS_CHANGE_QUEUE, true, false, false, null);
 						channel.queueDeclare(Config.RABBITMQ_PRICE_CHANGE_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.RABBITMQ_DELETED_LINKS_QUEUE, true, false, false, null);
 
 						channel.queueBind(Config.RABBITMQ_NEW_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_NEW_LINKS_QUEUE + ".#");
 						channel.queueBind(Config.RABBITMQ_FAILED_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_FAILED_LINKS_QUEUE + ".#");
@@ -47,6 +48,7 @@ public class RabbitMQ {
 
 						channel.queueBind(Config.RABBITMQ_STATUS_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE + ".#");
 						channel.queueBind(Config.RABBITMQ_PRICE_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_PRICE_CHANGE_QUEUE + ".#");
+						channel.queueBind(Config.RABBITMQ_DELETED_LINKS_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_DELETED_LINKS_QUEUE + ".#");
 					} catch (Exception e) {
 						log.error("Error in opening RabbitMQ channel", e);
 					}

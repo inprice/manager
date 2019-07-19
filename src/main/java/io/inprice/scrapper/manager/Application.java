@@ -1,14 +1,12 @@
 package io.inprice.scrapper.manager;
 
 import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.manager.config.Config;
-import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
+import io.inprice.scrapper.manager.consumer.DeletedLinksConsumer;
 import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
+import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
 import io.inprice.scrapper.manager.helpers.*;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Entry point of the application.
@@ -29,41 +27,31 @@ public class Application {
 			TobeAvailableLinksConsumer.start();
 			StatusChangeConsumer.start();
 			PriceChangeConsumer.start();
+			DeletedLinksConsumer.start();
 
-		}, "app").start();
+		}, "app-starter").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			log.info("APPLICATION IS TERMINATING...");
 			Global.isApplicationRunning = false;
 
+			log.info(" - TaskManager scheduler is shutting down...");
 			TaskManager.stop();
 
-			log.info("Redis connection is shutting down...");
+			log.info(" - Thread pools are shutting down...");
+			ThreadPools.shutdown();
+
+			log.info(" - Redis connection is closing...");
 			RedisClient.shutdown();
-			log.info("Redis is shutdown.");
 
-			log.info("RabbitMQ connection is closing...");
+			log.info(" - RabbitMQ connection is closing...");
 			RabbitMQ.closeChannel();
-			log.info("RabbitMQ is closed.");
 
-			try {
-				log.info("Thread pool is shutting down...");
-				ThreadPools.MASTER_POOL.shutdown();
-				ThreadPools.MASTER_POOL.awaitTermination(Config.WAITING_TIME_FOR_AWAIT_TERMINATION, TimeUnit.MILLISECONDS);
-				log.info("Thread pool is shutdown.");
-			} catch (InterruptedException e) {
-				log.info("Thread pool termination is interrupted.");
-			}
-
-			log.info("DB connection is closing...");
+			log.info(" - DB connection is closing...");
 			DBUtils.shutdown();
-			log.info("DB Connection is closed.");
 
-			shutdown();
-		}));
-	}
-
-	private static void shutdown() {
-		log.info("TaskManager is shutdown.");
+			log.info("ALL SERVICES IS DONE.");
+		},"shutdown-hook"));
 	}
 
 }

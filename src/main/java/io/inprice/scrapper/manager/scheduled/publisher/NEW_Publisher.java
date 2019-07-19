@@ -21,7 +21,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
         super(Status.NEW, Config.CRONTAB_FOR_NEW_LINKS, Config.RABBITMQ_NEW_LINKS_QUEUE);
     }
 
-    public NEW_Publisher(Status status, String crontab, String queueName) {
+    NEW_Publisher(Status status, String crontab, String queueName) {
         super(status, crontab, queueName);
     }
 
