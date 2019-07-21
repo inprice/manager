@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Config;
 public class SOCKET_ERROR_Publisher extends FailedLinksPublisher {
 
     public SOCKET_ERROR_Publisher() {
-        super(Status.SOCKET_ERROR, Config.CRONTAB_FOR_SOCKET_ERRORS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
+        super(Status.SOCKET_ERROR, Config.CRON_FOR_SOCKET_ERRORS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
     }
 
 }

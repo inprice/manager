@@ -18,7 +18,7 @@ import java.util.List;
 public class NEW_Publisher extends AbstractLinkPublisher {
 
     public NEW_Publisher() {
-        super(Status.NEW, Config.CRONTAB_FOR_NEW_LINKS, Config.RABBITMQ_NEW_LINKS_QUEUE);
+        super(Status.NEW, Config.CRON_FOR_NEW_LINKS, Config.MQ_NEW_LINKS_QUEUE);
     }
 
     NEW_Publisher(Status status, String crontab, String queueName) {
@@ -43,10 +43,10 @@ public class NEW_Publisher extends AbstractLinkPublisher {
             }
 
             if (link.getStatus().equals(oldStatus)) {
-                RabbitMQ.publish(Config.RABBITMQ_NEW_LINKS_QUEUE, link); //the consumer class is in Worker, NewLinksConsumer
+                RabbitMQ.publish(Config.MQ_NEW_LINKS_QUEUE, link); //the consumer class is in Worker, NewLinksConsumer
             } else {
                 StatusChange change = new StatusChange(link, oldStatus);
-                RabbitMQ.publish(Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
+                RabbitMQ.publish(Config.MQ_CHANGE_EXCHANGE, Config.MQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
             }
         }
     }

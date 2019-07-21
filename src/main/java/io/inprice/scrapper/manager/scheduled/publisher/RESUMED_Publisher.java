@@ -16,14 +16,14 @@ import java.util.List;
 public class RESUMED_Publisher extends AbstractLinkPublisher {
 
     public RESUMED_Publisher() {
-        super(Status.RESUMED, Config.CRONTAB_FOR_RESUMED_LINKS, Config.RABBITMQ_STATUS_CHANGE_QUEUE);
+        super(Status.RESUMED, Config.CRON_FOR_RESUMED_LINKS, Config.MQ_STATUS_CHANGE_QUEUE);
     }
 
     @Override
     void handleLinks(List<Link> linkList) {
         for (Link link: linkList) {
             StatusChange change = new StatusChange(link, Status.RESUMED);
-            RabbitMQ.publish(Config.RABBITMQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
+            RabbitMQ.publish(Config.MQ_STATUS_CHANGE_QUEUE, change); //the consumer class is here, StatusChangeConsumer
         }
     }
 

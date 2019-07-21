@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Config;
 public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
 
     public NETWORK_ERROR_Publisher() {
-        super(Status.NETWORK_ERROR, Config.CRONTAB_FOR_NETWORK_ERRORS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G1);
+        super(Status.NETWORK_ERROR, Config.CRON_FOR_NETWORK_ERRORS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G1);
     }
 
 }

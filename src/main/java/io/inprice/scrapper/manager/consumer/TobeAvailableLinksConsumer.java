@@ -49,7 +49,7 @@ public class TobeAvailableLinksConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_TOBE_AVAILABLE_LINKS_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue for getting links to make available.", e);
 		}

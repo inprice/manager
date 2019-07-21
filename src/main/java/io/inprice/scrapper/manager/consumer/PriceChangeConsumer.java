@@ -46,7 +46,7 @@ public class PriceChangeConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_PRICE_CHANGE_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(Config.MQ_PRICE_CHANGE_QUEUE, true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue up for getting price changes.", e);
 		}

@@ -40,7 +40,7 @@ public class DeletedLinksConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_DELETED_LINKS_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(Config.MQ_DELETED_LINKS_QUEUE, true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue up for deleted links.", e);
 		}

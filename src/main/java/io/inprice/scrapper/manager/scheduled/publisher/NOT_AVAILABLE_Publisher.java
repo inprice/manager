@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Config;
 public class NOT_AVAILABLE_Publisher extends FailedLinksPublisher {
 
     public NOT_AVAILABLE_Publisher() {
-        super(Status.NOT_AVAILABLE, Config.CRONTAB_FOR_NOT_AVAILABLE_LINKS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
+        super(Status.NOT_AVAILABLE, Config.CRON_FOR_NOT_AVAILABLE_LINKS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
     }
 
 }

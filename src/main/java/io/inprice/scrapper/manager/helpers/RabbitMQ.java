@@ -20,35 +20,35 @@ public class RabbitMQ {
 			synchronized (log) {
 				if (!isChannelActive()) {
 					final ConnectionFactory connectionFactory = new ConnectionFactory();
-					connectionFactory.setHost(Config.RABBITMQ_HOST);
-					connectionFactory.setPort(Config.RABBITMQ_PORT);
-					connectionFactory.setUsername(Config.RABBITMQ_USERNAME);
-					connectionFactory.setPassword(Config.RABBITMQ_PASSWORD);
+					connectionFactory.setHost(Config.MQ_HOST);
+					connectionFactory.setPort(Config.MQ_PORT);
+					connectionFactory.setUsername(Config.MQ_USERNAME);
+					connectionFactory.setPassword(Config.MQ_PASSWORD);
 
 					try {
 						Connection connection = connectionFactory.newConnection();
 						channel = connection.createChannel();
 
-						channel.exchangeDeclare(Config.RABBITMQ_LINK_EXCHANGE, "topic");
-						channel.exchangeDeclare(Config.RABBITMQ_CHANGE_EXCHANGE, "topic");
+						channel.exchangeDeclare(Config.MQ_LINK_EXCHANGE, "topic");
+						channel.exchangeDeclare(Config.MQ_CHANGE_EXCHANGE, "topic");
 
-						channel.queueDeclare(Config.RABBITMQ_NEW_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.RABBITMQ_AVAILABLE_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.RABBITMQ_FAILED_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.RABBITMQ_TOBE_AVAILABLE_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_NEW_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_AVAILABLE_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_FAILED_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, true, false, false, null);
 
-						channel.queueDeclare(Config.RABBITMQ_STATUS_CHANGE_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.RABBITMQ_PRICE_CHANGE_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.RABBITMQ_DELETED_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_STATUS_CHANGE_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_PRICE_CHANGE_QUEUE, true, false, false, null);
+						channel.queueDeclare(Config.MQ_DELETED_LINKS_QUEUE, true, false, false, null);
 
-						channel.queueBind(Config.RABBITMQ_NEW_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_NEW_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.RABBITMQ_FAILED_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_FAILED_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.RABBITMQ_AVAILABLE_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_AVAILABLE_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.RABBITMQ_TOBE_AVAILABLE_LINKS_QUEUE, Config.RABBITMQ_LINK_EXCHANGE, Config.RABBITMQ_TOBE_AVAILABLE_LINKS_QUEUE + ".#");
+						channel.queueBind(Config.MQ_NEW_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_NEW_LINKS_QUEUE + ".#");
+						channel.queueBind(Config.MQ_FAILED_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_FAILED_LINKS_QUEUE + ".#");
+						channel.queueBind(Config.MQ_AVAILABLE_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_AVAILABLE_LINKS_QUEUE + ".#");
+						channel.queueBind(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE + ".#");
 
-						channel.queueBind(Config.RABBITMQ_STATUS_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_STATUS_CHANGE_QUEUE + ".#");
-						channel.queueBind(Config.RABBITMQ_PRICE_CHANGE_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_PRICE_CHANGE_QUEUE + ".#");
-						channel.queueBind(Config.RABBITMQ_DELETED_LINKS_QUEUE, Config.RABBITMQ_CHANGE_EXCHANGE, Config.RABBITMQ_DELETED_LINKS_QUEUE + ".#");
+						channel.queueBind(Config.MQ_STATUS_CHANGE_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_STATUS_CHANGE_QUEUE + ".#");
+						channel.queueBind(Config.MQ_PRICE_CHANGE_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_PRICE_CHANGE_QUEUE + ".#");
+						channel.queueBind(Config.MQ_DELETED_LINKS_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_DELETED_LINKS_QUEUE + ".#");
 					} catch (Exception e) {
 						log.error("Error in opening RabbitMQ channel", e);
 					}
@@ -60,7 +60,7 @@ public class RabbitMQ {
 	}
 
 	public static boolean publish(String queue, Serializable message) {
-		return publish(Config.RABBITMQ_LINK_EXCHANGE, queue, message);
+		return publish(Config.MQ_LINK_EXCHANGE, queue, message);
 	}
 
 	public static boolean publish(String exchange, String queue, Serializable message) {

@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Config;
 public class AVAILABLE_Publisher extends AbstractLinkPublisher {
 
     public AVAILABLE_Publisher() {
-        super(Status.AVAILABLE, Config.CRONTAB_FOR_AVAILABLE_LINKS, Config.RABBITMQ_AVAILABLE_LINKS_QUEUE);
+        super(Status.AVAILABLE, Config.CRON_FOR_AVAILABLE_LINKS, Config.MQ_AVAILABLE_LINKS_QUEUE);
     }
 
 }

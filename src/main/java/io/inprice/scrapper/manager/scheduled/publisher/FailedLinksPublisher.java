@@ -12,7 +12,7 @@ class FailedLinksPublisher extends AbstractLinkPublisher {
     private int retryLimit;
 
     FailedLinksPublisher(Status status, String cron, int retryLimit) {
-        super(status, cron, Config.RABBITMQ_FAILED_LINKS_QUEUE, true);
+        super(status, cron, Config.MQ_FAILED_LINKS_QUEUE, true);
         this.retryLimit = retryLimit;
     }
 

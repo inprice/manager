@@ -17,7 +17,7 @@ public class PriceUpdater implements Task {
 
     private static final Logger log = new Logger(PriceUpdater.class);
 
-    private final String crontab = Config.CRONTAB_FOR_PRODUCT_PRICE_UPDATE;;
+    private final String crontab = Config.CRON_FOR_PRODUCT_PRICE_UPDATE;;
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {

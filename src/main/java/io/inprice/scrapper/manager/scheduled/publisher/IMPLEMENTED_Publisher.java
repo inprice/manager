@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Config;
 public class IMPLEMENTED_Publisher extends NEW_Publisher {
 
     public IMPLEMENTED_Publisher() {
-        super(Status.IMPLEMENTED, Config.CRONTAB_FOR_IMPLEMENTED_LINKS, Config.RABBITMQ_NEW_LINKS_QUEUE);
+        super(Status.IMPLEMENTED, Config.CRON_FOR_IMPLEMENTED_LINKS, Config.MQ_NEW_LINKS_QUEUE);
     }
 
 }

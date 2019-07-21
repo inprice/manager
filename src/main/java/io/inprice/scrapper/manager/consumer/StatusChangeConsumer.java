@@ -46,7 +46,7 @@ public class StatusChangeConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.RABBITMQ_STATUS_CHANGE_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(Config.MQ_STATUS_CHANGE_QUEUE, true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue up for getting status changes.", e);
 		}
