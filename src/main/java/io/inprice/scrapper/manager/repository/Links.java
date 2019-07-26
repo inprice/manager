@@ -22,13 +22,13 @@ public class Links {
 
     public static List<Link> getLinks(Status status) {
         final String query = String.format(
-                "select *, p.price as product_price from link " +
-                "inner join customer_plan as cp on cp.id = customer_plan_id " +
-                "inner join product as p on p.id = product_id " +
-                "where link.status = '%s' " +
-                "  and cp.active = true " +
-                "  and cp.due_date >= now() " +
-                "  and link.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "select l.*, p.price as product_price from link as l " +
+                "inner join workspace as ws on ws.id = l.workspace_id " +
+                "inner join product as p on p.id = l.product_id " +
+                "where l.status = '%s' " +
+                "  and ws.active = true " +
+                "  and ws.due_date >= now() " +
+                "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
                 status.name(), Config.DB_FETCH_LIMIT);
 
@@ -37,14 +37,14 @@ public class Links {
 
     public static List<Link> getFailedLinks(Status status, int retryLimit) {
         final String query = String.format(
-                "select *, p.price as product_price from link " +
-                "inner join customer_plan as cp on cp.id = customer_plan_id " +
-                "inner join product as p on p.id = product_id " +
-                "where link.status = '%s' " +
-                "  and link.retry < %d " +
-                "  and cp.active = true " +
-                "  and cp.due_date >= now() " +
-                "  and link.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "select l.*, p.price as product_price from link as l " +
+                "inner join workspace as ws on ws.id = l.workspace_id " +
+                "inner join product as p on p.id = l.product_id " +
+                "where l.status = '%s' " +
+                "  and l.retry < %d " +
+                "  and ws.active = true " +
+                "  and ws.due_date >= now() " +
+                "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
                 status.name(), retryLimit, Config.DB_FETCH_LIMIT);
 
@@ -282,19 +282,16 @@ public class Links {
             model.setLastCheck(rs.getDate("last_check"));
             model.setLastUpdate(rs.getDate("last_update"));
             model.setStatus(Status.valueOf(rs.getString("status")));
+            model.setPreviousStatus(Status.valueOf(rs.getString("previous_status")));
             model.setRetry(rs.getInt("retry"));
             model.setWebsiteClassName(rs.getString("website_class_name"));
 
-            model.setCustomerId(rs.getLong("customer_id"));
-            model.setCustomerPlanId(rs.getLong("customer_plan_id"));
+            model.setCompanyId(rs.getLong("company_id"));
+            model.setWorkspaceId(rs.getLong("workspace_id"));
+            model.setProductId(rs.getLong("product_id"));
             model.setSiteId(rs.getLong("site_id"));
 
-            model.setProductId(rs.getLong("product_id"));
             model.setProductPrice(rs.getBigDecimal("product_price"));
-
-            if (rs.getString("previous_status") != null) {
-                model.setPreviousStatus(Status.valueOf(rs.getString("previous_status")));
-            }
 
             return model;
         } catch (SQLException e) {
