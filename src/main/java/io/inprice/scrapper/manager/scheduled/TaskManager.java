@@ -1,15 +1,17 @@
 package io.inprice.scrapper.manager.scheduled;
 
-import io.inprice.scrapper.common.logging.Logger;
-import io.inprice.scrapper.manager.scheduled.publisher.*;
+import io.inprice.scrapper.manager.scheduled.publisher.AVAILABLE_Publisher;
+import io.inprice.scrapper.manager.scheduled.publisher.RENEWED_Publisher;
 import io.inprice.scrapper.manager.scheduled.updater.PriceUpdater;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.impl.StdSchedulerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TaskManager {
 
-    private static final Logger log = new Logger(TaskManager.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskManager.class);
 
     private static Scheduler scheduler;
 

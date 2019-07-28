@@ -1,6 +1,5 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.manager.config.Config;
@@ -9,6 +8,8 @@ import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.repository.Links;
 import io.inprice.scrapper.manager.scheduled.Task;
 import org.quartz.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -21,7 +22,7 @@ import java.util.List;
  */
 public abstract class AbstractLinkPublisher implements Task {
 
-    private static final Logger log = new Logger("LinkHandlerTask");
+    private static final Logger log = LoggerFactory.getLogger("LinkHandlerTask");
 
     private final Status status;
     private final String crontab;
@@ -43,7 +44,7 @@ public abstract class AbstractLinkPublisher implements Task {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) {
         if (Global.isTaskRunning(status.name())) {
-            log.warn("%s link handler is already triggered and hasn't finished yet!", status);
+            log.warn("{} link handler is already triggered and hasn't finished yet!", status);
             return;
         }
 
@@ -72,12 +73,12 @@ public abstract class AbstractLinkPublisher implements Task {
             }
 
             if (counter > 0)
-                log.info("%s link(s) is handled successfully. Number: %d, Time: %d", status.name(), counter, (System.currentTimeMillis() - startTime));
+                log.info("{} link(s) is handled successfully. Number: {}, Time: {}", status.name(), counter, (System.currentTimeMillis() - startTime));
             else
-                log.info("No link in %s status found.", status.name());
+                log.info("No link in {} status found.", status.name());
 
         } catch (Exception e) {
-            log.error("Failed to completed %s task!", e, status.name());
+            log.error(String.format("Failed to completed %s task!", status.name()), e);
         } finally {
             Global.setTaskRunningStatus(status.name(), false);
         }

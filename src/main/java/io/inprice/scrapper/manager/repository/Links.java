@@ -2,12 +2,13 @@ package io.inprice.scrapper.manager.repository;
 
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkSpec;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.DBUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -18,7 +19,7 @@ import java.util.List;
 
 public class Links {
 
-    private static final Logger log = new Logger(Links.class);
+    private static final Logger log = LoggerFactory.getLogger(Links.class);
 
     public static List<Link> getLinks(Status status) {
         final String query = String.format(
@@ -70,7 +71,6 @@ public class Links {
      *  - In order to add a price change into link_price table, changePrice method is called
      *  - Specs of the link are added
      *
-     * @param link
      * @return boolean
      */
     public static boolean makeAvailable(Link link) {
@@ -131,7 +131,7 @@ public class Links {
                     }
                 }
             } else {
-                log.warn(String.format("Link is already in %s status. Link Id: %d ", link.getStatus().name(), link.getId()));
+                log.warn("Link is already in {} status. Link Id: {} ", link.getStatus().name(), link.getId());
             }
 
             if (result) {
@@ -183,8 +183,8 @@ public class Links {
             if (result) {
                 addStatusChangeHistory(con, change.getLink());
             } else {
-                log.warn(String.format("Link's status is already changed! Link Id: %d, Old Status: %s, New Status: %s",
-                        change.getLink().getId(), oldStatusName, newStatusName));
+                log.warn("Link's status is already changed! Link Id: {}, Old Status: {}, New Status: {}",
+                        change.getLink().getId(), oldStatusName, newStatusName);
             }
 
             if (result) {
@@ -235,7 +235,7 @@ public class Links {
 
         } catch (SQLException e) {
             DBUtils.rollback(con);
-            log.error("Failed to change price. Link Id: %d, Price: %f", change.getLinkId(), change.getNewPrice(), e);
+            log.error("Failed to change price. Link Id: {}, Price: {}", change.getLinkId(), change.getNewPrice(), e);
         } finally {
             DBUtils.close(con);
         }

@@ -1,6 +1,5 @@
 package io.inprice.scrapper.manager.scheduled.updater;
 
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
@@ -8,14 +7,15 @@ import io.inprice.scrapper.manager.info.ProductLinks;
 import io.inprice.scrapper.manager.repository.Products;
 import io.inprice.scrapper.manager.scheduled.Task;
 import org.quartz.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 public class PriceUpdater implements Task {
 
-    private static final Logger log = new Logger(PriceUpdater.class);
+    private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
 
     private final String crontab = Config.CRON_FOR_PRODUCT_PRICE_UPDATE;;
 
@@ -80,12 +80,12 @@ public class PriceUpdater implements Task {
                         Products.updatePrice(productId, basePrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice);
                         counter++;
                     }
-                    log.info("Product Price Updater is completed for Product: %d", productId);
+                    log.info("Product Price Updater is completed for Product: {}", productId);
                 }
             }
 
             if (counter > 0) {
-                log.info("Prices of %d products have been updated!", counter);
+                log.info("Prices of {} products have been updated!", counter);
             } else {
                 log.info("No product price is updated!");
             }

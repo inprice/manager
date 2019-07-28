@@ -5,13 +5,14 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.Links;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -20,7 +21,7 @@ import java.io.IOException;
  */
 public class TobeAvailableLinksConsumer {
 
-	private static final Logger log = new Logger(TobeAvailableLinksConsumer.class);
+	private static final Logger log = LoggerFactory.getLogger(TobeAvailableLinksConsumer.class);
 
 	public static void start() {
 		log.info("To be AVAILABLE links consumer is up and running.");

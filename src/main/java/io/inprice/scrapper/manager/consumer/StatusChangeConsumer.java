@@ -6,18 +6,19 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.Links;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class StatusChangeConsumer {
 
-	private static final Logger log = new Logger(StatusChangeConsumer.class);
+	private static final Logger log = LoggerFactory.getLogger(StatusChangeConsumer.class);
 
 	public static void start() {
 		log.info("Status change consumer is running.");

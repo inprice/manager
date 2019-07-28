@@ -1,12 +1,13 @@
 package io.inprice.scrapper.manager;
 
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.consumer.DeletedLinksConsumer;
 import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
 import io.inprice.scrapper.manager.helpers.*;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Entry point of the application.
@@ -17,7 +18,7 @@ import io.inprice.scrapper.manager.scheduled.TaskManager;
  */
 public class Application {
 
-	private static final Logger log = new Logger(Application.class);
+	private static final Logger log = LoggerFactory.getLogger(Application.class);
 
 	public static void main(String[] args) {
 		new Thread(() -> {

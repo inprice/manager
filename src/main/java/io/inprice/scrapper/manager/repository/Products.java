@@ -1,9 +1,10 @@
 package io.inprice.scrapper.manager.repository;
 
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import io.inprice.scrapper.manager.info.ProductLinks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class Products {
 
-    private static final Logger log = new Logger(Products.class);
+    private static final Logger log = LoggerFactory.getLogger(Products.class);
 
     public static boolean updatePrice(Long prodId, BigDecimal prodPrice, int position, String minSeller, String maxSeller, BigDecimal minPrice, BigDecimal avgPrice, BigDecimal maxPrice) {
         return DBUtils.executeBatchQueries(new String[] {

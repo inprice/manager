@@ -1,7 +1,8 @@
 package io.inprice.scrapper.manager.helpers;
 
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ThreadPools {
 
-	private static final Logger log = new Logger(ThreadPools.class);
+	private static final Logger log = LoggerFactory.getLogger(ThreadPools.class);
 
 	public static final ExecutorService PRICE_CHANGE_POOL;
 	public static final ExecutorService DELETED_LINKS_POOL;

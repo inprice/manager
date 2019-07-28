@@ -4,14 +4,15 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.common.logging.Logger;
 import io.inprice.scrapper.manager.config.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 
 public class RabbitMQ {
 
-	private static final Logger log = new Logger(RabbitMQ.class);
+	private static final Logger log = LoggerFactory.getLogger(RabbitMQ.class);
 
 	private static Channel channel;
 
