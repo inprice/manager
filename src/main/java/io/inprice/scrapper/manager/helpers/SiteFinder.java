@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager.helpers;
 
 import io.inprice.scrapper.common.models.Site;
+import io.inprice.scrapper.common.utils.URLUtils;
 import io.inprice.scrapper.manager.repository.Sites;
 
 import java.util.Collections;
@@ -14,7 +15,7 @@ public class SiteFinder {
     private static Map<String, Site> sitesByDomain;
 
     public static Site findSiteByUrl(String url) {
-        final String domain = extractDomain(url);
+        final String domain = URLUtils.extractDomain(url);
         Site found = null;
 
         if (domain != null) {
@@ -30,23 +31,6 @@ public class SiteFinder {
             }
         }
         return found;
-    }
-
-    public static boolean isValidURL(String url) {
-        if (url == null
-        || url.trim().isEmpty()
-        || url.trim().length() < 20
-        || url.trim().length() > 2000) return false;
-        return url.matches("^(http|https)://.*$");
-    }
-
-    private static String extractDomain(String url) {
-        final String newForm = url.replaceAll("^(https?)://|www.", "");
-        final String[] chunks = newForm.split("/");
-
-        if (chunks.length > 0) return chunks[0];
-
-        return null;
     }
 
     private static Map<String, Site> getDomainSiteMap() {

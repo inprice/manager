@@ -74,7 +74,7 @@ public class DBUtils {
 
     private static void close(Connection con, Statement pst) {
         try {
-            pst.close();
+            if (pst != null) pst.close();
             con.close();
         } catch (SQLException ex) {
             //
@@ -193,10 +193,10 @@ public class DBUtils {
             }
             DBUtils.commit(con);
         } catch (SQLException e) {
-            DBUtils.rollback(con);
+            if (con != null) DBUtils.rollback(con);
             log.error(errorMessage, e);
         } finally {
-            DBUtils.close(con, sta);
+            if (con != null) DBUtils.close(con, sta);
         }
         return result;
     }

@@ -4,6 +4,7 @@ import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.Site;
+import io.inprice.scrapper.common.utils.URLUtils;
 import io.inprice.scrapper.manager.config.Config;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.SiteFinder;
@@ -30,7 +31,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
         for (Link link: linkList) {
             Status oldStatus = link.getStatus();
 
-            if (SiteFinder.isValidURL(link.getUrl())) {
+            if (URLUtils.isAValidURL(link.getUrl())) {
                 Site site = SiteFinder.findSiteByUrl(link.getUrl());
                 if (site != null) {
                     link.setSiteId(site.getId());

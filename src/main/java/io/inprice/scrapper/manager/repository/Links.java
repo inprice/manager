@@ -109,7 +109,7 @@ public class Links {
 
             if (result) {
                 addStatusChangeHistory(con, link);
-                addPriceChangeHistory(con, link.getId(), link.getPrice());
+                addPriceChangeHistory(con, link);
 
                 if (link.getSpecList() != null && link.getSpecList().size() > 0) {
                     //deleting old specs if any
@@ -141,10 +141,10 @@ public class Links {
             }
 
         } catch (SQLException e) {
-            DBUtils.rollback(con);
+            if (con != null) DBUtils.rollback(con);
             log.error("Failed to make available a link. Link Id: " + link.getId(), e);
         } finally {
-            DBUtils.close(con);
+            if (con != null) DBUtils.close(con);
         }
 
         return result;
@@ -194,10 +194,10 @@ public class Links {
             }
 
         } catch (SQLException e) {
-            DBUtils.rollback(con);
+            if (con != null) DBUtils.rollback(con);
             log.error("Failed to add a new status. Link Id: " + change.getLink().getId(), e);
         } finally {
-            DBUtils.close(con);
+            if (con != null) DBUtils.close(con);
         }
 
         return result;
@@ -227,7 +227,7 @@ public class Links {
             }
 
             if (result) {
-                addPriceChangeHistory(con, change.getLinkId(), change.getNewPrice());
+                addPriceChangeHistory(con, change);
                 DBUtils.commit(con);
             } else {
                 DBUtils.rollback(con);
@@ -237,7 +237,7 @@ public class Links {
             DBUtils.rollback(con);
             log.error("Failed to change price. Link Id: {}, Price: {}", change.getLinkId(), change.getNewPrice(), e);
         } finally {
-            DBUtils.close(con);
+            if (con != null) DBUtils.close(con);
         }
 
         return result;
@@ -246,14 +246,28 @@ public class Links {
     private static void addStatusChangeHistory(Connection con, Link link) {
         executeSimpleQuery(
             con,
-            String.format("insert into link_history (link_id, status, http_status) values (%d, '%s', %d)", link.getId(), link.getStatus(), link.getHttpStatus())
+            String.format(
+                "insert into link_history (link_id, status, http_status, company_id, workspace_id, product_id) " +
+                "values (%d, '%s', %d, %d, %d, %d)",
+                link.getId(), link.getStatus(), link.getHttpStatus(), link.getCompanyId(), link.getWorkspaceId(), link.getProductId()
+            )
         );
     }
 
-    private static void addPriceChangeHistory(Connection con, long linkId, BigDecimal price) {
+    private static void addPriceChangeHistory(Connection con, Link link) {
+        addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getCompanyId(), link.getWorkspaceId(), link.getProductId());
+    }
+
+    private static void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
+        addPriceChangeHistory(con, priceInfo.getLinkId(), priceInfo.getNewPrice(), priceInfo.getCompanyId(), priceInfo.getWorkspaceId(), priceInfo.getProductId());
+    }
+
+    private static void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long companyId, long workspaceId, long productId) {
         executeSimpleQuery(
             con,
-            String.format("insert into link_price (link_id, price) values (%d, %f)", linkId, price)
+            String.format(
+            "insert into link_price (link_id, price, companyId, workspaceId, productId) " +
+                "values (%d, %f, %d, %d, %d)", linkId, price, companyId, workspaceId, productId)
         );
     }
 
