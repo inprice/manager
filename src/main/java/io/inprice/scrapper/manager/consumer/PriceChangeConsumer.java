@@ -4,9 +4,10 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -19,6 +20,7 @@ import java.io.IOException;
 public class PriceChangeConsumer {
 
 	private static final Logger log = LoggerFactory.getLogger(PriceChangeConsumer.class);
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	public static void start() {
 		log.info("Price change consumer is up and running.");
@@ -47,7 +49,7 @@ public class PriceChangeConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.MQ_PRICE_CHANGE_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(props.getQueue_PriceChange(), true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue up for getting price changes.", e);
 		}

@@ -1,11 +1,12 @@
 package io.inprice.scrapper.manager.repository;
 
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkSpec;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.DBUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import java.util.List;
 public class Links {
 
     private static final Logger log = LoggerFactory.getLogger(Links.class);
+    private static final Properties props = Beans.getSingleton(Properties.class);
 
     public static List<Link> getLinks(Status status) {
         final String query = String.format(
@@ -31,7 +33,7 @@ public class Links {
                 "  and ws.due_date >= now() " +
                 "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
-                status.name(), Config.DB_FETCH_LIMIT);
+                status.name(), props.getDB_FetchLimit());
 
         return findAll(query);
     }
@@ -47,7 +49,7 @@ public class Links {
                 "  and ws.due_date >= now() " +
                 "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
                 "limit %d",
-                status.name(), retryLimit, Config.DB_FETCH_LIMIT);
+                status.name(), retryLimit, props.getDB_FetchLimit());
 
         return findAll(query);
     }

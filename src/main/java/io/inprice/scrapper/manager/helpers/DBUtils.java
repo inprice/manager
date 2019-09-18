@@ -2,9 +2,10 @@ package io.inprice.scrapper.manager.helpers;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.ModelMapper;
 import io.inprice.scrapper.common.models.Model;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,15 +16,15 @@ import java.util.List;
 public class DBUtils {
 
     private static final Logger log = LoggerFactory.getLogger(DBUtils.class);
-
+    private static final Properties props = Beans.getSingleton(Properties.class);
     private static final HikariDataSource ds;
 
     static{
         HikariConfig hConf = new HikariConfig();
 
-        hConf.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s?characterEncoding=utf8", Config.DB_HOST, Config.DB_PORT, Config.DB_DATABASE));
-        hConf.setUsername(Config.DB_USERNAME);
-        hConf.setPassword(Config.DB_PASSWORD);
+        hConf.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s?%s", props.getDB_Host(), props.getDB_Port(), props.getDB_Database(), props.getDB_Properties()));
+        hConf.setUsername(props.getDB_Username());
+        hConf.setPassword(props.getDB_Password());
         hConf.addDataSourceProperty("cachePrepStmts", "true");
         hConf.addDataSourceProperty("prepStmtCacheSize", "250");
         hConf.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");

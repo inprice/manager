@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager.helpers;
 
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.manager.config.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPools {
 
 	private static final Logger log = LoggerFactory.getLogger(ThreadPools.class);
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	public static final ExecutorService PRICE_CHANGE_POOL;
 	public static final ExecutorService DELETED_LINKS_POOL;
@@ -38,7 +40,7 @@ public class ThreadPools {
 		for (ExecutorService pool: registry) {
 			try {
 				pool.shutdown();
-				pool.awaitTermination(Config.WAITING_TIME_FOR_AWAIT_TERMINATION, TimeUnit.MILLISECONDS);
+				pool.awaitTermination(props.getWTF_AwaitTermination(), TimeUnit.MILLISECONDS);
 			} catch (InterruptedException e) {
 				log.error("Thread pool termination is interrupted.", e);
 			}

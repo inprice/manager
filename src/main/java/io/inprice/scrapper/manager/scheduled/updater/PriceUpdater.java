@@ -1,12 +1,14 @@
 package io.inprice.scrapper.manager.scheduled.updater;
 
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.common.info.TimePeriod;
+import io.inprice.scrapper.common.utils.DateUtils;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.info.ProductLinks;
 import io.inprice.scrapper.manager.repository.Products;
 import io.inprice.scrapper.manager.scheduled.Task;
-import org.quartz.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,11 +18,15 @@ import java.util.List;
 public class PriceUpdater implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
-
-    private final String crontab = Config.CRON_FOR_PRODUCT_PRICE_UPDATE;;
+    private static final Properties props = Beans.getSingleton(Properties.class);
 
     @Override
-    public void execute(JobExecutionContext jobExecutionContext) {
+    public TimePeriod getTimePeriod() {
+        return DateUtils.parseTimePeriod(props.getTP_ProductPriceUpdate());
+    }
+
+    @Override
+    public void run() {
         if (Global.isTaskRunning(getClass().getSimpleName())) {
             log.warn("Price Updater is already triggered and hasn't finished yet!");
             return;
@@ -37,7 +43,7 @@ public class PriceUpdater implements Task {
                 if (productId != null) {
 
                     List<ProductLinks> prodLinks = Products.getProductLinks(productId);
-                    if (prodLinks != null && prodLinks.size() > 0) {
+                    if (prodLinks.size() > 0) {
 
                         ProductLinks plMin = prodLinks.get(0);
                         ProductLinks plMax = prodLinks.get(prodLinks.size() - 1);
@@ -94,19 +100,4 @@ public class PriceUpdater implements Task {
             Global.setTaskRunningStatus(getClass().getSimpleName(), false);
         }
     }
-
-    @Override
-    public Trigger getTrigger() {
-        return TriggerBuilder.newTrigger()
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(crontab)
-            )
-        .build();
-    }
-
-    @Override
-    public JobDetail getJobDetail() {
-        return JobBuilder.newJob(getClass()).build();
-    }
-
 }

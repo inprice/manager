@@ -3,8 +3,9 @@ package io.inprice.scrapper.manager.helpers;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.io.Serializable;
 public class RabbitMQ {
 
 	private static final Logger log = LoggerFactory.getLogger(RabbitMQ.class);
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	private static Channel channel;
 
@@ -21,35 +23,43 @@ public class RabbitMQ {
 			synchronized (log) {
 				if (!isChannelActive()) {
 					final ConnectionFactory connectionFactory = new ConnectionFactory();
-					connectionFactory.setHost(Config.MQ_HOST);
-					connectionFactory.setPort(Config.MQ_PORT);
-					connectionFactory.setUsername(Config.MQ_USERNAME);
-					connectionFactory.setPassword(Config.MQ_PASSWORD);
+					connectionFactory.setHost(props.getMQ_Host());
+					connectionFactory.setPort(props.getMQ_Port());
+					connectionFactory.setUsername(props.getMQ_Username());
+					connectionFactory.setPassword(props.getMQ_Password());
 
 					try {
+						final String newLinksQueue = props.getRoutingKey_NewLinks();
+						final String availableLinksQueue = props.getRoutingKey_AvailableLinks();
+						final String failedLinksQueue = props.getRoutingKey_FailedLinks();
+
+						final String tobeAvailableLinksQueue = props.getQueue_TobeAvailableLinks();
+
+						final String statusChangeQueue = props.getQueue_StatusChange();
+						final String priceChangeQueue = props.getQueue_PriceChange();
+						final String deletedLinksQueue = props.getQueue_DeletedLinks();
+
 						Connection connection = connectionFactory.newConnection();
 						channel = connection.createChannel();
 
-						channel.exchangeDeclare(Config.MQ_LINK_EXCHANGE, "topic");
-						channel.exchangeDeclare(Config.MQ_CHANGE_EXCHANGE, "topic");
+						channel.exchangeDeclare(props.getMQ_LinkExchange(), "topic");
+						channel.exchangeDeclare(props.getMQ_ChangeExchange(), "topic");
 
-						channel.queueDeclare(Config.MQ_NEW_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.MQ_AVAILABLE_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.MQ_FAILED_LINKS_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, true, false, false, null);
+						channel.queueDeclare(newLinksQueue, true, false, false, null);
+						channel.queueDeclare(availableLinksQueue, true, false, false, null);
+						channel.queueDeclare(failedLinksQueue, true, false, false, null);
+						channel.queueDeclare(tobeAvailableLinksQueue, true, false, false, null);
+						channel.queueDeclare(statusChangeQueue, true, false, false, null);
+						channel.queueDeclare(priceChangeQueue, true, false, false, null);
+						channel.queueDeclare(deletedLinksQueue, true, false, false, null);
 
-						channel.queueDeclare(Config.MQ_STATUS_CHANGE_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.MQ_PRICE_CHANGE_QUEUE, true, false, false, null);
-						channel.queueDeclare(Config.MQ_DELETED_LINKS_QUEUE, true, false, false, null);
-
-						channel.queueBind(Config.MQ_NEW_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_NEW_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.MQ_FAILED_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_FAILED_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.MQ_AVAILABLE_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_AVAILABLE_LINKS_QUEUE + ".#");
-						channel.queueBind(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, Config.MQ_LINK_EXCHANGE, Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE + ".#");
-
-						channel.queueBind(Config.MQ_STATUS_CHANGE_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_STATUS_CHANGE_QUEUE + ".#");
-						channel.queueBind(Config.MQ_PRICE_CHANGE_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_PRICE_CHANGE_QUEUE + ".#");
-						channel.queueBind(Config.MQ_DELETED_LINKS_QUEUE, Config.MQ_CHANGE_EXCHANGE, Config.MQ_DELETED_LINKS_QUEUE + ".#");
+						channel.queueBind(newLinksQueue, props.getMQ_LinkExchange(), newLinksQueue + ".#");
+						channel.queueBind(availableLinksQueue, props.getMQ_LinkExchange(), availableLinksQueue + ".#");
+						channel.queueBind(failedLinksQueue, props.getMQ_LinkExchange(), failedLinksQueue + ".#");
+						channel.queueBind(tobeAvailableLinksQueue, props.getMQ_LinkExchange(), tobeAvailableLinksQueue + ".#");
+						channel.queueBind(statusChangeQueue, props.getMQ_ChangeExchange(), statusChangeQueue + ".#");
+						channel.queueBind(priceChangeQueue, props.getMQ_ChangeExchange(), priceChangeQueue + ".#");
+						channel.queueBind(deletedLinksQueue, props.getMQ_ChangeExchange(), deletedLinksQueue + ".#");
 					} catch (Exception e) {
 						log.error("Error in opening RabbitMQ channel", e);
 					}
@@ -60,13 +70,13 @@ public class RabbitMQ {
 		return channel;
 	}
 
-	public static boolean publish(String queue, Serializable message) {
-		return publish(Config.MQ_LINK_EXCHANGE, queue, message);
+	public static boolean publish(String routingKey, Serializable message) {
+		return publish(props.getMQ_LinkExchange(), routingKey, message);
 	}
 
-	public static boolean publish(String exchange, String queue, Serializable message) {
+	public static boolean publish(String exchange, String routingKey, Serializable message) {
 		try {
-			channel.basicPublish(exchange, queue, null, Converter.fromObject(message));
+			channel.basicPublish(exchange, routingKey, null, Converter.fromObject(message));
 			return true;
 		} catch (Exception e) {
 			log.error("Failed to send a message to queue", e);

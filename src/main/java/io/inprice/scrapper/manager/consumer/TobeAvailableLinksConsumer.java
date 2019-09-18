@@ -4,9 +4,10 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -22,9 +23,10 @@ import java.io.IOException;
 public class TobeAvailableLinksConsumer {
 
 	private static final Logger log = LoggerFactory.getLogger(TobeAvailableLinksConsumer.class);
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	public static void start() {
-		log.info("To be AVAILABLE links consumer is up and running.");
+		log.info("TO BE AVAILABLE links consumer is up and running.");
 
 		final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
 			@Override
@@ -50,7 +52,7 @@ public class TobeAvailableLinksConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.MQ_TOBE_AVAILABLE_LINKS_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(props.getQueue_TobeAvailableLinks(), true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue for getting links to make available.", e);
 		}

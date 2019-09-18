@@ -1,12 +1,9 @@
 package io.inprice.scrapper.manager.scheduled;
 
-import org.quartz.Job;
-import org.quartz.JobDetail;
-import org.quartz.Trigger;
+import io.inprice.scrapper.common.info.TimePeriod;
 
-public interface Task extends Job {
+public interface Task extends Runnable {
 
-    Trigger getTrigger();
-    JobDetail getJobDetail();
+    TimePeriod getTimePeriod();
 
 }

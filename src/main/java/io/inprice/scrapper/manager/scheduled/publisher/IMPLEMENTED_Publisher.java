@@ -1,7 +1,6 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
 import io.inprice.scrapper.common.meta.Status;
-import io.inprice.scrapper.manager.config.Config;
 
 /**
  * Finds and handles IMPLEMENTED links
@@ -10,8 +9,19 @@ import io.inprice.scrapper.manager.config.Config;
  */
 public class IMPLEMENTED_Publisher extends NEW_Publisher {
 
-    public IMPLEMENTED_Publisher() {
-        super(Status.IMPLEMENTED, Config.CRON_FOR_IMPLEMENTED_LINKS, Config.MQ_NEW_LINKS_QUEUE);
+    @Override
+    Status getStatus() {
+        return Status.IMPLEMENTED;
+    }
+
+    @Override
+    String getMQRoutingKey() {
+        return props.getRoutingKey_NewLinks();
+    }
+
+    @Override
+    String getTimePeriodStatement() {
+        return props.getTP_ImplementedLinks();
     }
 
 }

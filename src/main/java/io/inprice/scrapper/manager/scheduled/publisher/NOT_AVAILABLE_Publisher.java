@@ -1,7 +1,6 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
 import io.inprice.scrapper.common.meta.Status;
-import io.inprice.scrapper.manager.config.Config;
 
 /**
  * Finds and handles NOT_AVAILABLE links
@@ -11,7 +10,17 @@ import io.inprice.scrapper.manager.config.Config;
 public class NOT_AVAILABLE_Publisher extends FailedLinksPublisher {
 
     public NOT_AVAILABLE_Publisher() {
-        super(Status.NOT_AVAILABLE, Config.CRON_FOR_NOT_AVAILABLE_LINKS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
+        super(props.getRL_FailedLinksG3());
+    }
+
+    @Override
+    Status getStatus() {
+        return Status.NOT_AVAILABLE;
+    }
+
+    @Override
+    String getTimePeriodStatement() {
+        return props.getTP_NotAvailableLinks();
     }
 
 }

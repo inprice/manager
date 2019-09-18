@@ -1,7 +1,6 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
 import io.inprice.scrapper.common.meta.Status;
-import io.inprice.scrapper.manager.config.Config;
 
 /**
  * Finds and handles SOCKET_ERROR links
@@ -11,7 +10,17 @@ import io.inprice.scrapper.manager.config.Config;
 public class SOCKET_ERROR_Publisher extends FailedLinksPublisher {
 
     public SOCKET_ERROR_Publisher() {
-        super(Status.SOCKET_ERROR, Config.CRON_FOR_SOCKET_ERRORS, Config.RETRY_LIMIT_FOR_FAILED_LINKS_G3);
+        super(props.getRL_FailedLinksG3());
+    }
+
+    @Override
+    Status getStatus() {
+        return Status.SOCKET_ERROR;
+    }
+
+    @Override
+    String getTimePeriodStatement() {
+        return props.getTP_SocketErrors();
     }
 
 }

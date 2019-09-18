@@ -1,13 +1,15 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
+import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.common.utils.DateUtils;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.repository.Links;
 import io.inprice.scrapper.manager.scheduled.Task;
-import org.quartz.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,34 +25,22 @@ import java.util.List;
 public abstract class AbstractLinkPublisher implements Task {
 
     private static final Logger log = LoggerFactory.getLogger("LinkHandlerTask");
+    static final Properties props = Beans.getSingleton(Properties.class);
 
-    private final Status status;
-    private final String crontab;
-    private final String queueName;
-
-    private final boolean increaseRetry;
-
-    AbstractLinkPublisher(Status status, String crontab, String queueName) {
-        this(status, crontab, queueName, false);
-    }
-
-    AbstractLinkPublisher(Status status, String crontab, String queueName, boolean increaseRetry) {
-        this.status = status;
-        this.crontab = crontab;
-        this.queueName = queueName;
-        this.increaseRetry = increaseRetry;
-    }
+    abstract Status getStatus();
+    abstract String getTimePeriodStatement();
+    abstract String getMQRoutingKey();
 
     @Override
-    public void execute(JobExecutionContext jobExecutionContext) {
-        if (Global.isTaskRunning(status.name())) {
-            log.warn("{} link handler is already triggered and hasn't finished yet!", status);
+    public void run() {
+        if (Global.isTaskRunning(getStatus().name())) {
+            log.warn("{} link handler is already triggered and hasn't finished yet!", getStatus());
             return;
         }
 
         try {
             long startTime = System.currentTimeMillis();
-            Global.setTaskRunningStatus(status.name(), true);
+            Global.setTaskRunningStatus(getStatus().name(), true);
 
             int counter = 0;
             List<Link> links = getLinks();
@@ -61,9 +51,9 @@ public abstract class AbstractLinkPublisher implements Task {
                 handleLinks(links);
                 setLastCheckTime(links);
 
-                if (links.size() >= Config.DB_FETCH_LIMIT) {
+                if (links.size() >= props.getDB_FetchLimit()) {
                     try {
-                        Thread.sleep(Config.WAITING_TIME_FOR_GETTING_LINKS_FROM_DB);
+                        Thread.sleep(props.getWTF_GettingLinksFromDB());
                     } catch (InterruptedException ignored) {
                     }
                     links = getLinks();
@@ -73,22 +63,35 @@ public abstract class AbstractLinkPublisher implements Task {
             }
 
             if (counter > 0)
-                log.info("{} link(s) is handled successfully. Number: {}, Time: {}", status.name(), counter, (System.currentTimeMillis() - startTime));
+                log.info("{} link(s) is handled successfully. Number: {}, Time: {}", getStatus().name(), counter, (System.currentTimeMillis() - startTime));
             else
-                log.info("No link in {} status found.", status.name());
+                log.info("No link in {} status found.", getStatus().name());
 
         } catch (Exception e) {
-            log.error(String.format("Failed to completed %s task!", status.name()), e);
+            log.error(String.format("Failed to completed %s task!", getStatus().name()), e);
         } finally {
-            Global.setTaskRunningStatus(status.name(), false);
+            Global.setTaskRunningStatus(getStatus().name(), false);
         }
 
     }
 
+    @Override
+    public TimePeriod getTimePeriod() {
+        return DateUtils.parseTimePeriod(this.getTimePeriodStatement());
+    }
+
     void handleLinks(List<Link> linkList) {
         for (Link link : linkList) {
-            RabbitMQ.publish(queueName, link);
+            RabbitMQ.publish(getMQRoutingKey(), link);
         }
+    }
+
+    List<Link> getLinks() {
+        return Links.getLinks(getStatus());
+    }
+
+    boolean isIncreaseRetry() {
+        return false;
     }
 
     private void setLastCheckTime(List<Link> linkList) {
@@ -97,29 +100,6 @@ public abstract class AbstractLinkPublisher implements Task {
             if (sb.length() > 0) sb.append(",");
             sb.append(link.getId());
         }
-        Links.setLastCheckTime(sb.toString(), this.increaseRetry);
+        Links.setLastCheckTime(sb.toString(), isIncreaseRetry());
     }
-
-    List<Link> getLinks() {
-        return Links.getLinks(getStatus());
-    }
-
-    @Override
-    public Trigger getTrigger() {
-        return TriggerBuilder.newTrigger()
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(crontab)
-            )
-        .build();
-    }
-
-    @Override
-    public JobDetail getJobDetail() {
-        return JobBuilder.newJob(getClass()).build();
-    }
-
-    Status getStatus() {
-        return status;
-    }
-
 }

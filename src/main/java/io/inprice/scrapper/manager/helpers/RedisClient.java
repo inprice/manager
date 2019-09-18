@@ -1,11 +1,15 @@
 package io.inprice.scrapper.manager.helpers;
 
+import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.manager.config.Properties;
 import org.redisson.Redisson;
 import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 
 public class RedisClient {
+
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	private static final RedissonClient client;
 	private static final RSet<Long> priceChangingProductsIdSet;
@@ -14,8 +18,8 @@ public class RedisClient {
 		Config config = new Config();
 		config
 			.useSingleServer()
-			.setAddress(String.format("redis://%s:%d", io.inprice.scrapper.manager.config.Config.REDIS_HOST, io.inprice.scrapper.manager.config.Config.REDIS_PORT))
-			.setPassword(io.inprice.scrapper.manager.config.Config.REDIS_PASSWORD);
+			.setAddress(String.format("redis://%s:%d", props.getRedis_Host(), props.getRedis_Port()))
+			.setPassword((props.getRedis_Password().trim().isEmpty() ? null : props.getRedis_Password()));
 
 		client = Redisson.create(config);
 

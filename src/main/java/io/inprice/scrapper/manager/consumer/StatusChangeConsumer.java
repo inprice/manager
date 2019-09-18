@@ -4,9 +4,10 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Converter;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.manager.config.Config;
+import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -19,6 +20,7 @@ import java.io.IOException;
 public class StatusChangeConsumer {
 
 	private static final Logger log = LoggerFactory.getLogger(StatusChangeConsumer.class);
+	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	public static void start() {
 		log.info("Status change consumer is running.");
@@ -47,7 +49,7 @@ public class StatusChangeConsumer {
 		};
 
 		try {
-			RabbitMQ.getChannel().basicConsume(Config.MQ_STATUS_CHANGE_QUEUE, true, consumer);
+			RabbitMQ.getChannel().basicConsume(props.getQueue_StatusChange(), true, consumer);
 		} catch (IOException e) {
 			log.error("Failed to set a queue up for getting status changes.", e);
 		}
