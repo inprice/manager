@@ -9,14 +9,17 @@ import io.inprice.scrapper.common.meta.Status;
  */
 public class IMPLEMENTED_Publisher extends NEW_Publisher {
 
-    @Override
-    Status getStatus() {
-        return Status.IMPLEMENTED;
+    public IMPLEMENTED_Publisher() {
+        super();
+    }
+
+    public IMPLEMENTED_Publisher(boolean lookForImportedProducts) {
+        super(lookForImportedProducts);
     }
 
     @Override
-    String getMQRoutingKey() {
-        return props.getRoutingKey_NewLinks();
+    Status getStatus() {
+        return Status.IMPLEMENTED;
     }
 
     @Override

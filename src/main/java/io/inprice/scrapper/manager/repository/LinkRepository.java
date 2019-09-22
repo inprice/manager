@@ -3,6 +3,7 @@ package io.inprice.scrapper.manager.repository;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
+import io.inprice.scrapper.common.meta.ImportType;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkSpec;
@@ -18,12 +19,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-public class Links {
+public class LinkRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(Links.class);
+    private static final Logger log = LoggerFactory.getLogger(LinkRepository.class);
+    private static final DBUtils dbUtils = Beans.getSingleton(DBUtils.class);
+    private static final ProductRepository productRepository = Beans.getSingleton(ProductRepository.class);
     private static final Properties props = Beans.getSingleton(Properties.class);
 
-    public static List<Link> getLinks(Status status) {
+    /**
+     * This method can be used for both links and imported products at the same time.
+     * isLookingForImportedProducts parameter is used to distinguish the searching direction between links and imported product rows
+     *
+     */
+    public List<Link> getLinks(Status status, boolean isLookingForImportedProducts) {
         final String query = String.format(
                 "select l.*, p.price as product_price from link as l " +
                 "inner join workspace as ws on ws.id = l.workspace_id " +
@@ -32,13 +40,19 @@ public class Links {
                 "  and ws.active = true " +
                 "  and ws.due_date >= now() " +
                 "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "  and l.import_row_id " + (isLookingForImportedProducts ? "is not null " : " is null ") +
                 "limit %d",
                 status.name(), props.getDB_FetchLimit());
 
         return findAll(query);
     }
 
-    public static List<Link> getFailedLinks(Status status, int retryLimit) {
+    /**
+     * This method can be used for both links and imported products at the same time.
+     * isLookingForImportedProducts parameter is used to distinguish the searching direction between links and imported product rows
+     *
+     */
+    public List<Link> getFailedLinks(Status status, int retryLimit, boolean isLookingForImportedProducts) {
         final String query = String.format(
                 "select l.*, p.price as product_price from link as l " +
                 "inner join workspace as ws on ws.id = l.workspace_id " +
@@ -48,20 +62,21 @@ public class Links {
                 "  and ws.active = true " +
                 "  and ws.due_date >= now() " +
                 "  and l.last_check < now() - interval 30 minute " + //last check time must be older than 30 minutes
+                "  and l.import_row_id " + (isLookingForImportedProducts ? "is not null " : " is null ") +
                 "limit %d",
                 status.name(), retryLimit, props.getDB_FetchLimit());
 
         return findAll(query);
     }
 
-    public static void setLastCheckTime(String ids, boolean increaseRetry) {
+    public void setLastCheckTime(String ids, boolean increaseRetry) {
         final String query =
                 "update link " +
                 "set last_check=now() " +
                 (increaseRetry ? ", retry=retry+1 " : "") +
                 "where id in (" + ids + ") ";
 
-        DBUtils.executeQuery(query, "Failed to set last check time of ids: " + ids);
+        dbUtils.executeQuery(query, "Failed to set last check time of ids: " + ids);
     }
 
     /**
@@ -75,12 +90,12 @@ public class Links {
      *
      * @return boolean
      */
-    public static boolean makeAvailable(Link link) {
+    public boolean makeAvailable(Link link) {
         boolean result = false;
 
         Connection con = null;
         try {
-            con = DBUtils.getTransactionalConnection();
+            con = dbUtils.getTransactionalConnection();
 
             final String q1 =
                 "update link " +
@@ -110,10 +125,16 @@ public class Links {
             }
 
             if (result) {
-                addStatusChangeHistory(con, link);
-                addPriceChangeHistory(con, link);
 
-                if (link.getSpecList() != null && link.getSpecList().size() > 0) {
+                boolean isANormalLink = (link.getImportRowId() == null);
+
+                //is a link for product import!
+                if (! isANormalLink) productRepository.createAProductFromLink(con, link);
+
+                addStatusChangeHistory(con, link);
+                if (isANormalLink) addPriceChangeHistory(con, link);
+
+                if (isANormalLink && link.getSpecList() != null && link.getSpecList().size() > 0) {
                     //deleting old specs if any
                     executeSimpleQuery(con,"delete from link_spec where link_id=" + link.getId());
 
@@ -131,33 +152,35 @@ public class Links {
                         }
                         pst.executeBatch();
                     }
+                } else if (! isANormalLink) {
+                    updateImportRow(con, link.getImportRowId(), link.getStatus());
                 }
             } else {
                 log.warn("Link is already in {} status. Link Id: {} ", link.getStatus().name(), link.getId());
             }
 
             if (result) {
-                DBUtils.commit(con);
+                dbUtils.commit(con);
             } else {
-                DBUtils.rollback(con);
+                dbUtils.rollback(con);
             }
 
         } catch (SQLException e) {
-            if (con != null) DBUtils.rollback(con);
+            if (con != null) dbUtils.rollback(con);
             log.error("Failed to make available a link. Link Id: " + link.getId(), e);
         } finally {
-            if (con != null) DBUtils.close(con);
+            if (con != null) dbUtils.close(con);
         }
 
         return result;
     }
 
-    public static boolean changeStatus(StatusChange change) {
+    public boolean changeStatus(StatusChange change) {
         boolean result = false;
 
         Connection con = null;
         try {
-            con = DBUtils.getTransactionalConnection();
+            con = dbUtils.getTransactionalConnection();
 
             final String oldStatusName = change.getOldStatus().name();
             final String newStatusName = change.getLink().getStatus().name();
@@ -184,33 +207,36 @@ public class Links {
 
             if (result) {
                 addStatusChangeHistory(con, change.getLink());
+
+                //if it is an imported product
+                if (change.getLink().getImportRowId() != null) updateImportRow(con, change.getLink().getImportRowId(), change.getLink().getStatus());
             } else {
                 log.warn("Link's status is already changed! Link Id: {}, Old Status: {}, New Status: {}",
                         change.getLink().getId(), oldStatusName, newStatusName);
             }
 
             if (result) {
-                DBUtils.commit(con);
+                dbUtils.commit(con);
             } else {
-                DBUtils.rollback(con);
+                dbUtils.rollback(con);
             }
 
         } catch (SQLException e) {
-            if (con != null) DBUtils.rollback(con);
+            if (con != null) dbUtils.rollback(con);
             log.error("Failed to add a new status. Link Id: " + change.getLink().getId(), e);
         } finally {
-            if (con != null) DBUtils.close(con);
+            if (con != null) dbUtils.close(con);
         }
 
         return result;
     }
 
-    public static boolean changePrice(PriceUpdateInfo change) {
+    public boolean changePrice(PriceUpdateInfo change) {
         boolean result = false;
 
         Connection con = null;
         try {
-            con = DBUtils.getTransactionalConnection();
+            con = dbUtils.getTransactionalConnection();
 
             final String q1 =
                 "update link " +
@@ -230,22 +256,22 @@ public class Links {
 
             if (result) {
                 addPriceChangeHistory(con, change);
-                DBUtils.commit(con);
+                dbUtils.commit(con);
             } else {
-                DBUtils.rollback(con);
+                dbUtils.rollback(con);
             }
 
         } catch (SQLException e) {
-            DBUtils.rollback(con);
+            dbUtils.rollback(con);
             log.error("Failed to change price. Link Id: {}, Price: {}", change.getLinkId(), change.getNewPrice(), e);
         } finally {
-            if (con != null) DBUtils.close(con);
+            if (con != null) dbUtils.close(con);
         }
 
         return result;
     }
 
-    private static void addStatusChangeHistory(Connection con, Link link) {
+    private void addStatusChangeHistory(Connection con, Link link) {
         executeSimpleQuery(
             con,
             String.format(
@@ -256,15 +282,15 @@ public class Links {
         );
     }
 
-    private static void addPriceChangeHistory(Connection con, Link link) {
+    private void addPriceChangeHistory(Connection con, Link link) {
         addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getCompanyId(), link.getWorkspaceId(), link.getProductId());
     }
 
-    private static void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
+    private void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
         addPriceChangeHistory(con, priceInfo.getLinkId(), priceInfo.getNewPrice(), priceInfo.getCompanyId(), priceInfo.getWorkspaceId(), priceInfo.getProductId());
     }
 
-    private static void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long companyId, long workspaceId, long productId) {
+    private void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long companyId, long workspaceId, long productId) {
         executeSimpleQuery(
             con,
             String.format(
@@ -273,7 +299,7 @@ public class Links {
         );
     }
 
-    private static void executeSimpleQuery(Connection con, String query) {
+    private void executeSimpleQuery(Connection con, String query) {
         try (PreparedStatement pst = con.prepareStatement(query)) {
             pst.executeUpdate();
         } catch (Exception e) {
@@ -281,11 +307,26 @@ public class Links {
         }
     }
 
-    private static List<Link> findAll(String query) {
-        return DBUtils.findMultiple(query, Links::map);
+    private void updateImportRow(Connection con, Long importRowId, Status status) {
+        try (PreparedStatement pst = con.prepareStatement("update import_product_row set status=? where id = ?")) {
+            int i = 0;
+            pst.setString(++i, status.name());
+            pst.setLong(++i, importRowId);
+
+            boolean updated = (pst.executeUpdate() > 0);
+            if (! updated) {
+                log.warn("Failed to set an imported product status. Id: " +importRowId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to set an imported product status. Id: " +importRowId, e);
+        }
     }
 
-    private static Link map(ResultSet rs) {
+    private List<Link> findAll(String query) {
+        return dbUtils.findMultiple(query, this::map);
+    }
+
+    private Link map(ResultSet rs) {
         try {
             Link model = new Link(rs.getString("url"));
             model.setId(rs.getLong("id"));
@@ -301,13 +342,16 @@ public class Links {
             model.setPreviousStatus(Status.valueOf(rs.getString("previous_status")));
             model.setRetry(rs.getInt("retry"));
             model.setWebsiteClassName(rs.getString("website_class_name"));
-
             model.setCompanyId(rs.getLong("company_id"));
             model.setWorkspaceId(rs.getLong("workspace_id"));
             model.setProductId(rs.getLong("product_id"));
             model.setSiteId(rs.getLong("site_id"));
 
             model.setProductPrice(rs.getBigDecimal("product_price"));
+
+            //is an imported product!
+            model.setImportId(rs.getLong("import_id"));
+            model.setImportRowId(rs.getLong("import_row_id"));
 
             return model;
         } catch (SQLException e) {

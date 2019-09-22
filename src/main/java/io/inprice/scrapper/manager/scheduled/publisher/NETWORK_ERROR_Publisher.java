@@ -10,7 +10,11 @@ import io.inprice.scrapper.common.meta.Status;
 public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
 
     public NETWORK_ERROR_Publisher() {
-        super(props.getRL_FailedLinksG1());
+        super();
+    }
+
+    public NETWORK_ERROR_Publisher(boolean lookForImportedProducts) {
+        super(lookForImportedProducts);
     }
 
     @Override
@@ -21,6 +25,11 @@ public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
     @Override
     String getTimePeriodStatement() {
         return props.getTP_NetworkErrors();
+    }
+
+    @Override
+    int getRetryLimit() {
+        return props.getRL_FailedLinksG1();
     }
 
 }

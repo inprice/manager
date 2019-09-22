@@ -15,11 +15,6 @@ public class RENEWED_Publisher extends NEW_Publisher {
     }
 
     @Override
-    String getMQRoutingKey() {
-        return props.getRoutingKey_NewLinks();
-    }
-
-    @Override
     String getTimePeriodStatement() {
         return props.getTP_RenewedLinks();
     }

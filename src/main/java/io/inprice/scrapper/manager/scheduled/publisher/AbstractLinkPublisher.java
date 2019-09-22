@@ -8,7 +8,7 @@ import io.inprice.scrapper.common.utils.DateUtils;
 import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
-import io.inprice.scrapper.manager.repository.Links;
+import io.inprice.scrapper.manager.repository.LinkRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +25,25 @@ import java.util.List;
 public abstract class AbstractLinkPublisher implements Task {
 
     private static final Logger log = LoggerFactory.getLogger("LinkHandlerTask");
+    static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
     static final Properties props = Beans.getSingleton(Properties.class);
+
+    /*
+     * Same classes and logic can be used for both links and imported product definition rows
+     */
+    private boolean lookForImportedProducts;
 
     abstract Status getStatus();
     abstract String getTimePeriodStatement();
     abstract String getMQRoutingKey();
+
+    AbstractLinkPublisher() {
+        this.lookForImportedProducts = false;
+    }
+
+    AbstractLinkPublisher(boolean lookForImportedProducts) {
+        this.lookForImportedProducts = lookForImportedProducts;
+    }
 
     @Override
     public void run() {
@@ -53,7 +67,7 @@ public abstract class AbstractLinkPublisher implements Task {
 
                 if (links.size() >= props.getDB_FetchLimit()) {
                     try {
-                        Thread.sleep(props.getWTF_GettingLinksFromDB());
+                        Thread.sleep(props.getWT_ForGettingLinksFromDB());
                     } catch (InterruptedException ignored) {
                     }
                     links = getLinks();
@@ -77,7 +91,13 @@ public abstract class AbstractLinkPublisher implements Task {
 
     @Override
     public TimePeriod getTimePeriod() {
-        return DateUtils.parseTimePeriod(this.getTimePeriodStatement());
+        TimePeriod tp = DateUtils.parseTimePeriod(this.getTimePeriodStatement());
+
+        //if looking for imported products then interval is set fifteen per cent more of normal value
+        if (lookForImportedProducts) {
+            tp = new TimePeriod((int)(tp.getInterval() * 1.15), tp.getTimeUnit());
+        }
+        return tp;
     }
 
     void handleLinks(List<Link> linkList) {
@@ -87,7 +107,7 @@ public abstract class AbstractLinkPublisher implements Task {
     }
 
     List<Link> getLinks() {
-        return Links.getLinks(getStatus());
+        return linkRepository.getLinks(getStatus(), lookForImportedProducts);
     }
 
     boolean isIncreaseRetry() {
@@ -100,6 +120,11 @@ public abstract class AbstractLinkPublisher implements Task {
             if (sb.length() > 0) sb.append(",");
             sb.append(link.getId());
         }
-        Links.setLastCheckTime(sb.toString(), isIncreaseRetry());
+        linkRepository.setLastCheckTime(sb.toString(), isIncreaseRetry());
     }
+
+    boolean isLookingForImportedProducts() {
+        return lookForImportedProducts;
+    }
+
 }

@@ -1,26 +1,28 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.repository.Links;
 
 import java.util.List;
 
 abstract class FailedLinksPublisher extends AbstractLinkPublisher {
 
-    private int retryLimit;
+    abstract int getRetryLimit();
 
-    FailedLinksPublisher(int retryLimit) {
-        this.retryLimit = retryLimit;
+    public FailedLinksPublisher() {
+        super();
+    }
+
+    public FailedLinksPublisher(boolean lookForImportedProducts) {
+        super(lookForImportedProducts);
     }
 
     List<Link> getLinks() {
-        return Links.getFailedLinks(getStatus(), this.retryLimit);
+        return linkRepository.getFailedLinks(getStatus(), getRetryLimit(), isLookingForImportedProducts());
     }
 
     @Override
     String getMQRoutingKey() {
-        return props.getRoutingKey_FailedLinks();
+        return props.getRoutingKey_FailedLinks() + "." + getStatus().name();
     }
 
     @Override

@@ -31,6 +31,10 @@ public class Properties {
 		return runningAt.equals("test");
 	}
 
+	public String getDB_Driver() {
+		return prop.getProperty("db.driver", "mysql");
+	}
+
 	public String getDB_Host() {
 		return prop.getProperty("db.host", "localhost");
 	}
@@ -45,6 +49,10 @@ public class Properties {
 
 	public String getDB_Database() {
 		return prop.getProperty("db.database", "inprice");
+	}
+
+	public String getDB_Additions() {
+		return prop.getProperty("db.additions", "");
 	}
 
 	public String getDB_Username() {
@@ -132,12 +140,12 @@ public class Properties {
 		return prop.getProperty("queue.of.tobe-available-links", "tobe-available-links");
 	}
 
-	public int getWTF_AwaitTermination() {
-		return getOrDefault("wtf.await-termination", 30000);
+	public int getWT_ForAwaitTermination() {
+		return getOrDefault("wt.for.await-termination", 30000);
 	}
 
-	public int getWTF_GettingLinksFromDB() {
-		return getOrDefault("wtf.getting-links-from-db", 3000);
+	public int getWT_ForGettingLinksFromDB() {
+		return getOrDefault("wt.for.getting-links-from-db", 3000);
 	}
 
 	public int getRL_FailedLinksG1() {
@@ -186,6 +194,14 @@ public class Properties {
 
 	public String getTP_NotAvailableLinks() {
 		return prop.getProperty("tp.not-available-links", "8H");
+	}
+
+	public String getPrefix_ForSearchingInEbay() {
+		return prop.getProperty("prefix.for.searching.in.ebay", "https://www.ebay.com/itm/");
+	}
+
+	public String getPrefix_ForSearchingInAmazon() {
+		return prop.getProperty("prefix.for.searching.in.amazon", "https://www.amazon.com/dp/");
 	}
 
 	private int getOrDefault(String key, int defauld) {

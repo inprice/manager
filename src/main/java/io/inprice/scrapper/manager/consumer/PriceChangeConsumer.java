@@ -11,7 +11,7 @@ import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
-import io.inprice.scrapper.manager.repository.Links;
+import io.inprice.scrapper.manager.repository.LinkRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +20,7 @@ import java.io.IOException;
 public class PriceChangeConsumer {
 
 	private static final Logger log = LoggerFactory.getLogger(PriceChangeConsumer.class);
+	private static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
 	private static final Properties props = Beans.getSingleton(Properties.class);
 
 	public static void start() {
@@ -32,7 +33,7 @@ public class PriceChangeConsumer {
 					ThreadPools.PRICE_CHANGE_POOL.submit(() -> {
 						PriceUpdateInfo pui = Converter.toObject(body);
 						if (pui != null) {
-							boolean isOK = Links.changePrice(pui);
+							boolean isOK = linkRepository.changePrice(pui);
 							if (isOK) {
 								RedisClient.addPriceChanging(pui.getProductId());
 							} else {

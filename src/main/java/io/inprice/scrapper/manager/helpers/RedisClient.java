@@ -10,7 +10,6 @@ import org.redisson.config.Config;
 public class RedisClient {
 
 	private static final Properties props = Beans.getSingleton(Properties.class);
-
 	private static final RedissonClient client;
 	private static final RSet<Long> priceChangingProductsIdSet;
 

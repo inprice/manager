@@ -9,10 +9,6 @@ import io.inprice.scrapper.common.meta.Status;
  */
 public class NOT_AVAILABLE_Publisher extends FailedLinksPublisher {
 
-    public NOT_AVAILABLE_Publisher() {
-        super(props.getRL_FailedLinksG3());
-    }
-
     @Override
     Status getStatus() {
         return Status.NOT_AVAILABLE;
@@ -21,6 +17,11 @@ public class NOT_AVAILABLE_Publisher extends FailedLinksPublisher {
     @Override
     String getTimePeriodStatement() {
         return props.getTP_NotAvailableLinks();
+    }
+
+    @Override
+    int getRetryLimit() {
+        return props.getRL_FailedLinksG3();
     }
 
 }

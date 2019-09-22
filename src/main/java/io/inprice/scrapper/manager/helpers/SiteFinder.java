@@ -1,8 +1,9 @@
 package io.inprice.scrapper.manager.helpers;
 
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.models.Site;
 import io.inprice.scrapper.common.utils.URLUtils;
-import io.inprice.scrapper.manager.repository.Sites;
+import io.inprice.scrapper.manager.repository.SiteRepository;
 
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class SiteFinder {
+
+    private static final SiteRepository repository = Beans.getSingleton(SiteRepository.class);
 
     private static final Object lock = new Object();
     private static Map<String, Site> sitesByDomain;
@@ -37,7 +40,7 @@ public class SiteFinder {
         if (sitesByDomain == null) {
             synchronized (lock) {
                 if (sitesByDomain == null) {
-                    List<Site> siteList = Sites.getAll();
+                    List<Site> siteList = repository.getAll();
                     sitesByDomain = new TreeMap<>(Collections.reverseOrder());
                     siteList.forEach(site -> sitesByDomain.put(site.getDomain(), site));
                 }

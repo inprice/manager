@@ -17,12 +17,23 @@ public class DBUtils {
 
     private static final Logger log = LoggerFactory.getLogger(DBUtils.class);
     private static final Properties props = Beans.getSingleton(Properties.class);
-    private static final HikariDataSource ds;
 
-    static{
+    private static HikariDataSource ds;
+
+    private DBUtils() {
+        wakeup();
+    }
+
+    private void wakeup() {
         HikariConfig hConf = new HikariConfig();
 
-        hConf.setJdbcUrl(String.format("jdbc:mysql://%s:%d/%s?%s", props.getDB_Host(), props.getDB_Port(), props.getDB_Database(), props.getDB_Properties()));
+        final String connectionString =
+                String.format("jdbc:%s:%s:%d/%s%s", props.getDB_Driver(), props.getDB_Host(),
+                        props.getDB_Port(), props.getDB_Database(), props.getDB_Additions());
+
+        log.info(connectionString);
+
+        hConf.setJdbcUrl(connectionString);
         hConf.setUsername(props.getDB_Username());
         hConf.setPassword(props.getDB_Password());
         hConf.addDataSourceProperty("cachePrepStmts", "true");
@@ -39,17 +50,17 @@ public class DBUtils {
         ds = new HikariDataSource(hConf);
     }
 
-    public static Connection getConnection() throws SQLException {
+    public Connection getConnection() throws SQLException {
         return ds.getConnection();
     }
 
-    public static Connection getTransactionalConnection() throws SQLException {
+    public Connection getTransactionalConnection() throws SQLException {
         Connection con = ds.getConnection();
         con.setAutoCommit(false);
         return con;
     }
 
-    public static void commit(Connection con) {
+    public void commit(Connection con) {
         try {
             con.commit();
         } catch (SQLException ex) {
@@ -57,7 +68,7 @@ public class DBUtils {
         }
     }
 
-    public static void rollback(Connection con) {
+    public void rollback(Connection con) {
         try {
             con.rollback();
         } catch (SQLException ex) {
@@ -65,7 +76,7 @@ public class DBUtils {
         }
     }
 
-    public static void close(Connection con) {
+    public void close(Connection con) {
         try {
             con.close();
         } catch (SQLException ex) {
@@ -73,7 +84,7 @@ public class DBUtils {
         }
     }
 
-    private static void close(Connection con, Statement pst) {
+    private void close(Connection con, Statement pst) {
         try {
             if (pst != null) pst.close();
             con.close();
@@ -82,7 +93,7 @@ public class DBUtils {
         }
     }
 
-    public static <M extends Model> M findSingle(String query, ModelMapper<M> mapper) {
+    public <M extends Model> M findSingle(String query, ModelMapper<M> mapper) {
         List<M> result = findMultiple(query, mapper);
 
         if (result != null && result.size() > 0)
@@ -91,9 +102,9 @@ public class DBUtils {
             return null;
     }
 
-    public static <M extends Model> List<M> findMultiple(String query, ModelMapper<M> mapper) {
+    public <M extends Model> List<M> findMultiple(String query, ModelMapper<M> mapper) {
         List<M> result = new ArrayList<>();
-        try (Connection con = DBUtils.getConnection();
+        try (Connection con = getConnection();
              PreparedStatement pst = con.prepareStatement(query);
              ResultSet rs = pst.executeQuery()) {
 
@@ -111,9 +122,9 @@ public class DBUtils {
      * For single executions with a continual transaction
      *
      */
-    public static boolean executeQuery(Connection con, String query, String errorMessage) {
+    public boolean executeQuery(Connection con, String query, String errorMessage) {
         if (con == null) {
-            return DBUtils.executeQuery(query, errorMessage);
+            return executeQuery(query, errorMessage);
         }
 
         try (PreparedStatement pst = con.prepareStatement(query)) {
@@ -129,8 +140,8 @@ public class DBUtils {
      * For single executions without any continual transaction
      *
      */
-    public static boolean executeQuery(String query, String errorMessage) {
-        try (Connection con = DBUtils.getConnection();
+    public boolean executeQuery(String query, String errorMessage) {
+        try (Connection con = getConnection();
              PreparedStatement pst = con.prepareStatement(query)) {
 
             int affected = pst.executeUpdate();
@@ -141,9 +152,9 @@ public class DBUtils {
         return false;
     }
 
-    public static boolean executeBatchQueries(Connection con, String[] queries, String errorMessage) {
+    public boolean executeBatchQueries(Connection con, String[] queries, String errorMessage) {
         if (con == null) {
-            return DBUtils.executeBatchQueries(queries, errorMessage);
+            return executeBatchQueries(queries, errorMessage);
         }
 
         boolean result = false;
@@ -169,13 +180,17 @@ public class DBUtils {
      * For batch executions without any continual transaction
      *
      */
-    public static boolean executeBatchQueries(String[] queries, String errorMessage) {
+    public boolean executeBatchQueries(String[] queries, String errorMessage) {
+        return executeBatchQueries(queries, errorMessage, 0);
+    }
+
+    public boolean executeBatchQueries(String[] queries, String errorMessage, int expectedSuccessfulStatementCount) {
         boolean result = false;
 
         Connection con = null;
         Statement sta = null;
         try {
-            con = DBUtils.getTransactionalConnection();
+            con = getTransactionalConnection();
             sta = con.createStatement();
 
             for (String query: queries) {
@@ -184,20 +199,35 @@ public class DBUtils {
 
             int[] affected = sta.executeBatch();
 
-            result = true;
+            result = false;
+            int successfulStatementCount = 0;
+
             for (int aff: affected) {
-                if (aff < 1) {
-                    DBUtils.rollback(con);
-                    result = false;
-                    break;
+                if (expectedSuccessfulStatementCount > 0) {
+                    if (aff > 0) successfulStatementCount++;
+                    if (successfulStatementCount >= expectedSuccessfulStatementCount) {
+                        result = true;
+                        break;
+                    }
+                } else {
+                    if (aff < 1) {
+                        break;
+                    }
                 }
             }
-            DBUtils.commit(con);
+
+            if (result) {
+                commit(con);
+            } else {
+                rollback(con);
+                if (! props.isRunningForTests() && ! errorMessage.contains("to delete")) log.error(errorMessage);
+            }
+
         } catch (SQLException e) {
-            if (con != null) DBUtils.rollback(con);
+            if (con != null) rollback(con);
             log.error(errorMessage, e);
         } finally {
-            if (con != null) DBUtils.close(con, sta);
+            if (con != null) close(con, sta);
         }
         return result;
     }

@@ -10,7 +10,11 @@ import io.inprice.scrapper.common.meta.Status;
 public class SOCKET_ERROR_Publisher extends FailedLinksPublisher {
 
     public SOCKET_ERROR_Publisher() {
-        super(props.getRL_FailedLinksG3());
+        super();
+    }
+
+    public SOCKET_ERROR_Publisher(boolean lookForImportedProducts) {
+        super(lookForImportedProducts);
     }
 
     @Override
@@ -21,6 +25,11 @@ public class SOCKET_ERROR_Publisher extends FailedLinksPublisher {
     @Override
     String getTimePeriodStatement() {
         return props.getTP_SocketErrors();
+    }
+
+    @Override
+    int getRetryLimit() {
+        return props.getRL_FailedLinksG3();
     }
 
 }

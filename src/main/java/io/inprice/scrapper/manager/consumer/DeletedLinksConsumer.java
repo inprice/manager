@@ -6,7 +6,6 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Converter;
-import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
@@ -29,11 +28,11 @@ public class DeletedLinksConsumer {
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
 				try {
 					ThreadPools.DELETED_LINKS_POOL.submit(() -> {
-						PriceUpdateInfo pui = Converter.toObject(body);
-						if (pui != null) {
-							RedisClient.addPriceChanging(pui.getProductId());
+						Long productId = Converter.toObject(body);
+						if (productId != null && productId > 0) {
+							RedisClient.addPriceChanging(productId);
 						} else {
-							log.error("PriceUpdateInfo object is null!");
+							log.error("Invalid product id value!");
 						}
 					});
 				} catch (Exception e) {

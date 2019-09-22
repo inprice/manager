@@ -17,6 +17,14 @@ import java.util.List;
  */
 public class NEW_Publisher extends AbstractLinkPublisher {
 
+    public NEW_Publisher() {
+        super();
+    }
+
+    public NEW_Publisher(boolean lookForImportedProducts) {
+        super(lookForImportedProducts);
+    }
+
     @Override
     Status getStatus() {
         return Status.NEW;
@@ -24,7 +32,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
 
     @Override
     String getMQRoutingKey() {
-        return props.getRoutingKey_NewLinks();
+        return props.getRoutingKey_NewLinks() + "." + getStatus().name();
     }
 
     @Override

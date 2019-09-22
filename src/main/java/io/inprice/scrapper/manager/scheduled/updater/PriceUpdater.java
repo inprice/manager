@@ -7,7 +7,7 @@ import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.info.ProductLinks;
-import io.inprice.scrapper.manager.repository.Products;
+import io.inprice.scrapper.manager.repository.ProductRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +18,7 @@ import java.util.List;
 public class PriceUpdater implements Task {
 
     private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
+    private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
     private static final Properties props = Beans.getSingleton(Properties.class);
 
     @Override
@@ -42,7 +43,7 @@ public class PriceUpdater implements Task {
                 Long productId = RedisClient.pollPriceChanging();
                 if (productId != null) {
 
-                    List<ProductLinks> prodLinks = Products.getProductLinks(productId);
+                    List<ProductLinks> prodLinks = repository.getProductLinks(productId);
                     if (prodLinks.size() > 0) {
 
                         ProductLinks plMin = prodLinks.get(0);
@@ -83,7 +84,7 @@ public class PriceUpdater implements Task {
                             maxSeller = "You";
                         }
 
-                        Products.updatePrice(productId, basePrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice);
+                        repository.updatePrice(productId, basePrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice);
                         counter++;
                     }
                     log.info("Product Price Updater is completed for Product: {}", productId);
