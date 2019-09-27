@@ -17,26 +17,28 @@ import java.util.List;
 
 public class PriceUpdater implements Task {
 
+    private static final String NAME = "Product Price Updater";
+    
     private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
     private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
     private static final Properties props = Beans.getSingleton(Properties.class);
 
     @Override
     public TimePeriod getTimePeriod() {
-        return DateUtils.parseTimePeriod(props.getTP_ProductPriceUpdate());
+        return DateUtils.parseTimePeriod(props.getTP_UpdateProductPrices());
     }
 
     @Override
     public void run() {
         if (Global.isTaskRunning(getClass().getSimpleName())) {
-            log.warn("Price Updater is already triggered and hasn't finished yet!");
+            log.warn(NAME + " is already triggered and hasn't finished yet!");
             return;
         }
 
         try {
             Global.setTaskRunningStatus(getClass().getSimpleName(), true);
 
-            log.info("Product Price Updater is triggered");
+            log.info(NAME + " is triggered.");
             int counter = 0;
 
             while (!RedisClient.isPriceChangingSetEmpty()) {
@@ -87,7 +89,7 @@ public class PriceUpdater implements Task {
                         repository.updatePrice(productId, basePrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice);
                         counter++;
                     }
-                    log.info("Product Price Updater is completed for Product: {}", productId);
+                    log.info(NAME + " is completed for Id: {}", productId);
                 }
             }
 

@@ -3,7 +3,6 @@ package io.inprice.scrapper.manager.repository;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.meta.ImportType;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkSpec;
@@ -97,66 +96,74 @@ public class LinkRepository {
         try {
             con = dbUtils.getTransactionalConnection();
 
-            final String q1 =
-                "update link " +
-                "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, status=?, " +
+            //if it is a normal link (not an imported product's link)
+            if (link.getImportRowId() == null) {
+
+                final String q1 =
+                    "update link " +
+                    "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, status=?, " +
                     "previous_status=?, site_id=?, website_class_name=?, last_update=now(), retry=0, http_status=0 " +
-                "where id = ? " +
-                "  and status != ?";
+                    "where id = ? " +
+                    "  and status != ?";
 
-            try (PreparedStatement pst = con.prepareStatement(q1)) {
-                int i = 0;
-                pst.setString(++i, link.getName());
-                pst.setString(++i, link.getSku());
-                pst.setString(++i, link.getBrand());
-                pst.setString(++i, link.getSeller());
-                pst.setString(++i, link.getShipment());
-                pst.setBigDecimal(++i, link.getPrice());
-                pst.setString(++i, link.getStatus().name());
-                pst.setString(++i, link.getPreviousStatus().name());
-                pst.setLong(++i, link.getSiteId());
-                pst.setString(++i, link.getWebsiteClassName());
-                pst.setLong(++i, link.getId());
-                pst.setString(++i, link.getStatus().name());
+                try (PreparedStatement pst = con.prepareStatement(q1)) {
+                    int i = 0;
+                    pst.setString(++i, link.getName());
+                    pst.setString(++i, link.getSku());
+                    pst.setString(++i, link.getBrand());
+                    pst.setString(++i, link.getSeller());
+                    pst.setString(++i, link.getShipment());
+                    pst.setBigDecimal(++i, link.getPrice());
+                    pst.setString(++i, link.getStatus().name());
+                    pst.setString(++i, link.getPreviousStatus().name());
+                    pst.setLong(++i, link.getSiteId());
+                    pst.setString(++i, link.getWebsiteClassName());
+                    pst.setLong(++i, link.getId());
+                    pst.setString(++i, link.getStatus().name());
 
-                result = (pst.executeUpdate() > 0);
-            } catch (Exception e) {
-                log.error("Failed to make a link available. Link Id: " + link.getId(), e);
-            }
-
-            if (result) {
-
-                boolean isANormalLink = (link.getImportRowId() == null);
-
-                //is a link for product import!
-                if (! isANormalLink) productRepository.createAProductFromLink(con, link);
-
-                addStatusChangeHistory(con, link);
-                if (isANormalLink) addPriceChangeHistory(con, link);
-
-                if (isANormalLink && link.getSpecList() != null && link.getSpecList().size() > 0) {
-                    //deleting old specs if any
-                    executeSimpleQuery(con,"delete from link_spec where link_id=" + link.getId());
-
-                    int j;
-                    final String q3 = "insert into link_spec (link_id, _key, _value) values (?, ?, ?)";
-                    try (PreparedStatement pst = con.prepareStatement(q3)) {
-                        for (int i = 0; i < link.getSpecList().size(); i++) {
-                            LinkSpec spec = link.getSpecList().get(i);
-
-                            j = 0;
-                            pst.setLong(++j, link.getId());
-                            pst.setString(++j, spec.getKey());
-                            pst.setString(++j, spec.getValue());
-                            pst.addBatch();
-                        }
-                        pst.executeBatch();
-                    }
-                } else if (! isANormalLink) {
-                    updateImportRow(con, link.getImportRowId(), link.getStatus());
+                    result = (pst.executeUpdate() > 0);
+                } catch (Exception e) {
+                    log.error("Failed to make a link available. Link Id: " + link.getId(), e);
                 }
+
+                if (result) {
+
+                    addStatusChangeHistory(con, link);
+                    addPriceChangeHistory(con, link);
+
+                    if (link.getSpecList() != null && link.getSpecList().size() > 0) {
+                        //deleting old specs if any
+                        executeSimpleQuery(con, "delete from link_spec where link_id=" + link.getId());
+
+                        int j;
+                        final String q3 = "insert into link_spec (link_id, _key, _value) values (?, ?, ?)";
+                        try (PreparedStatement pst = con.prepareStatement(q3)) {
+                            for (int i = 0; i < link.getSpecList().size(); i++) {
+                                LinkSpec spec = link.getSpecList().get(i);
+
+                                j = 0;
+                                pst.setLong(++j, link.getId());
+                                pst.setString(++j, spec.getKey());
+                                pst.setString(++j, spec.getValue());
+                                pst.addBatch();
+                            }
+                            pst.executeBatch();
+                        }
+                    }
+                } else {
+                    log.warn("Link is already in {} status. Link Id: {} ", link.getStatus().name(), link.getId());
+                }
+
+            //if it is an imported product's link
             } else {
-                log.warn("Link is already in {} status. Link Id: {} ", link.getStatus().name(), link.getId());
+                //no need to keep the link any more!
+                try (PreparedStatement pst = con.prepareStatement("delete from link where id = " + link.getId())) {
+                    pst.executeUpdate();
+                    productRepository.createAProductFromLink(con, link);
+                    updateImportRow(con, link.getImportRowId(), link.getStatus());
+                } catch (Exception e) {
+                    log.error("Failed to delete a link in make available method. Link Id: " + link.getId(), e);
+                }
             }
 
             if (result) {
@@ -187,32 +194,37 @@ public class LinkRepository {
 
             if (change.getLink().getHttpStatus() == null) change.getLink().setHttpStatus(0);
 
-            final String q1 =
-                "update link " +
-                "set status=?, previous_status=?, http_status=?, last_update=now() " +
-                (change.getLink().getHttpStatus() != 0 ? ", retry=retry+1 " : "") +
-                "where id=? " +
-                "  and status!=?";
+            //if it is a normal link (not an imported product's link)
+            if (change.getLink().getImportRowId() == null) {
 
-            try (PreparedStatement pst = con.prepareStatement(q1)) {
-                int i = 0;
-                pst.setString(++i, newStatusName);
-                pst.setString(++i, oldStatusName);
-                pst.setInt(++i, change.getLink().getHttpStatus());
-                pst.setLong(++i, change.getLink().getId());
-                pst.setString(++i, newStatusName);
+                final String q1 =
+                    "update link " +
+                    "set status=?, previous_status=?, http_status=?, last_update=now() " +
+                    (change.getLink().getHttpStatus() != 0 ? ", retry=retry+1 " : "") +
+                    "where id=? " +
+                    "  and status!=?";
 
-                result = (pst.executeUpdate() > 0);
-            }
+                try (PreparedStatement pst = con.prepareStatement(q1)) {
+                    int i = 0;
+                    pst.setString(++i, newStatusName);
+                    pst.setString(++i, oldStatusName);
+                    pst.setInt(++i, change.getLink().getHttpStatus());
+                    pst.setLong(++i, change.getLink().getId());
+                    pst.setString(++i, newStatusName);
 
-            if (result) {
-                addStatusChangeHistory(con, change.getLink());
+                    result = (pst.executeUpdate() > 0);
+                }
 
-                //if it is an imported product
-                if (change.getLink().getImportRowId() != null) updateImportRow(con, change.getLink().getImportRowId(), change.getLink().getStatus());
+                if (result) {
+                    addStatusChangeHistory(con, change.getLink());
+                } else {
+                    log.warn("Link's status is already changed! Link Id: {}, Old Status: {}, New Status: {}",
+                            change.getLink().getId(), oldStatusName, newStatusName);
+                }
+
+            //if it is an imported product's link
             } else {
-                log.warn("Link's status is already changed! Link Id: {}, Old Status: {}, New Status: {}",
-                        change.getLink().getId(), oldStatusName, newStatusName);
+                updateImportRow(con, change.getLink().getImportRowId(), change.getLink().getStatus());
             }
 
             if (result) {
@@ -269,6 +281,31 @@ public class LinkRepository {
         }
 
         return result;
+    }
+
+    /**
+     * Deletes all expired links added for imported products.
+     */
+    public void deleteImportedProductsLinks() {
+        Connection con = null;
+        try {
+            con = dbUtils.getTransactionalConnection();
+
+            executeSimpleQuery(
+                con,
+        "delete from link " +
+                "where last_check < now() - interval 5 day " + //last check time must be older than 5 days
+                "  and import_row_id is not null"
+            );
+
+            con.commit();
+
+        } catch (SQLException e) {
+            dbUtils.rollback(con);
+            log.error("Failed to delete all expired links for imported products!", e);
+        } finally {
+            if (con != null) dbUtils.close(con);
+        }
     }
 
     private void addStatusChangeHistory(Connection con, Link link) {

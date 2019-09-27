@@ -28,7 +28,7 @@ public class DBUtils {
         HikariConfig hConf = new HikariConfig();
 
         final String connectionString =
-                String.format("jdbc:%s:%s:%d/%s%s", props.getDB_Driver(), props.getDB_Host(),
+                String.format("jdbc:%s://%s:%d/%s%s", props.getDB_Driver(), props.getDB_Host(),
                         props.getDB_Port(), props.getDB_Database(), props.getDB_Additions());
 
         log.info(connectionString);

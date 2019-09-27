@@ -180,8 +180,12 @@ public class Properties {
 		return prop.getProperty("tp.implemented-links", "33M");
 	}
 
-	public String getTP_ProductPriceUpdate() {
-		return prop.getProperty("tp.product-price-update", "1H");
+	public String getTP_UpdateProductPrices() {
+		return prop.getProperty("tp.update-product-prices", "1H");
+	}
+
+	public String getTP_CleanLinks() {
+		return prop.getProperty("tp.cleans-links", "1d");
 	}
 
 	public String getTP_NetworkErrors() {

@@ -77,9 +77,9 @@ public abstract class AbstractLinkPublisher implements Task {
             }
 
             if (counter > 0)
-                log.info("{} link(s) is handled successfully. Number: {}, Time: {}", getStatus().name(), counter, (System.currentTimeMillis() - startTime));
+                log.info("[{} -> Imported: {}] link(s) is handled successfully. Number: {}, Time: {}", getStatus().name(), lookForImportedProducts, counter, (System.currentTimeMillis() - startTime));
             else
-                log.info("No link in {} status found.", getStatus().name());
+                log.info("No link [{} -> Imported: {}] status found.", getStatus().name(), lookForImportedProducts);
 
         } catch (Exception e) {
             log.error(String.format("Failed to completed %s task!", getStatus().name()), e);

@@ -2,6 +2,7 @@ package io.inprice.scrapper.manager.scheduled;
 
 import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.manager.scheduled.publisher.*;
+import io.inprice.scrapper.manager.scheduled.updater.LinkCleaner;
 import io.inprice.scrapper.manager.scheduled.updater.PriceUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,12 +13,13 @@ import java.util.concurrent.ScheduledExecutorService;
 public class TaskManager {
 
     private static final Logger log = LoggerFactory.getLogger(TaskManager.class);
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(15);
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(14);
 
     public static void start() {
         log.info("TaskManager is up.");
 
         loadTask(new PriceUpdater());
+        loadTask(new LinkCleaner());
 
         loadTask(new NEW_Publisher());
         loadTask(new RENEWED_Publisher());
