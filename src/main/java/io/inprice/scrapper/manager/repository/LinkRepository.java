@@ -5,6 +5,7 @@ import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.Status;
 import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.models.LinkHistory;
 import io.inprice.scrapper.common.models.LinkSpec;
 import io.inprice.scrapper.manager.config.Properties;
 import io.inprice.scrapper.manager.helpers.DBUtils;
@@ -190,12 +191,19 @@ public class LinkRepository {
             con = dbUtils.getTransactionalConnection();
 
             final String oldStatusName = change.getOldStatus().name();
-            final String newStatusName = change.getLink().getStatus().name();
+            String newStatusName = change.getLink().getStatus().name();
 
             if (change.getLink().getHttpStatus() == null) change.getLink().setHttpStatus(0);
 
             //if it is a normal link (not an imported product's link)
             if (change.getLink().getImportRowId() == null) {
+
+                if (Status.RESUMED.equals(change.getLink().getStatus())) {
+                    Status originalStatus = findThirdBackStatusForResumedLinks(con, change.getLink().getId());
+                    if (originalStatus != null) {
+                        newStatusName = originalStatus.name();
+                    }
+                }
 
                 final String q1 =
                     "update link " +
@@ -319,6 +327,33 @@ public class LinkRepository {
         );
     }
 
+    /**
+     * Since the previous status of a resumed link must be PAUSED (thus, nonsens to return back to PAUSED from RESUMED)
+     * We need to find the third status in back which means we find the status before PAUSED
+     *
+     * 1- Link is in any status
+     * 2- passes in PAUSED
+     * 3- passes in RESUMED
+     * 4- we must return back to the status in first step
+     */
+    private Status findThirdBackStatusForResumedLinks(Connection con, Long linkId) {
+        final String query =
+            String.format(
+                "select * from link_history " +
+                "where link_id = %d " +
+                "order by created_at desc " +
+                "limit 3 ",
+                linkId
+            );
+
+        List<LinkHistory> historyList = dbUtils.findMultiple(con, query, this::historyMap);
+        if (historyList != null && historyList.size() > 2) {
+            return historyList.get(2).getStatus();
+        }
+
+        return null;
+    }
+
     private void addPriceChangeHistory(Connection con, Link link) {
         addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getCompanyId(), link.getWorkspaceId(), link.getProductId());
     }
@@ -376,6 +411,7 @@ public class LinkRepository {
             model.setLastCheck(rs.getDate("last_check"));
             model.setLastUpdate(rs.getDate("last_update"));
             model.setStatus(Status.valueOf(rs.getString("status")));
+            model.setHttpStatus(rs.getInt("http_status"));
             model.setPreviousStatus(Status.valueOf(rs.getString("previous_status")));
             model.setRetry(rs.getInt("retry"));
             model.setWebsiteClassName(rs.getString("website_class_name"));
@@ -393,6 +429,24 @@ public class LinkRepository {
             return model;
         } catch (SQLException e) {
             log.error("Failed to set link's properties", e);
+        }
+        return null;
+    }
+
+    private LinkHistory historyMap(ResultSet rs) {
+        try {
+            LinkHistory model = new LinkHistory();
+            model.setId(rs.getLong("id"));
+            model.setLinkId(rs.getLong("link_id"));
+            model.setStatus(Status.valueOf(rs.getString("status")));
+            model.setHttpStatus(rs.getInt("http_status"));
+            model.setCompanyId(rs.getLong("company_id"));
+            model.setWorkspaceId(rs.getLong("workspace_id"));
+            model.setCreatedAt(rs.getDate("created_at"));
+
+            return model;
+        } catch (SQLException e) {
+            log.error("Failed to set link's history properties", e);
         }
         return null;
     }
