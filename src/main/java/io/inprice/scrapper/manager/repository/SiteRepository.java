@@ -27,7 +27,7 @@ public class SiteRepository {
             model.setName(rs.getString("name"));
             model.setDomain(rs.getString("domain"));
             model.setClassName(rs.getString("class_name"));
-            model.setInsertAt(rs.getDate("insert_at"));
+            model.setCreatedAt(rs.getDate("created_at"));
 
             model.setCountryId(rs.getLong("country_id"));
 
