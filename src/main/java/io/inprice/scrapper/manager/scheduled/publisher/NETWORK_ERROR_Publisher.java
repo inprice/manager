@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.meta.Status;
+import io.inprice.scrapper.common.meta.LinkStatus;
+import io.inprice.scrapper.manager.external.Props;
 
 /**
  * Finds and handles NETWORK_ERROR links
@@ -9,27 +10,19 @@ import io.inprice.scrapper.common.meta.Status;
  */
 public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
 
-    public NETWORK_ERROR_Publisher() {
-        super();
-    }
+  @Override
+  LinkStatus getStatus() {
+    return LinkStatus.NETWORK_ERROR;
+  }
 
-    public NETWORK_ERROR_Publisher(boolean lookForImportedProducts) {
-        super(lookForImportedProducts);
-    }
+  @Override
+  String getTimePeriodStatement() {
+    return Props.TIMING_FOR_NETWORK_ERRORS();
+  }
 
-    @Override
-    Status getStatus() {
-        return Status.NETWORK_ERROR;
-    }
-
-    @Override
-    String getTimePeriodStatement() {
-        return props.getTP_NetworkErrors();
-    }
-
-    @Override
-    int getRetryLimit() {
-        return props.getRL_FailedLinksG1();
-    }
+  @Override
+  int getRetryLimit() {
+    return Props.RETRY_LIMIT_FOR_FAILED_LINKS_G1();
+  }
 
 }

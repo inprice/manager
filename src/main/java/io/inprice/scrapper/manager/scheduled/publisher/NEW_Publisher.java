@@ -1,14 +1,15 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
+import java.util.List;
+
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.meta.Status;
+import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.Site;
 import io.inprice.scrapper.common.utils.URLUtils;
+import io.inprice.scrapper.manager.external.Props;
 import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.SiteFinder;
-
-import java.util.List;
 
 /**
  * Finds and handles NEW (and also RENEWED through inheritance) links
@@ -17,53 +18,47 @@ import java.util.List;
  */
 public class NEW_Publisher extends AbstractLinkPublisher {
 
-    public NEW_Publisher() {
-        super();
-    }
+  @Override
+  LinkStatus getStatus() {
+    return LinkStatus.NEW;
+  }
 
-    public NEW_Publisher(boolean lookForImportedProducts) {
-        super(lookForImportedProducts);
-    }
+  @Override
+  String getMQRoutingKey() {
+    return Props.MQ_ROUTING_NEW_LINKS() + "." + getStatus().name();
+  }
 
-    @Override
-    Status getStatus() {
-        return Status.NEW;
-    }
+  @Override
+  String getTimePeriodStatement() {
+    return Props.TIMING_FOR_NEW_LINKS();
+  }
 
-    @Override
-    String getMQRoutingKey() {
-        return props.getRoutingKey_NewLinks() + "." + getStatus().name();
-    }
+  @Override
+  void handleLinks(List<Link> linkList) {
+    for (Link link : linkList) {
+      LinkStatus oldStatus = link.getStatus();
 
-    @Override
-    String getTimePeriodStatement() {
-        return props.getTP_NewLinks();
-    }
-
-    @Override
-    void handleLinks(List<Link> linkList) {
-        for (Link link: linkList) {
-            Status oldStatus = link.getStatus();
-
-            if (URLUtils.isAValidURL(link.getUrl())) {
-                Site site = SiteFinder.findSiteByUrl(link.getUrl());
-                if (site != null) {
-                    link.setSiteId(site.getId());
-                    link.setWebsiteClassName(site.getClassName());
-                } else {
-                    link.setStatus(Status.BE_IMPLEMENTED);
-                }
-            } else {
-                link.setStatus(Status.IMPROPER);
-            }
-
-            if (link.getStatus().equals(oldStatus)) {
-                RabbitMQ.publish(getMQRoutingKey(), link); //the consumer class is in Worker, NewLinksConsumer
-            } else {
-                StatusChange change = new StatusChange(link, oldStatus);
-                RabbitMQ.publish(props.getMQ_ChangeExchange(), props.getRoutingKey_StatusChange(), change); //the consumer class is here, StatusChangeConsumer
-            }
+      if (URLUtils.isAValidURL(link.getUrl())) {
+        Site site = SiteFinder.findSiteByUrl(link.getUrl());
+        if (site != null) {
+          link.setSiteId(site.getId());
+          link.setWebsiteClassName(site.getClassName());
+        } else {
+          link.setStatus(LinkStatus.BE_IMPLEMENTED);
         }
+      } else {
+        link.setStatus(LinkStatus.IMPROPER);
+      }
+
+      if (link.getStatus().equals(oldStatus)) {
+        // the consumer class is in Worker, NewLinksConsumer
+        RabbitMQ.publish(getMQRoutingKey(), link);
+      } else {
+        // the consumer class is here, StatusChangeConsumer
+        StatusChange change = new StatusChange(link, oldStatus);
+        RabbitMQ.publish(Props.MQ_EXCHANGE_CHANGES(), Props.MQ_ROUTING_STATUS_CHANGES(), change); 
+      }
     }
+  }
 
 }

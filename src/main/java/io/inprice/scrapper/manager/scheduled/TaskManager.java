@@ -29,12 +29,6 @@ public class TaskManager {
         loadTask(new NETWORK_ERROR_Publisher());
         loadTask(new SOCKET_ERROR_Publisher());
         loadTask(new NOT_AVAILABLE_Publisher());
-
-        //tasks for imported products
-        loadTask(new NEW_Publisher(true));
-        loadTask(new IMPLEMENTED_Publisher(true));
-        loadTask(new NETWORK_ERROR_Publisher(true));
-        loadTask(new SOCKET_ERROR_Publisher(true));
     }
 
     private static void loadTask(Task task) {

@@ -1,13 +1,19 @@
 package io.inprice.scrapper.manager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.inprice.scrapper.manager.consumer.DeletedLinksConsumer;
 import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
-import io.inprice.scrapper.manager.helpers.*;
+import io.inprice.scrapper.common.helpers.Database;
+import io.inprice.scrapper.manager.helpers.Beans;
+import io.inprice.scrapper.manager.helpers.Global;
+import io.inprice.scrapper.manager.helpers.RabbitMQ;
+import io.inprice.scrapper.manager.helpers.RedisClient;
+import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Entry point of the application.
@@ -19,6 +25,8 @@ import org.slf4j.LoggerFactory;
 public class Application {
 
 	private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+  private static final Database db = Beans.getSingleton(Database.class);
 
 	public static void main(String[] args) {
 		new Thread(() -> {
@@ -49,7 +57,7 @@ public class Application {
 			RabbitMQ.closeChannel();
 
 			log.info(" - DB connection is closing...");
-			DBUtils.shutdown();
+			db.shutdown();
 
 			log.info("ALL SERVICES IS DONE.");
 		},"shutdown-hook"));

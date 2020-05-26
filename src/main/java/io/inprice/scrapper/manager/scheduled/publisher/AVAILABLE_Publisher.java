@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.meta.Status;
+import io.inprice.scrapper.common.meta.LinkStatus;
+import io.inprice.scrapper.manager.external.Props;
 
 /**
  * Finds and handles AVAILABLE links
@@ -9,19 +10,19 @@ import io.inprice.scrapper.common.meta.Status;
  */
 public class AVAILABLE_Publisher extends AbstractLinkPublisher {
 
-    @Override
-    Status getStatus() {
-        return Status.AVAILABLE;
-    }
+  @Override
+  LinkStatus getStatus() {
+    return LinkStatus.AVAILABLE;
+  }
 
-    @Override
-    String getMQRoutingKey() {
-        return props.getRoutingKey_AvailableLinks();
-    }
+  @Override
+  String getMQRoutingKey() {
+    return Props.MQ_ROUTING_AVAILABLE_LINKS();
+  }
 
-    @Override
-    String getTimePeriodStatement() {
-        return props.getTP_AvailableLinks();
-    }
+  @Override
+  String getTimePeriodStatement() {
+    return Props.TIMING_FOR_AVAILABLE_LINKS();
+  }
 
 }

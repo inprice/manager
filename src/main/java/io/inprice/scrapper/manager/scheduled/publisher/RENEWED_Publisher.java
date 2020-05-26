@@ -1,6 +1,7 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.meta.Status;
+import io.inprice.scrapper.common.meta.LinkStatus;
+import io.inprice.scrapper.manager.external.Props;
 
 /**
  * Finds and handles RENEWED links
@@ -9,14 +10,14 @@ import io.inprice.scrapper.common.meta.Status;
  */
 public class RENEWED_Publisher extends NEW_Publisher {
 
-    @Override
-    Status getStatus() {
-        return Status.RENEWED;
-    }
+  @Override
+  LinkStatus getStatus() {
+    return LinkStatus.RENEWED;
+  }
 
-    @Override
-    String getTimePeriodStatement() {
-        return props.getTP_RenewedLinks();
-    }
+  @Override
+  String getTimePeriodStatement() {
+    return Props.TIMING_FOR_RENEWED_LINKS();
+  }
 
 }
