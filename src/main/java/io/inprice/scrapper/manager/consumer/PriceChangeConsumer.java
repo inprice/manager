@@ -10,11 +10,11 @@ import com.rabbitmq.client.Envelope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.scrapper.common.config.SysProps;
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
-import io.inprice.scrapper.manager.external.Props;
 import io.inprice.scrapper.manager.helpers.Beans;
 import io.inprice.scrapper.manager.helpers.MessageConverter;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.LinkRepository;
@@ -37,7 +37,7 @@ public class PriceChangeConsumer {
               boolean isOK = linkRepository.changePrice(pui);
               if (isOK) {
                 RedisClient.addPriceChanging(pui.getProductId());
-                RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
+                //RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while changing Price!");
               }
@@ -46,18 +46,19 @@ public class PriceChangeConsumer {
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
+            /*
             try {
               RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, false);
             } catch (IOException e1) {
               log.error("Failed to send a message to dlq", e1);
-            }
+            }*/
           }
         });
       }
     };
 
     try {
-      RabbitMQ.getChannel().basicConsume(Props.MQ_QUEUE_PRICE_CHANGE(), false, consumer);
+      RabbitMQ.getChannel().basicConsume(SysProps.MQ_PRICE_CHANGE_QUEUE(), false, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting price changes.", e);
     }

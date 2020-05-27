@@ -5,14 +5,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.utils.DateUtils;
-import io.inprice.scrapper.manager.external.Props;
+import io.inprice.scrapper.manager.config.Props;
 import io.inprice.scrapper.manager.helpers.Global;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.repository.LinkRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
 

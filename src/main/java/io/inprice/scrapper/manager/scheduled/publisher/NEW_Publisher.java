@@ -2,13 +2,14 @@ package io.inprice.scrapper.manager.scheduled.publisher;
 
 import java.util.List;
 
+import io.inprice.scrapper.common.config.SysProps;
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.Site;
 import io.inprice.scrapper.common.utils.URLUtils;
-import io.inprice.scrapper.manager.external.Props;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
+import io.inprice.scrapper.manager.config.Props;
 import io.inprice.scrapper.manager.helpers.SiteFinder;
 
 /**
@@ -25,7 +26,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
 
   @Override
   String getMQRoutingKey() {
-    return Props.MQ_ROUTING_NEW_LINKS() + "." + getStatus().name();
+    return SysProps.MQ_NEW_LINKS_ROUTING() + "." + getStatus().name();
   }
 
   @Override
@@ -56,7 +57,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
       } else {
         // the consumer class is here, StatusChangeConsumer
         StatusChange change = new StatusChange(link, oldStatus);
-        RabbitMQ.publish(Props.MQ_EXCHANGE_CHANGES(), Props.MQ_ROUTING_STATUS_CHANGES(), change); 
+        RabbitMQ.publish(SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), change); 
       }
     }
   }

@@ -1,5 +1,6 @@
 package io.inprice.scrapper.manager.helpers;
 
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RSet;
 import org.redisson.api.RedissonClient;
@@ -7,7 +8,7 @@ import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.scrapper.manager.external.Props;
+import io.inprice.scrapper.common.config.SysProps;
 
 public class RedisClient {
 
@@ -19,9 +20,16 @@ public class RedisClient {
   private static RSet<Long> priceChangingProductsIdSet;
 
   static {
+    final String redisPass = SysProps.REDIS_PASSWORD();
     Config config = new Config();
-    config.useSingleServer().setAddress(String.format("redis://%s:%d", Props.REDIS_HOST(), Props.REDIS_PORT()))
-        .setPassword((Props.REDIS_PASSWORD().trim().isEmpty() ? null : Props.REDIS_PASSWORD()));
+    config
+      .useSingleServer()
+      .setAddress(String.format("redis://%s:%d", SysProps.REDIS_HOST(), SysProps.REDIS_PORT()))
+      .setPassword(!StringUtils.isBlank(redisPass) ? redisPass : null)
+      .setConnectionPoolSize(10)
+      .setConnectionMinimumIdleSize(1)
+      .setIdleConnectionTimeout(5000)
+      .setTimeout(5000);
 
     while (!isHealthy && Global.isApplicationRunning) {
       try {

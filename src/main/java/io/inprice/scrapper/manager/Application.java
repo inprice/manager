@@ -3,14 +3,14 @@ package io.inprice.scrapper.manager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.scrapper.common.helpers.RabbitMQ;
+import io.inprice.scrapper.common.helpers.Database;
 import io.inprice.scrapper.manager.consumer.DeletedLinksConsumer;
 import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
 import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
-import io.inprice.scrapper.common.helpers.Database;
 import io.inprice.scrapper.manager.helpers.Beans;
 import io.inprice.scrapper.manager.helpers.Global;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.scheduled.TaskManager;

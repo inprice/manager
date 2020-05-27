@@ -10,11 +10,11 @@ import com.rabbitmq.client.Envelope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.manager.external.Props;
 import io.inprice.scrapper.manager.helpers.MessageConverter;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.LinkRepository;
@@ -37,7 +37,7 @@ public class StatusChangeConsumer {
               boolean isOK = linkRepository.changeStatus(change);
               if (isOK) {
                 RedisClient.addPriceChanging(change.getLink().getProductId());
-                RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
+                //RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), true);
               } else {
                 log.error("DB problem while changing Link status!");
               }
@@ -46,18 +46,19 @@ public class StatusChangeConsumer {
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
+            /*
             try {
-              RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, false);
+              RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, true);
             } catch (IOException e1) {
               log.error("Failed to send a message to dlq", e1);
-            }
+            }*/
           }
         });
       }
     };
 
     try {
-      RabbitMQ.getChannel().basicConsume(Props.MQ_QUEUE_STATUS_CHANGE(), false, consumer);
+      RabbitMQ.getChannel().basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), true, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting status changes.", e);
     }

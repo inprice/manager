@@ -2,8 +2,8 @@ package io.inprice.scrapper.manager.scheduled.publisher;
 
 import java.util.List;
 
+import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.external.Props;
 
 abstract class FailedLinksPublisher extends AbstractLinkPublisher {
 
@@ -15,7 +15,7 @@ abstract class FailedLinksPublisher extends AbstractLinkPublisher {
 
   @Override
   String getMQRoutingKey() {
-    return Props.MQ_ROUTING_FAILED_LINKS() + "." + getStatus().name();
+    return SysProps.MQ_FAILED_LINKS_ROUTING() + "." + getStatus().name();
   }
 
   @Override

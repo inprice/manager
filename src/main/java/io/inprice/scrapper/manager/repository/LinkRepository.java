@@ -19,7 +19,7 @@ import io.inprice.scrapper.common.meta.PlanStatus;
 import io.inprice.scrapper.common.models.Link;
 import io.inprice.scrapper.common.models.LinkHistory;
 import io.inprice.scrapper.common.models.LinkSpec;
-import io.inprice.scrapper.manager.external.Props;
+import io.inprice.scrapper.manager.config.Props;
 
 public class LinkRepository {
 

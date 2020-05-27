@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.scrapper.manager.external.Props;
+import io.inprice.scrapper.common.config.SysProps;
 
 public class ThreadPools {
 
@@ -39,7 +39,7 @@ public class ThreadPools {
     for (ExecutorService pool : registry) {
       try {
         pool.shutdown();
-        pool.awaitTermination(Props.WAITING_TIME_FOR_TERMINATION(), TimeUnit.SECONDS);
+        pool.awaitTermination(SysProps.WAITING_TIME_FOR_TERMINATION(), TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         log.error("Thread pool termination is interrupted.", e);
       }

@@ -2,11 +2,12 @@ package io.inprice.scrapper.manager.scheduled.publisher;
 
 import java.util.List;
 
+import io.inprice.scrapper.common.config.SysProps;
+import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.external.Props;
-import io.inprice.scrapper.manager.helpers.RabbitMQ;
+import io.inprice.scrapper.manager.config.Props;
 
 /**
  * Finds links in RESUMED status and changes back to their previous status
@@ -22,7 +23,7 @@ public class RESUMED_Publisher extends AbstractLinkPublisher {
 
   @Override
   String getMQRoutingKey() {
-    return Props.MQ_ROUTING_STATUS_CHANGES();
+    return SysProps.MQ_STATUS_CHANGES_ROUTING();
   }
 
   @Override

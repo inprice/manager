@@ -1,7 +1,8 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
+import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.meta.LinkStatus;
-import io.inprice.scrapper.manager.external.Props;
+import io.inprice.scrapper.manager.config.Props;
 
 /**
  * Finds and handles AVAILABLE links
@@ -17,7 +18,7 @@ public class AVAILABLE_Publisher extends AbstractLinkPublisher {
 
   @Override
   String getMQRoutingKey() {
-    return Props.MQ_ROUTING_AVAILABLE_LINKS();
+    return SysProps.MQ_AVAILABLE_LINKS_ROUTING();
   }
 
   @Override
