@@ -16,6 +16,7 @@ import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Database;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.manager.info.PriceUpdate;
 import io.inprice.scrapper.manager.info.ProductLinks;
 
 public class ProductRepository {
@@ -70,41 +71,39 @@ public class ProductRepository {
     return false;
   }
 
-  public boolean updatePrice(Long prodId, BigDecimal prodPrice, int position, String minSeller, String maxSeller,
-      BigDecimal minPrice, BigDecimal avgPrice, BigDecimal maxPrice) {
-
+  public boolean updatePrice(PriceUpdate pu) {
     List<String> queries = new ArrayList<>(2);
     queries.add(
       String.format(
         "insert into product_price " +
-        "(product_id, price, position, min_seller, max_seller, min_price, avg_price, max_price) " + 
-        "values (%d, %f, %d, '%s', '%s', %f, %f, %f);",
-        prodId, prodPrice, position, minSeller, maxSeller, minPrice, avgPrice, maxPrice)
+        "(product_id, price, position, min_platform, min_seller, min_price, avg_price, " +
+          "max_platform, max_seller, max_price, links_count, company_id) " + 
+        "values (%d, %f, %d, '%s', '%s', %f, %f, '%s', '%s', %f, %d, %d);",
+        pu.getProductId(), pu.getBasePrice(), pu.getPosition(), pu.getMinPlatform(), pu.getMinSeller(), pu.getMinPrice(), pu.getAvgPrice(),
+        pu.getMaxPlatform(), pu.getMaxSeller(), pu.getMaxPrice(), pu.getLinksCount(), pu.getCompanyId())
     );
 
     queries.add(
       String.format(
-        "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, s.domain as site_name " +
-        "from product as p " + "inner join link as l on l.product_id = p.id " +
-        "inner join site as s on s.id = l.site_id " + 
-        "where p.id = %d " + 
-        "  and p.price > 0 " +
-        "  and l.price > 0" + 
-        "  and l.status != '%s' " + 
-        "order by l.price ",
-        prodId, LinkStatus.PAUSED)
+        "update product " +
+        "set position=%d, min_platform='%s', min_seller='%s', min_price=%f, avg_price=%f, " +
+           "max_platform='%s', max_seller='%s', max_price=%f, links_count=%d, updated_at=now() " +
+        "where id=%d " +
+        "  and company_id=%d",
+        pu.getPosition(), pu.getMinPlatform(), pu.getMinSeller(), pu.getMinPrice(), pu.getAvgPrice(),
+        pu.getMaxPlatform(), pu.getMaxSeller(), pu.getMaxPrice(), pu.getLinksCount(), pu.getProductId(), pu.getCompanyId())
     );
 
     return db.executeBatchQueries(
         queries, 
-        String.format("Failed to update product price. Product Id: %d, Avg.Price: %f", prodId, avgPrice)
+        "Failed to update product price. " + pu.toString()
     );
   }
 
   public List<ProductLinks> getProductLinks(Long productId) {
     return db.findMultiple(
       String.format(
-        "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, s.domain as site_name " +
+        "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, p.company_id, s.domain as site_name " +
         "from product as p " +
         "inner join link as l on l.product_id = p.id " +
         "inner join site as s on s.id = l.site_id " +
@@ -121,12 +120,13 @@ public class ProductRepository {
   private ProductLinks mapProductLinks(ResultSet rs) {
     ProductLinks pl = new ProductLinks();
     try {
-      pl.setId(rs.getLong("prod_id"));
-      pl.setPrice(rs.getBigDecimal("prod_price"));
+      pl.setProductId(rs.getLong("prod_id"));
+      pl.setProductPrice(rs.getBigDecimal("prod_price"));
       pl.setLinkId(rs.getLong("link_id"));
       pl.setLinkPrice(rs.getBigDecimal("link_price"));
       pl.setSeller(rs.getString("seller"));
-      pl.setSiteName(rs.getString("site_name"));
+      pl.setSeller(rs.getString("seller"));
+      pl.setCompanyId(rs.getLong("company_id"));
 
     } catch (SQLException e) {
       log.error("Failed to set product's properties", e);

@@ -12,11 +12,12 @@ public class ProductLinks implements Serializable {
 
   private static final long serialVersionUID = 373006989454188752L;
 
-  private Long id;
-  private BigDecimal price;
+  private Long productId;
+  private BigDecimal productPrice;
   private Long linkId;
   private BigDecimal linkPrice;
   private String seller;
   private String siteName;
+  private Long companyId;
 
 }

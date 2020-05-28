@@ -40,7 +40,7 @@ public class TobeAvailableLinksConsumer {
               boolean isOK = linkRepository.makeAvailable(link);
               if (isOK) {
                 RedisClient.addPriceChanging(link.getProductId());
-                //RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
+                RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while activating a link!");
               }
@@ -49,19 +49,18 @@ public class TobeAvailableLinksConsumer {
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
-            /*
             try {
               RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, false);
             } catch (IOException e1) {
               log.error("Failed to send a message to dlq", e1);
-            }*/
+            }
           }
         });
       }
     };
 
     try {
-      RabbitMQ.getChannel().basicConsume(SysProps.MQ_TOBE_AVAILABLE_LINKS_QUEUE(), true, consumer);
+      RabbitMQ.getChannel().basicConsume(SysProps.MQ_TOBE_AVAILABLE_LINKS_QUEUE(), false, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue for getting links to make available.", e);
     }

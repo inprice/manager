@@ -98,8 +98,8 @@ public class LinkRepository {
 
       final String q1 = 
         "update link " + 
-        "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, status=?, " +
-        "pre_status=?, site_id=?, website_class_name=?, last_update=now(), retry=0, http_status=0 " +
+        "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, pre_status=status, status=?, " +
+        "site_id=?, website_class_name=?, last_update=now(), retry=0, http_status=0 " +
         "where id = ? " + 
         "  and status != ?";
 
@@ -132,7 +132,7 @@ public class LinkRepository {
           executeSimpleQuery(con, "delete from link_spec where link_id=" + link.getId());
 
           int j;
-          final String q3 = "insert into link_spec (link_id, _key, _value) values (?, ?, ?)";
+          final String q3 = "insert into link_spec (link_id, _key, _value, product_id, company_id) values (?, ?, ?, ?, ?)";
           try (PreparedStatement pst = con.prepareStatement(q3)) {
             for (int i = 0; i < link.getSpecList().size(); i++) {
               LinkSpec spec = link.getSpecList().get(i);
@@ -141,6 +141,8 @@ public class LinkRepository {
               pst.setLong(++j, link.getId());
               pst.setString(++j, spec.getKey());
               pst.setString(++j, spec.getValue());
+              pst.setLong(++j, link.getProductId());
+              pst.setLong(++j, link.getCompanyId());
               pst.addBatch();
             }
             pst.executeBatch();
@@ -275,9 +277,9 @@ public class LinkRepository {
   private void addStatusChangeHistory(Connection con, Link link) {
     executeSimpleQuery(con,
       String.format(
-        "insert into link_history (link_id, status, http_status, company_id, product_id) " +
+        "insert into link_history (link_id, status, http_status, product_id, company_id) " +
         "values (%d, '%s', %d, %d, %d)",
-        link.getId(), link.getStatus(), link.getHttpStatus(), link.getCompanyId(), link.getProductId()));
+        link.getId(), link.getStatus(), link.getHttpStatus(), link.getProductId(), link.getCompanyId()));
   }
 
   /**
@@ -304,17 +306,17 @@ public class LinkRepository {
   }
 
   private void addPriceChangeHistory(Connection con, Link link) {
-    addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getCompanyId(), link.getProductId());
+    addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getProductId(), link.getCompanyId());
   }
 
   private void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
-    addPriceChangeHistory(con, priceInfo.getLinkId(), priceInfo.getNewPrice(), priceInfo.getCompanyId(), priceInfo.getProductId());
+    addPriceChangeHistory(con, priceInfo.getLinkId(), priceInfo.getNewPrice(), priceInfo.getProductId(), priceInfo.getCompanyId());
   }
 
-  private void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long companyId, long productId) {
+  private void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long productId, long companyId) {
     executeSimpleQuery(con, String.format(
-        "insert into link_price (link_id, price, companyId, productId) values (%d, %f, %d, %d)",
-        linkId, price, companyId, productId));
+        "insert into link_price (link_id, price, product_id, company_id) values (%d, %f, %d, %d)",
+        linkId, price, productId, companyId));
   }
 
   private void executeSimpleQuery(Connection con, String query) {

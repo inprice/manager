@@ -37,7 +37,7 @@ public class StatusChangeConsumer {
               boolean isOK = linkRepository.changeStatus(change);
               if (isOK) {
                 RedisClient.addPriceChanging(change.getLink().getProductId());
-                //RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), true);
+                RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while changing Link status!");
               }
@@ -46,19 +46,18 @@ public class StatusChangeConsumer {
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
-            /*
             try {
-              RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, true);
+              RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, false);
             } catch (IOException e1) {
               log.error("Failed to send a message to dlq", e1);
-            }*/
+            }
           }
         });
       }
     };
 
     try {
-      RabbitMQ.getChannel().basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), true, consumer);
+      RabbitMQ.getChannel().basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), false, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting status changes.", e);
     }
