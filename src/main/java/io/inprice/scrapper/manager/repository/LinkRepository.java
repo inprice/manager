@@ -28,8 +28,7 @@ public class LinkRepository {
 
   /**
    * This method can be used for both links and imported products at the same
-   * time. isLookingForImportedProducts parameter is used to distinguish the
-   * searching direction between links and imported product rows
+   * time.
    *
    */
   public List<Link> getLinks(LinkStatus status) {
@@ -49,8 +48,7 @@ public class LinkRepository {
 
   /**
    * This method can be used for both links and imported products at the same
-   * time. isLookingForImportedProducts parameter is used to distinguish the
-   * searching direction between links and imported product rows
+   * time.
    *
    */
   public List<Link> getFailedLinks(LinkStatus status, int retryLimit) {
@@ -84,8 +82,8 @@ public class LinkRepository {
    *
    * - All the basic information of the link is set first 
    * - In order to add a status change into link_history table, changeStatus method is called 
-   * - In order to add a price change into link_price table, changePrice method is called 
-   * - Specs of the link are added
+   * - and also changePrice method is called for adding a price change row into link_price table
+   * - lastly, specs of the link are added
    *
    * @return boolean
    */

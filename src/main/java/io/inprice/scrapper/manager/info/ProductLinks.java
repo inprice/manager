@@ -18,6 +18,7 @@ public class ProductLinks implements Serializable {
   private BigDecimal linkPrice;
   private String seller;
   private String siteName;
+  private Integer ranking = 0;
   private Long companyId;
 
 }

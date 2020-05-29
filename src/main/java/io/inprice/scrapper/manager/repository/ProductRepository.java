@@ -1,12 +1,10 @@
 package io.inprice.scrapper.manager.repository;
 
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -16,7 +14,7 @@ import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Database;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.manager.info.PriceUpdate;
+import io.inprice.scrapper.common.models.ProductPrice;
 import io.inprice.scrapper.manager.info.ProductLinks;
 
 public class ProductRepository {
@@ -30,7 +28,7 @@ public class ProductRepository {
       "(code, name, brand, price, company_id) " + 
       "values (?, ?, ?, ?, ?) ";
 
-    try (PreparedStatement pst = con.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+    try (PreparedStatement pst = con.prepareStatement(query)) {
       int i = 0;
       pst.setString(++i, link.getSku());
       pst.setString(++i, link.getName());
@@ -38,81 +36,105 @@ public class ProductRepository {
       pst.setBigDecimal(++i, link.getPrice());
       pst.setLong(++i, link.getCompanyId());
 
-      if (pst.executeUpdate() > 0) {
-        try (ResultSet generatedKeys = pst.getGeneratedKeys()) {
-          if (generatedKeys.next()) {
-            link.setProductId(generatedKeys.getLong(1));
-            return addAPriceHistory(con, link);
+      return (pst.executeUpdate() > 0);
+    }
+  }
+
+  public boolean updatePrice(List<ProductPrice> ppList) {
+    final String q1 =
+      "insert into product_price " +
+      "(product_id, price, min_platform, min_seller, min_price, min_diff, avg_price, avg_diff, " +
+        "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, company_id) " + 
+      "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+    int successCounter = 0;
+    Connection con = null;
+    try {
+      con = db.getTransactionalConnection();
+
+      for (ProductPrice pp : ppList) {
+        Long lastPriceId = null;
+
+        try (PreparedStatement pst = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS)) {
+          int i = 0;
+          pst.setLong(++i, pp.getProductId());
+          pst.setBigDecimal(++i, pp.getPrice());
+          pst.setString(++i, pp.getMinPlatform());
+          pst.setString(++i, pp.getMinSeller());
+          pst.setBigDecimal(++i, pp.getMinPrice());
+          pst.setBigDecimal(++i, pp.getMinDiff());
+          pst.setBigDecimal(++i, pp.getAvgPrice());
+          pst.setBigDecimal(++i, pp.getAvgDiff());
+          pst.setString(++i, pp.getMaxPlatform());
+          pst.setString(++i, pp.getMaxSeller());
+          pst.setBigDecimal(++i, pp.getMaxPrice());
+          pst.setBigDecimal(++i, pp.getMaxDiff());
+          pst.setInt(++i, pp.getCompetitors());
+          pst.setInt(++i, pp.getPosition());
+          pst.setInt(++i, pp.getRanking());
+          pst.setInt(++i, pp.getRankingWith());
+          pst.setLong(++i, pp.getCompanyId());
+          if (pst.executeUpdate() > 0) {
+            try (ResultSet generatedKeys = pst.getGeneratedKeys()) {
+              if (generatedKeys.next()) {
+                lastPriceId = generatedKeys.getLong(1);
+              }
+            }
+          }
+        }
+
+        if (lastPriceId != null) {
+          final String q2 =
+            "update product " +
+            "set price=?, last_price_id=?, updated_at=now() " +
+            "where id=? " +
+            "  and company_id=?";
+
+          try (PreparedStatement pst = con.prepareStatement(q2)) {
+            int i = 0;
+            pst.setBigDecimal(++i, pp.getPrice());
+            pst.setLong(++i, lastPriceId);
+            pst.setLong(++i, pp.getProductId());
+            pst.setLong(++i, pp.getCompanyId());
+            if (pst.executeUpdate() > 0) {
+              successCounter++;
+            }
           }
         }
       }
+
+      if (successCounter == ppList.size()) {
+        db.commit(con);
+      } else {
+        db.rollback(con);
+      }
+
+    } catch (SQLException e) {
+      if (con != null)
+        db.rollback(con);
+      log.error("Failed to update products' prices.", e);
+      successCounter = 0;
+    } finally {
+      if (con != null)
+        db.close(con);
     }
 
-    return false;
-  }
-
-  private boolean addAPriceHistory(Connection con, Link link) {
-    final String query = 
-      "insert into product_price " + 
-      "(product_id, price, company_id) " + 
-      "values (?, ?, ?) ";
-
-    try (PreparedStatement pst = con.prepareStatement(query)) {
-      int i = 0;
-      pst.setLong(++i, link.getProductId());
-      pst.setBigDecimal(++i, link.getPrice());
-      pst.setLong(++i, link.getCompanyId());
-
-      return (pst.executeUpdate() > 0);
-    } catch (Exception e) {
-      log.error("Error", e);
-    }
-
-    return false;
-  }
-
-  public boolean updatePrice(PriceUpdate pu) {
-    List<String> queries = new ArrayList<>(2);
-    queries.add(
-      String.format(
-        "insert into product_price " +
-        "(product_id, price, position, min_platform, min_seller, min_price, avg_price, " +
-          "max_platform, max_seller, max_price, links_count, company_id) " + 
-        "values (%d, %f, %d, '%s', '%s', %f, %f, '%s', '%s', %f, %d, %d);",
-        pu.getProductId(), pu.getBasePrice(), pu.getPosition(), pu.getMinPlatform(), pu.getMinSeller(), pu.getMinPrice(), pu.getAvgPrice(),
-        pu.getMaxPlatform(), pu.getMaxSeller(), pu.getMaxPrice(), pu.getLinksCount(), pu.getCompanyId())
-    );
-
-    queries.add(
-      String.format(
-        "update product " +
-        "set position=%d, min_platform='%s', min_seller='%s', min_price=%f, avg_price=%f, " +
-           "max_platform='%s', max_seller='%s', max_price=%f, links_count=%d, updated_at=now() " +
-        "where id=%d " +
-        "  and company_id=%d",
-        pu.getPosition(), pu.getMinPlatform(), pu.getMinSeller(), pu.getMinPrice(), pu.getAvgPrice(),
-        pu.getMaxPlatform(), pu.getMaxSeller(), pu.getMaxPrice(), pu.getLinksCount(), pu.getProductId(), pu.getCompanyId())
-    );
-
-    return db.executeBatchQueries(
-        queries, 
-        "Failed to update product price. " + pu.toString()
-    );
+    return (successCounter == ppList.size());
   }
 
   public List<ProductLinks> getProductLinks(Long productId) {
     return db.findMultiple(
       String.format(
-        "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, p.company_id, s.domain as site_name " +
+        "select p.id as prod_id, p.price as prod_price, l.id as link_id, l.price as link_price, l.seller, p.company_id, s.domain as site_name, " +
+        "dense_rank() over (order by l.price) as ranking " +
         "from product as p " +
         "inner join link as l on l.product_id = p.id " +
         "inner join site as s on s.id = l.site_id " +
         "where p.id = %d " +
         "  and p.price > 0 " +
         "  and l.price > 0" +
-        "  and l.status != '%s' " +
-        "order by l.price ",
-        productId, LinkStatus.PAUSED),
+        "  and l.status = '%s' ",
+        productId, LinkStatus.AVAILABLE),
       this::mapProductLinks
     );
   }
@@ -125,11 +147,12 @@ public class ProductRepository {
       pl.setLinkId(rs.getLong("link_id"));
       pl.setLinkPrice(rs.getBigDecimal("link_price"));
       pl.setSeller(rs.getString("seller"));
-      pl.setSeller(rs.getString("seller"));
+      pl.setSiteName(rs.getString("site_name"));
+      pl.setRanking(rs.getInt("ranking"));
       pl.setCompanyId(rs.getLong("company_id"));
 
     } catch (SQLException e) {
-      log.error("Failed to set product's properties", e);
+      log.error("Failed to set product links properties", e);
     }
     return pl;
   }

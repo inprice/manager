@@ -1,6 +1,9 @@
 package io.inprice.scrapper.manager.scheduled.updater;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -8,11 +11,11 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.info.TimePeriod;
+import io.inprice.scrapper.common.models.ProductPrice;
 import io.inprice.scrapper.common.utils.DateUtils;
 import io.inprice.scrapper.manager.config.Props;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
-import io.inprice.scrapper.manager.info.PriceUpdate;
 import io.inprice.scrapper.manager.info.ProductLinks;
 import io.inprice.scrapper.manager.repository.ProductRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
@@ -20,6 +23,8 @@ import io.inprice.scrapper.manager.scheduled.Task;
 public class PriceUpdater implements Task {
 
   private static final String NAME = "Product Price Updater";
+  private static final BigDecimal BigDecimal_AHUNDRED = new BigDecimal(100);
+  private static final MathContext mc = new MathContext(2, RoundingMode.HALF_UP);
 
   private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
   private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
@@ -40,7 +45,7 @@ public class PriceUpdater implements Task {
       Global.setTaskRunningStatus(getClass().getSimpleName(), true);
 
       log.info(NAME + " is triggered.");
-      int counter = 0;
+      List<ProductPrice> ppList = new ArrayList<>();
 
       while (!RedisClient.isPriceChangingSetEmpty()) {
         Long productId = RedisClient.pollPriceChanging();
@@ -49,54 +54,79 @@ public class PriceUpdater implements Task {
           List<ProductLinks> prodLinks = repository.getProductLinks(productId);
           if (prodLinks.size() > 0) {
 
-            ProductLinks plMin = prodLinks.get(0);
-            ProductLinks plMax = prodLinks.get(prodLinks.size() - 1);
+            ProductLinks plFirst = prodLinks.get(0);
+            ProductLinks plLast = prodLinks.get(prodLinks.size() - 1);
 
-            PriceUpdate pu = new PriceUpdate();
-            pu.setBasePrice(plMin.getProductPrice());
-            pu.setCompanyId(plMin.getCompanyId());
-            pu.setLinksCount(prodLinks.size() - 1);
-            pu.setMinPlatform(plMin.getSiteName());
-            pu.setMinSeller(plMin.getSeller());
-            pu.setMinPrice(plMin.getLinkPrice());
-            pu.setAvgPrice(plMin.getProductPrice());
-            pu.setMaxPlatform(plMax.getSiteName());
-            pu.setMaxSeller(plMax.getSeller());
-            pu.setMaxPrice(plMax.getLinkPrice());
+            ProductPrice pi = new ProductPrice();
+            pi.setPrice(plFirst.getProductPrice());
+            pi.setCompetitors(prodLinks.size() - 1);
+            pi.setCompanyId(plFirst.getCompanyId());
+            pi.setMinPlatform(plFirst.getSiteName());
+            pi.setMinSeller(plFirst.getSeller());
+            pi.setMinPrice(plFirst.getLinkPrice());
+            pi.setAvgPrice(plFirst.getProductPrice());
+            pi.setMaxPlatform(plLast.getSiteName());
+            pi.setMaxSeller(plLast.getSeller());
+            pi.setMaxPrice(plLast.getLinkPrice());
 
+            //finding total, ranking and rankingWith
+            int ranking = 0;
+            int rankingWith = 0;
             BigDecimal total = BigDecimal.ZERO;
             for (ProductLinks pl : prodLinks) {
               total = total.add(pl.getLinkPrice());
+              if (pl.getProductPrice().compareTo(pl.getLinkPrice()) <= 0) {
+                ranking = pl.getRanking();
+              }
+              if (pl.getProductPrice().compareTo(pl.getLinkPrice()) == 0) {
+                rankingWith++;
+              }
             }
+            if (ranking == 0) {
+              ranking = plLast.getRanking() + 1;
+            }
+            pi.setRanking(ranking);
+            pi.setRankingWith(rankingWith);
 
+            // finding avg price
             if (total.compareTo(BigDecimal.ZERO) > 0) {
-              pu.setAvgPrice(total.divide(BigDecimal.valueOf(prodLinks.size()), 2, BigDecimal.ROUND_HALF_UP));
+              pi.setAvgPrice(total.divide(BigDecimal.valueOf(prodLinks.size()), 2, BigDecimal.ROUND_HALF_UP));
             }
 
-            pu.setPosition(3);// average
-            BigDecimal basePrice = plMin.getProductPrice();
+            // setting diffs
+            pi.setMinDiff(findDiff(pi.getPrice(), plFirst.getLinkPrice()));
+            pi.setAvgDiff(findDiff(pi.getPrice(), pi.getAvgPrice()));
+            pi.setMaxDiff(findDiff(pi.getPrice(), plLast.getLinkPrice()));
 
-            if (basePrice.compareTo(pu.getMinPrice()) <= 0) {
-              pu.setPosition(1);
-              pu.setMinSeller("You");
-            } else if (basePrice.compareTo(pu.getAvgPrice()) < 0) {
-              pu.setPosition(2);
-            } else if (basePrice.compareTo(pu.getAvgPrice()) > 0 && basePrice.compareTo(pu.getMaxPrice()) < 0) {
-              pu.setPosition(4);
-            } else if (basePrice.compareTo(pu.getMaxPrice()) >= 0) {
-              pu.setPosition(5);
-              pu.setMaxSeller("You");
+            //finding position
+            pi.setPosition(3);// average
+            BigDecimal basePrice = plFirst.getProductPrice();
+
+            if (basePrice.compareTo(pi.getMinPrice()) <= 0) {
+              pi.setPosition(1);
+              pi.setMinSeller("You");
+            } else if (basePrice.compareTo(pi.getAvgPrice()) < 0) {
+              pi.setPosition(2);
+            } else if (basePrice.compareTo(pi.getAvgPrice()) > 0 && basePrice.compareTo(pi.getMaxPrice()) < 0) {
+              pi.setPosition(4);
+            } else if (basePrice.compareTo(pi.getMaxPrice()) >= 0) {
+              pi.setPosition(5);
+              pi.setMaxSeller("You");
             }
 
-            repository.updatePrice(pu);
-            counter++;
+            ppList.add(pi);
           }
           log.info(NAME + " is completed for Id: {}", productId);
         }
       }
 
-      if (counter > 0) {
-        log.info("Prices of {} products have been updated!", counter);
+      if (ppList.size() > 0) {
+        boolean result = repository.updatePrice(ppList);
+        if (result) {
+          log.info("Prices of {} products have been updated!", ppList.size());
+        } else {
+          log.warn("An error occurred during updating products' prices!");
+        }
       } else {
         log.info("No product price is updated!");
       }
@@ -105,4 +135,25 @@ public class PriceUpdater implements Task {
       Global.setTaskRunningStatus(getClass().getSimpleName(), false);
     }
   }
+
+  private BigDecimal findDiff(BigDecimal first, BigDecimal second) {
+    BigDecimal result = BigDecimal.ZERO;
+
+    if (first.compareTo(BigDecimal.ZERO) > 0 && second.compareTo(BigDecimal.ZERO) > 0) {
+      if (first.compareTo(second) == 0) {
+        result = BigDecimal.ONE;
+      } else  if (first.compareTo(second) > 0) {
+        result = first.divide(second).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).round(mc);
+      } else {
+        result = second.divide(first).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).round(mc);
+      }
+    } else {
+      if (first.compareTo(BigDecimal.ZERO) > 0 || second.compareTo(BigDecimal.ZERO) > 0) {
+        result = BigDecimal_AHUNDRED;
+      }
+    }
+
+    return result;
+  }
+
 }
