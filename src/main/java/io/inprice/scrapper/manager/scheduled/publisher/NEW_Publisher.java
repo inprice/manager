@@ -2,7 +2,10 @@ package io.inprice.scrapper.manager.scheduled.publisher;
 
 import java.util.List;
 
+import com.rabbitmq.client.Channel;
+
 import io.inprice.scrapper.common.config.SysProps;
+import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.LinkStatus;
@@ -36,6 +39,7 @@ public class NEW_Publisher extends AbstractLinkPublisher {
 
   @Override
   void handleLinks(List<Link> linkList) {
+    Channel channel = RabbitMQ.openChannel();
     for (Link link : linkList) {
       LinkStatus oldStatus = link.getStatus();
 
@@ -53,13 +57,14 @@ public class NEW_Publisher extends AbstractLinkPublisher {
 
       if (link.getStatus().equals(oldStatus)) {
         // the consumer class is in Worker, NewLinksConsumer
-        RabbitMQ.publish(getMQRoutingKey(), link);
+        RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
       } else {
         // the consumer class is here, StatusChangeConsumer
         StatusChange change = new StatusChange(link, oldStatus);
-        RabbitMQ.publish(SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), change); 
+        RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), JsonConverter.toJson(change));
       }
     }
+    RabbitMQ.closeChannel(channel);
   }
 
 }

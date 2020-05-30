@@ -54,7 +54,7 @@ public class Application {
 			RedisClient.shutdown();
 
 			log.info(" - RabbitMQ connection is closing...");
-			RabbitMQ.closeChannel();
+			RabbitMQ.closeConnection();
 
 			log.info(" - DB connection is closing...");
 			db.shutdown();

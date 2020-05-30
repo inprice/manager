@@ -40,70 +40,81 @@ public class ProductRepository {
     }
   }
 
-  public boolean updatePrice(List<ProductPrice> ppList) {
+  public boolean updatePrice(List<ProductPrice> ppList, String zeroizedIds) {
     final String q1 =
       "insert into product_price " +
       "(product_id, price, min_platform, min_seller, min_price, min_diff, avg_price, avg_diff, " +
-        "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, company_id) " + 
-      "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, suggested_price, company_id) " + 
+      "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     int successCounter = 0;
     Connection con = null;
     try {
       con = db.getTransactionalConnection();
 
-      for (ProductPrice pp : ppList) {
-        Long lastPriceId = null;
+      if (ppList != null) {
+        for (ProductPrice pp : ppList) {
+          Long lastPriceId = null;
 
-        try (PreparedStatement pst = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS)) {
-          int i = 0;
-          pst.setLong(++i, pp.getProductId());
-          pst.setBigDecimal(++i, pp.getPrice());
-          pst.setString(++i, pp.getMinPlatform());
-          pst.setString(++i, pp.getMinSeller());
-          pst.setBigDecimal(++i, pp.getMinPrice());
-          pst.setBigDecimal(++i, pp.getMinDiff());
-          pst.setBigDecimal(++i, pp.getAvgPrice());
-          pst.setBigDecimal(++i, pp.getAvgDiff());
-          pst.setString(++i, pp.getMaxPlatform());
-          pst.setString(++i, pp.getMaxSeller());
-          pst.setBigDecimal(++i, pp.getMaxPrice());
-          pst.setBigDecimal(++i, pp.getMaxDiff());
-          pst.setInt(++i, pp.getCompetitors());
-          pst.setInt(++i, pp.getPosition());
-          pst.setInt(++i, pp.getRanking());
-          pst.setInt(++i, pp.getRankingWith());
-          pst.setLong(++i, pp.getCompanyId());
-          if (pst.executeUpdate() > 0) {
-            try (ResultSet generatedKeys = pst.getGeneratedKeys()) {
-              if (generatedKeys.next()) {
-                lastPriceId = generatedKeys.getLong(1);
+          try (PreparedStatement pst = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS)) {
+            int i = 0;
+            pst.setLong(++i, pp.getProductId());
+            pst.setBigDecimal(++i, pp.getPrice());
+            pst.setString(++i, pp.getMinPlatform());
+            pst.setString(++i, pp.getMinSeller());
+            pst.setBigDecimal(++i, pp.getMinPrice());
+            pst.setBigDecimal(++i, pp.getMinDiff());
+            pst.setBigDecimal(++i, pp.getAvgPrice());
+            pst.setBigDecimal(++i, pp.getAvgDiff());
+            pst.setString(++i, pp.getMaxPlatform());
+            pst.setString(++i, pp.getMaxSeller());
+            pst.setBigDecimal(++i, pp.getMaxPrice());
+            pst.setBigDecimal(++i, pp.getMaxDiff());
+            pst.setInt(++i, pp.getCompetitors());
+            pst.setInt(++i, pp.getPosition());
+            pst.setInt(++i, pp.getRanking());
+            pst.setInt(++i, pp.getRankingWith());
+            pst.setBigDecimal(++i, pp.getSuggestedPrice());
+            pst.setLong(++i, pp.getCompanyId());
+            if (pst.executeUpdate() > 0) {
+              try (ResultSet generatedKeys = pst.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                  lastPriceId = generatedKeys.getLong(1);
+                }
               }
             }
           }
-        }
 
-        if (lastPriceId != null) {
-          final String q2 =
-            "update product " +
-            "set price=?, last_price_id=?, updated_at=now() " +
-            "where id=? " +
-            "  and company_id=?";
+          if (lastPriceId != null) {
+            final String q2 =
+              "update product " +
+              "set price=?, last_price_id=?, updated_at=now() " +
+              "where id=? " +
+              "  and company_id=?";
 
-          try (PreparedStatement pst = con.prepareStatement(q2)) {
-            int i = 0;
-            pst.setBigDecimal(++i, pp.getPrice());
-            pst.setLong(++i, lastPriceId);
-            pst.setLong(++i, pp.getProductId());
-            pst.setLong(++i, pp.getCompanyId());
-            if (pst.executeUpdate() > 0) {
-              successCounter++;
+            try (PreparedStatement pst = con.prepareStatement(q2)) {
+              int i = 0;
+              pst.setBigDecimal(++i, pp.getPrice());
+              pst.setLong(++i, lastPriceId);
+              pst.setLong(++i, pp.getProductId());
+              pst.setLong(++i, pp.getCompanyId());
+              if (pst.executeUpdate() > 0) {
+                successCounter++;
+              }
             }
           }
         }
       }
 
-      if (successCounter == ppList.size()) {
+      if (zeroizedIds.length() > 1) {
+        db.executeQuery(
+          con, 
+          "update product set last_price_id=null, updated_at=now() where id in (" + zeroizedIds + ")", 
+          "Failed to zeroize some product price info"
+        );
+      }
+
+      if (zeroizedIds.length() > 1 || (ppList != null && successCounter == ppList.size())) {
         db.commit(con);
       } else {
         db.rollback(con);

@@ -2,7 +2,7 @@ package io.inprice.scrapper.manager.scheduled;
 
 import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.manager.scheduled.publisher.*;
-import io.inprice.scrapper.manager.scheduled.updater.LinkCleaner;
+import io.inprice.scrapper.manager.scheduled.updater.MemebershipRemover;
 import io.inprice.scrapper.manager.scheduled.updater.PriceUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class TaskManager {
         log.info("TaskManager is up.");
 
         loadTask(new PriceUpdater());
-        loadTask(new LinkCleaner());
+        loadTask(new MemebershipRemover());
 
         loadTask(new NEW_Publisher());
         loadTask(new RENEWED_Publisher());

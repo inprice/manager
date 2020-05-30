@@ -8,15 +8,15 @@ import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.common.utils.DateUtils;
 import io.inprice.scrapper.manager.config.Props;
 import io.inprice.scrapper.manager.helpers.Global;
-import io.inprice.scrapper.manager.repository.LinkRepository;
+import io.inprice.scrapper.manager.repository.MembershipRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
 
-public class LinkCleaner implements Task {
+public class MemebershipRemover implements Task {
 
   private static final String NAME = "Link Cleaner for Imported Products";
 
-  private static final Logger log = LoggerFactory.getLogger(LinkCleaner.class);
-  private static final LinkRepository repository = Beans.getSingleton(LinkRepository.class);
+  private static final Logger log = LoggerFactory.getLogger(MemebershipRemover.class);
+  private static final MembershipRepository repository = Beans.getSingleton(MembershipRepository.class);
 
   @Override
   public TimePeriod getTimePeriod() {
@@ -34,8 +34,7 @@ public class LinkCleaner implements Task {
       Global.setTaskRunningStatus(getClass().getSimpleName(), true);
 
       log.info(NAME + " is triggered.");
-      //TODO: silinen member lar icin uyarlanacak!
-      // repository.deleteImportedProductsLinks();
+      repository.deletePermanently();
       log.info(NAME + " is completed.");
 
     } finally {

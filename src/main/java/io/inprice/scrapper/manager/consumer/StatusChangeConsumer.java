@@ -3,6 +3,7 @@ package io.inprice.scrapper.manager.consumer;
 import java.io.IOException;
 
 import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
@@ -12,9 +13,9 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.manager.helpers.MessageConverter;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.LinkRepository;
@@ -27,17 +28,19 @@ public class StatusChangeConsumer {
   public static void start() {
     log.info("Status change consumer is running.");
 
-    final Consumer consumer = new DefaultConsumer(RabbitMQ.getChannel()) {
+    final Channel channel = RabbitMQ.openChannel();
+
+    final Consumer consumer = new DefaultConsumer(channel) {
       @Override
       public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
         ThreadPools.STATUS_CHANGE_POOL.submit(() -> {
           try {
-            StatusChange change = MessageConverter.toObject(body);
+            StatusChange change = JsonConverter.fromJson(new String(body), StatusChange.class);
             if (change != null) {
               boolean isOK = linkRepository.changeStatus(change);
               if (isOK) {
                 RedisClient.addPriceChanging(change.getLink().getProductId());
-                RabbitMQ.getChannel().basicAck(envelope.getDeliveryTag(), false);
+                channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while changing Link status!");
               }
@@ -47,7 +50,7 @@ public class StatusChangeConsumer {
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
             try {
-              RabbitMQ.getChannel().basicNack(envelope.getDeliveryTag(), false, false);
+              channel.basicNack(envelope.getDeliveryTag(), false, false);
             } catch (IOException e1) {
               log.error("Failed to send a message to dlq", e1);
             }
@@ -57,7 +60,7 @@ public class StatusChangeConsumer {
     };
 
     try {
-      RabbitMQ.getChannel().basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), false, consumer);
+      channel.basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), false, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting status changes.", e);
     }

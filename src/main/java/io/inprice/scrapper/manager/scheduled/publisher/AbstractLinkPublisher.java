@@ -2,11 +2,14 @@ package io.inprice.scrapper.manager.scheduled.publisher;
 
 import java.util.List;
 
+import com.rabbitmq.client.Channel;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Beans;
+import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.info.TimePeriod;
 import io.inprice.scrapper.common.meta.LinkStatus;
 import io.inprice.scrapper.common.models.Link;
@@ -84,9 +87,11 @@ public abstract class AbstractLinkPublisher implements Task {
   }
 
   void handleLinks(List<Link> linkList) {
+    Channel channel = RabbitMQ.openChannel();
     for (Link link : linkList) {
-      RabbitMQ.publish(getMQRoutingKey(), link);
+      RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
     }
+    RabbitMQ.closeChannel(channel);
   }
 
   List<Link> getLinks() {

@@ -6,6 +6,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,7 @@ public class PriceUpdater implements Task {
       Global.setTaskRunningStatus(getClass().getSimpleName(), true);
 
       log.info(NAME + " is triggered.");
+      StringBuilder zeroizedSB = new StringBuilder("0");
       List<ProductPrice> ppList = new ArrayList<>();
 
       while (!RedisClient.isPriceChangingSetEmpty()) {
@@ -68,6 +70,7 @@ public class PriceUpdater implements Task {
             pi.setMaxPlatform(plLast.getSiteName());
             pi.setMaxSeller(plLast.getSeller());
             pi.setMaxPrice(plLast.getLinkPrice());
+            pi.setSuggestedPrice(plFirst.getProductPrice());
 
             //finding total, ranking and rankingWith
             int ranking = 0;
@@ -107,25 +110,35 @@ public class PriceUpdater implements Task {
               pi.setMinSeller("You");
             } else if (basePrice.compareTo(pi.getAvgPrice()) < 0) {
               pi.setPosition(2);
-            } else if (basePrice.compareTo(pi.getAvgPrice()) > 0 && basePrice.compareTo(pi.getMaxPrice()) < 0) {
+            } else if (basePrice.compareTo(pi.getMaxPrice()) < 0) {
               pi.setPosition(4);
-            } else if (basePrice.compareTo(pi.getMaxPrice()) >= 0) {
+            } else {
               pi.setPosition(5);
               pi.setMaxSeller("You");
             }
 
             ppList.add(pi);
+          } else { // product and product_price relation must be removed since there is no price info
+            zeroizedSB.append(",");
+            zeroizedSB.append(productId);
           }
           log.info(NAME + " is completed for Id: {}", productId);
         }
       }
 
       if (ppList.size() > 0) {
-        boolean result = repository.updatePrice(ppList);
+        boolean result = repository.updatePrice(ppList, zeroizedSB.toString());
         if (result) {
           log.info("Prices of {} products have been updated!", ppList.size());
         } else {
           log.warn("An error occurred during updating products' prices!");
+        }
+      } else if (zeroizedSB.length() > 1) {
+        boolean result = repository.updatePrice(null, zeroizedSB.toString());
+        if (result) {
+          log.info("{} products' price info is zeroized.", StringUtils.countMatches(zeroizedSB.toString(), ","));
+        } else {
+          log.warn("An error occurred during zeroizing products' price info!");
         }
       } else {
         log.info("No product price is updated!");
