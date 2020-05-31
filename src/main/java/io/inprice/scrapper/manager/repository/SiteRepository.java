@@ -27,7 +27,7 @@ public class SiteRepository {
       model.setName(rs.getString("name"));
       model.setDomain(rs.getString("domain"));
       model.setClassName(rs.getString("class_name"));
-      model.setCreatedAt(rs.getDate("created_at"));
+      model.setCreatedAt(rs.getTimestamp("created_at"));
 
       return model;
     } catch (SQLException e) {

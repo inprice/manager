@@ -57,11 +57,19 @@ public class NEW_Publisher extends AbstractLinkPublisher {
 
       if (link.getStatus().equals(oldStatus)) {
         // the consumer class is in Worker, NewLinksConsumer
-        RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
+        try {
+          RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
       } else {
         // the consumer class is here, StatusChangeConsumer
         StatusChange change = new StatusChange(link, oldStatus);
-        RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), JsonConverter.toJson(change));
+        try {
+          RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), JsonConverter.toJson(change));
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
       }
     }
     RabbitMQ.closeChannel(channel);

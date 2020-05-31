@@ -144,7 +144,8 @@ public class ProductRepository {
         "where p.id = %d " +
         "  and p.price > 0 " +
         "  and l.price > 0" +
-        "  and l.status = '%s' ",
+        "  and l.status = '%s' " +
+        "order by l.price",
         productId, LinkStatus.AVAILABLE),
       this::mapProductLinks
     );

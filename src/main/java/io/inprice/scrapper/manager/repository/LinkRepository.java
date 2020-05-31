@@ -39,7 +39,7 @@ public class LinkRepository {
         "where l.status = '%s' " + 
         "  and c.plan_status = '%s' " + 
         "  and c.due_date >= now() " + 
-        "  and l.last_check < now() - interval 30 minute " + 
+        "  and (l.last_check is null or l.last_check < now() - interval 30 minute) " + 
         "limit %d",
         status.name(), PlanStatus.ACTIVE.name(), Props.DB_FETCH_LIMIT());
 
@@ -60,7 +60,7 @@ public class LinkRepository {
         "  and l.retry < %d " + 
         "  and c.plan_status = '%s' " + 
         "  and c.due_date >= now() " + 
-        "  and l.last_check < now() - interval 30 minute " + 
+        "  and (l.last_check is null or l.last_check < now() - interval 30 minute) " + 
         "limit %d",
         status.name(), retryLimit, PlanStatus.ACTIVE.name(), Props.DB_FETCH_LIMIT());
 
@@ -339,8 +339,8 @@ public class LinkRepository {
       model.setSeller(rs.getString("seller"));
       model.setShipment(rs.getString("shipment"));
       model.setPrice(rs.getBigDecimal("price"));
-      model.setLastCheck(rs.getDate("last_check"));
-      model.setLastUpdate(rs.getDate("last_update"));
+      model.setLastCheck(rs.getTimestamp("last_check"));
+      model.setLastUpdate(rs.getTimestamp("last_update"));
       model.setStatus(LinkStatus.valueOf(rs.getString("status")));
       model.setHttpStatus(rs.getInt("http_status"));
       model.setPreStatus(LinkStatus.valueOf(rs.getString("pre_status")));
@@ -349,6 +349,7 @@ public class LinkRepository {
       model.setCompanyId(rs.getLong("company_id"));
       model.setProductId(rs.getLong("product_id"));
       model.setSiteId(rs.getLong("site_id"));
+      model.setCreatedAt(rs.getTimestamp("created_at"));
 
       model.setProductPrice(rs.getBigDecimal("product_price"));
 
@@ -367,7 +368,7 @@ public class LinkRepository {
       model.setStatus(LinkStatus.valueOf(rs.getString("status")));
       model.setHttpStatus(rs.getInt("http_status"));
       model.setCompanyId(rs.getLong("company_id"));
-      model.setCreatedAt(rs.getDate("created_at"));
+      model.setCreatedAt(rs.getTimestamp("created_at"));
 
       return model;
     } catch (SQLException e) {

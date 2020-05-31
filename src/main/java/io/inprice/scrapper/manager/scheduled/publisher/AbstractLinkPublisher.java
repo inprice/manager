@@ -88,8 +88,12 @@ public abstract class AbstractLinkPublisher implements Task {
 
   void handleLinks(List<Link> linkList) {
     Channel channel = RabbitMQ.openChannel();
-    for (Link link : linkList) {
-      RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
+    try {
+      for (Link link : linkList) {
+        RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
     RabbitMQ.closeChannel(channel);
   }

@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "CodeLens (Launch) - Test",
+      "request": "launch",
+      "mainClass": "io.inprice.scrapper.manager.Test",
+      "projectName": "manager"
+    },
+    {
+      "type": "java",
       "name": "Debug API",
       "request": "launch",
       "projectName": "manager",
@@ -22,7 +29,7 @@
         "TIMING_FOR_NETWORK_ERRORS": "5d",
         "RETRY_LIMIT_FOR_FAILED_LINKS_G1": 3,
         "RETRY_LIMIT_FOR_FAILED_LINKS_G2": 5,
-        "RETRY_LIMIT_FOR_FAILED_LINKS_G3": 10,
+        "RETRY_LIMIT_FOR_FAILED_LINKS_G3": 10
       }
     }
   ]

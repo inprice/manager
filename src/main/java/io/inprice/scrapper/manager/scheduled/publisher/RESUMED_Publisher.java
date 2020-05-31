@@ -37,9 +37,13 @@ public class RESUMED_Publisher extends AbstractLinkPublisher {
   @Override
   void handleLinks(List<Link> linkList) {
     Channel channel = RabbitMQ.openChannel();
-    for (Link link : linkList) {
-      StatusChange change = new StatusChange(link, getStatus());
-      RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), getMQRoutingKey(), JsonConverter.toJson(change));
+    try {
+      for (Link link : linkList) {
+        StatusChange change = new StatusChange(link, getStatus());
+        RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), getMQRoutingKey(), JsonConverter.toJson(change));
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
     RabbitMQ.closeChannel(channel);
   }

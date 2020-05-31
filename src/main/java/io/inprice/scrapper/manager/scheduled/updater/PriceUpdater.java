@@ -25,7 +25,6 @@ public class PriceUpdater implements Task {
 
   private static final String NAME = "Product Price Updater";
   private static final BigDecimal BigDecimal_AHUNDRED = new BigDecimal(100);
-  private static final MathContext mc = new MathContext(2, RoundingMode.HALF_UP);
 
   private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
   private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
@@ -60,8 +59,9 @@ public class PriceUpdater implements Task {
             ProductLinks plLast = prodLinks.get(prodLinks.size() - 1);
 
             ProductPrice pi = new ProductPrice();
+            pi.setProductId(plFirst.getProductId());
             pi.setPrice(plFirst.getProductPrice());
-            pi.setCompetitors(prodLinks.size() - 1);
+            pi.setCompetitors(prodLinks.size());
             pi.setCompanyId(plFirst.getCompanyId());
             pi.setMinPlatform(plFirst.getSiteName());
             pi.setMinSeller(plFirst.getSeller());
@@ -107,14 +107,20 @@ public class PriceUpdater implements Task {
 
             if (basePrice.compareTo(pi.getMinPrice()) <= 0) {
               pi.setPosition(1);
+              pi.setMinPlatform("Yours");
               pi.setMinSeller("You");
+              pi.setMinPrice(plFirst.getProductPrice());
+              pi.setMinDiff(BigDecimal.ZERO);
             } else if (basePrice.compareTo(pi.getAvgPrice()) < 0) {
               pi.setPosition(2);
             } else if (basePrice.compareTo(pi.getMaxPrice()) < 0) {
               pi.setPosition(4);
             } else {
               pi.setPosition(5);
+              pi.setMaxPlatform("Yours");
               pi.setMaxSeller("You");
+              pi.setMaxPrice(plLast.getProductPrice());
+              pi.setMaxDiff(BigDecimal.ZERO);
             }
 
             ppList.add(pi);
@@ -144,26 +150,18 @@ public class PriceUpdater implements Task {
         log.info("No product price is updated!");
       }
 
+    } catch (Exception e) {
+      log.error("Failed to update product price!", e);
     } finally {
       Global.setTaskRunningStatus(getClass().getSimpleName(), false);
     }
   }
 
   private BigDecimal findDiff(BigDecimal first, BigDecimal second) {
-    BigDecimal result = BigDecimal.ZERO;
+    BigDecimal result = BigDecimal_AHUNDRED;
 
     if (first.compareTo(BigDecimal.ZERO) > 0 && second.compareTo(BigDecimal.ZERO) > 0) {
-      if (first.compareTo(second) == 0) {
-        result = BigDecimal.ONE;
-      } else  if (first.compareTo(second) > 0) {
-        result = first.divide(second).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).round(mc);
-      } else {
-        result = second.divide(first).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).round(mc);
-      }
-    } else {
-      if (first.compareTo(BigDecimal.ZERO) > 0 || second.compareTo(BigDecimal.ZERO) > 0) {
-        result = BigDecimal_AHUNDRED;
-      }
+      result = second.divide(first, 4, RoundingMode.HALF_UP).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).setScale(2);
     }
 
     return result;
