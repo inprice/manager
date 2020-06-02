@@ -8,20 +8,20 @@ import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.meta.LinkStatus;
-import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.meta.CompetitorStatus;
+import io.inprice.scrapper.common.models.Competitor;
 import io.inprice.scrapper.manager.config.Props;
 
 /**
- * Finds links in RESUMED status and changes back to their previous status
+ * Finds competitors in RESUMED status and changes back to their previous status
  *
  * @author mdpinar
  */
-public class RESUMED_Publisher extends AbstractLinkPublisher {
+public class RESUMED_Publisher extends AbstractCompetitorPublisher {
 
   @Override
-  LinkStatus getStatus() {
-    return LinkStatus.RESUMED;
+  CompetitorStatus getStatus() {
+    return CompetitorStatus.RESUMED;
   }
 
   @Override
@@ -31,15 +31,15 @@ public class RESUMED_Publisher extends AbstractLinkPublisher {
 
   @Override
   String getTimePeriodStatement() {
-    return Props.TIMING_FOR_RESUMED_LINKS();
+    return Props.TIMING_FOR_RESUMED_COMPETITORS();
   }
 
   @Override
-  void handleLinks(List<Link> linkList) {
+  void handleCompetitors(List<Competitor> competitorList) {
     Channel channel = RabbitMQ.openChannel();
     try {
-      for (Link link : linkList) {
-        StatusChange change = new StatusChange(link, getStatus());
+      for (Competitor competitor : competitorList) {
+        StatusChange change = new StatusChange(competitor, getStatus());
         RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), getMQRoutingKey(), JsonConverter.toJson(change));
       }
     } catch (Exception e) {

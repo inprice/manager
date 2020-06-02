@@ -16,23 +16,23 @@ public class ThreadPools {
   private static final Logger log = LoggerFactory.getLogger(ThreadPools.class);
 
   public static final ExecutorService PRICE_CHANGE_POOL;
-  public static final ExecutorService DELETED_LINKS_POOL;
+  public static final ExecutorService PRICE_REFRESH_POOL;
   public static final ExecutorService STATUS_CHANGE_POOL;
-  public static final ExecutorService AVAILABLE_LINKS_POOL;
+  public static final ExecutorService AVAILABLE_COMPETITORS_POOL;
 
   private static final List<ExecutorService> registry;
 
   static {
     STATUS_CHANGE_POOL = Executors.newFixedThreadPool(2);
-    AVAILABLE_LINKS_POOL = Executors.newFixedThreadPool(2);
+    AVAILABLE_COMPETITORS_POOL = Executors.newFixedThreadPool(2);
     PRICE_CHANGE_POOL = Executors.newFixedThreadPool(1);
-    DELETED_LINKS_POOL = Executors.newFixedThreadPool(1);
+    PRICE_REFRESH_POOL = Executors.newFixedThreadPool(1);
 
     registry = new ArrayList<>();
     registry.add(STATUS_CHANGE_POOL);
-    registry.add(AVAILABLE_LINKS_POOL);
+    registry.add(AVAILABLE_COMPETITORS_POOL);
     registry.add(PRICE_CHANGE_POOL);
-    registry.add(DELETED_LINKS_POOL);
+    registry.add(PRICE_REFRESH_POOL);
   }
 
   public static void shutdown() {

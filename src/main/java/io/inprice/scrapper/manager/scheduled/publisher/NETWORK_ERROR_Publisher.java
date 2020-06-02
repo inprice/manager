@@ -1,18 +1,18 @@
 package io.inprice.scrapper.manager.scheduled.publisher;
 
-import io.inprice.scrapper.common.meta.LinkStatus;
+import io.inprice.scrapper.common.meta.CompetitorStatus;
 import io.inprice.scrapper.manager.config.Props;
 
 /**
- * Finds and handles NETWORK_ERROR links
+ * Finds and handles NETWORK_ERROR competitors
  *
  * @author mdpinar
  */
-public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
+public class NETWORK_ERROR_Publisher extends FailedCompetitorsPublisher {
 
   @Override
-  LinkStatus getStatus() {
-    return LinkStatus.NETWORK_ERROR;
+  CompetitorStatus getStatus() {
+    return CompetitorStatus.NETWORK_ERROR;
   }
 
   @Override
@@ -22,7 +22,7 @@ public class NETWORK_ERROR_Publisher extends FailedLinksPublisher {
 
   @Override
   int getRetryLimit() {
-    return Props.RETRY_LIMIT_FOR_FAILED_LINKS_G1();
+    return Props.RETRY_LIMIT_FOR_FAILED_COMPETITORS_G1();
   }
 
 }

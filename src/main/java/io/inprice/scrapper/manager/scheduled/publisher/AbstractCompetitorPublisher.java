@@ -11,12 +11,12 @@ import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.info.TimePeriod;
-import io.inprice.scrapper.common.meta.LinkStatus;
-import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.meta.CompetitorStatus;
+import io.inprice.scrapper.common.models.Competitor;
 import io.inprice.scrapper.common.utils.DateUtils;
 import io.inprice.scrapper.manager.config.Props;
 import io.inprice.scrapper.manager.helpers.Global;
-import io.inprice.scrapper.manager.repository.LinkRepository;
+import io.inprice.scrapper.manager.repository.CompetitorRepository;
 import io.inprice.scrapper.manager.scheduled.Task;
 
 /**
@@ -27,19 +27,19 @@ import io.inprice.scrapper.manager.scheduled.Task;
  *
  * @author mdpinar
  */
-public abstract class AbstractLinkPublisher implements Task {
+public abstract class AbstractCompetitorPublisher implements Task {
 
-  private static final Logger log = LoggerFactory.getLogger("LinkHandlerTask");
-  static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
+  private static final Logger log = LoggerFactory.getLogger("CompetitorHandlerTask");
+  static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
-  abstract LinkStatus getStatus();
+  abstract CompetitorStatus getStatus();
   abstract String getTimePeriodStatement();
   abstract String getMQRoutingKey();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(getStatus().name())) {
-      log.warn("{} link handler is already triggered and hasn't finished yet!", getStatus());
+      log.warn("{} competitor handler is already triggered and hasn't finished yet!", getStatus());
       return;
     }
 
@@ -48,30 +48,30 @@ public abstract class AbstractLinkPublisher implements Task {
       Global.setTaskRunningStatus(getStatus().name(), true);
 
       int counter = 0;
-      List<Link> links = getLinks();
+      List<Competitor> competitors = getCompetitors();
 
-      while (links.size() > 0) {
-        counter += links.size();
+      while (competitors.size() > 0) {
+        counter += competitors.size();
 
-        handleLinks(links);
-        setLastCheckTime(links);
+        handleCompetitors(competitors);
+        setLastCheckTime(competitors);
 
-        if (links.size() >= Props.DB_FETCH_LIMIT()) {
+        if (competitors.size() >= Props.DB_FETCH_LIMIT()) {
           try {
-            Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS());
+            Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_COMPETITORS());
           } catch (InterruptedException ignored) {
           }
-          links = getLinks();
+          competitors = getCompetitors();
         } else {
-          links.clear();
+          competitors.clear();
         }
       }
 
       if (counter > 0)
-        log.info("{} link(s) is handled successfully. Number: {}, Time: {}", getStatus().name(),
+        log.info("{} competitor(s) is handled successfully. Number: {}, Time: {}", getStatus().name(),
             counter, (System.currentTimeMillis() - startTime));
       else
-        log.info("No link {} status found.", getStatus().name());
+        log.info("No competitor {} status found.", getStatus().name());
 
     } catch (Exception e) {
       log.error(String.format("Failed to completed %s task!", getStatus().name()), e);
@@ -86,11 +86,11 @@ public abstract class AbstractLinkPublisher implements Task {
     return DateUtils.parseTimePeriod(this.getTimePeriodStatement());
   }
 
-  void handleLinks(List<Link> linkList) {
+  void handleCompetitors(List<Competitor> competitorList) {
     Channel channel = RabbitMQ.openChannel();
     try {
-      for (Link link : linkList) {
-        RabbitMQ.publishLink(channel, getMQRoutingKey(), JsonConverter.toJson(link));
+      for (Competitor competitor : competitorList) {
+        RabbitMQ.publishCompetitor(channel, getMQRoutingKey(), JsonConverter.toJson(competitor));
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -98,22 +98,22 @@ public abstract class AbstractLinkPublisher implements Task {
     RabbitMQ.closeChannel(channel);
   }
 
-  List<Link> getLinks() {
-    return linkRepository.getLinks(getStatus());
+  List<Competitor> getCompetitors() {
+    return competitorRepository.getCompetitors(getStatus());
   }
 
   boolean isIncreaseRetry() {
     return false;
   }
 
-  private void setLastCheckTime(List<Link> linkList) {
+  private void setLastCheckTime(List<Competitor> competitorList) {
     StringBuilder sb = new StringBuilder();
-    for (Link link : linkList) {
+    for (Competitor competitor : competitorList) {
       if (sb.length() > 0)
         sb.append(",");
-      sb.append(link.getId());
+      sb.append(competitor.getId());
     }
-    linkRepository.setLastCheckTime(sb.toString(), isIncreaseRetry());
+    competitorRepository.setLastCheckTime(sb.toString(), isIncreaseRetry());
   }
 
 }

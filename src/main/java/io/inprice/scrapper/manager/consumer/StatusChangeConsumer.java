@@ -18,12 +18,12 @@ import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
-import io.inprice.scrapper.manager.repository.LinkRepository;
+import io.inprice.scrapper.manager.repository.CompetitorRepository;
 
 public class StatusChangeConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(StatusChangeConsumer.class);
-  private static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
+  private static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
   public static void start() {
     log.info("Status change consumer is running.");
@@ -37,12 +37,12 @@ public class StatusChangeConsumer {
           try {
             StatusChange change = JsonConverter.fromJson(new String(body), StatusChange.class);
             if (change != null) {
-              boolean isOK = linkRepository.changeStatus(change);
+              boolean isOK = competitorRepository.changeStatus(change);
               if (isOK) {
-                RedisClient.addPriceChanging(change.getLink().getProductId());
+                RedisClient.addPriceChanging(change.getCompetitor().getProductId());
                 channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
-                log.error("DB problem while changing Link status!");
+                log.error("DB problem while changing competitor status!");
               }
             } else {
               log.error("Status change object is null!");

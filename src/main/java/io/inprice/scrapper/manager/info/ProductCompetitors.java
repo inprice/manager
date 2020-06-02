@@ -8,14 +8,14 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ProductLinks implements Serializable {
+public class ProductCompetitors implements Serializable {
 
   private static final long serialVersionUID = 373006989454188752L;
 
   private Long productId;
   private BigDecimal productPrice;
-  private Long linkId;
-  private BigDecimal linkPrice;
+  private Long competitorId;
+  private BigDecimal competitorPrice;
   private String seller;
   private String siteName;
   private Integer ranking = 0;

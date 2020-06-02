@@ -15,40 +15,40 @@ import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
-import io.inprice.scrapper.common.models.Link;
+import io.inprice.scrapper.common.models.Competitor;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
-import io.inprice.scrapper.manager.repository.LinkRepository;
+import io.inprice.scrapper.manager.repository.CompetitorRepository;
 
 /**
- * Consumer for links to be available
+ * Consumer for competitors to be available
  */
-public class TobeAvailableLinksConsumer {
+public class TobeAvailableCompetitorsConsumer {
 
-  private static final Logger log = LoggerFactory.getLogger(TobeAvailableLinksConsumer.class);
-  private static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
+  private static final Logger log = LoggerFactory.getLogger(TobeAvailableCompetitorsConsumer.class);
+  private static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
   public static void start() {
-    log.info("TO BE AVAILABLE links consumer is up and running.");
+    log.info("TO BE AVAILABLE competitors consumer is up and running.");
 
     final Channel channel = RabbitMQ.openChannel();
 
     final Consumer consumer = new DefaultConsumer(channel) {
       @Override
       public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
-        ThreadPools.AVAILABLE_LINKS_POOL.submit(() -> {
+        ThreadPools.AVAILABLE_COMPETITORS_POOL.submit(() -> {
           try {
-            Link link = JsonConverter.fromJson(new String(body), Link.class);
-            if (link != null) {
-              boolean isOK = linkRepository.makeAvailable(link);
+            Competitor competitor = JsonConverter.fromJson(new String(body), Competitor.class);
+            if (competitor != null) {
+              boolean isOK = competitorRepository.makeAvailable(competitor);
               if (isOK) {
-                RedisClient.addPriceChanging(link.getProductId());
+                RedisClient.addPriceChanging(competitor.getProductId());
                 channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
-                log.error("DB problem while activating a link!");
+                log.error("DB problem while activating a competitor!");
               }
             } else {
-              log.error("Link is null!");
+              log.error("competitor is null!");
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
@@ -63,9 +63,9 @@ public class TobeAvailableLinksConsumer {
     };
 
     try {
-      channel.basicConsume(SysProps.MQ_TOBE_AVAILABLE_LINKS_QUEUE(), false, consumer);
+      channel.basicConsume(SysProps.MQ_TOBE_AVAILABLE_COMPETITORS_QUEUE(), false, consumer);
     } catch (IOException e) {
-      log.error("Failed to set a queue for getting links to make available.", e);
+      log.error("Failed to set a queue for getting competitors to make available.", e);
     }
   }
 

@@ -4,12 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.helpers.RabbitMQ;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Database;
-import io.inprice.scrapper.manager.consumer.DeletedLinksConsumer;
+import io.inprice.scrapper.manager.consumer.PriceRefreshConsumer;
 import io.inprice.scrapper.manager.consumer.PriceChangeConsumer;
 import io.inprice.scrapper.manager.consumer.StatusChangeConsumer;
-import io.inprice.scrapper.manager.consumer.TobeAvailableLinksConsumer;
-import io.inprice.scrapper.manager.helpers.Beans;
+import io.inprice.scrapper.manager.consumer.TobeAvailableCompetitorsConsumer;
 import io.inprice.scrapper.manager.helpers.Global;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
@@ -33,10 +33,10 @@ public class Application {
 			Global.isApplicationRunning = true;
 
 			TaskManager.start();
-			TobeAvailableLinksConsumer.start();
+			TobeAvailableCompetitorsConsumer.start();
 			StatusChangeConsumer.start();
 			PriceChangeConsumer.start();
-			DeletedLinksConsumer.start();
+			PriceRefreshConsumer.start();
 
 		}, "app-starter").start();
 

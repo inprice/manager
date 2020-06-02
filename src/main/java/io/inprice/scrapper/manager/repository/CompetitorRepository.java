@@ -14,26 +14,26 @@ import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Database;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
-import io.inprice.scrapper.common.meta.LinkStatus;
+import io.inprice.scrapper.common.meta.CompetitorStatus;
 import io.inprice.scrapper.common.meta.PlanStatus;
-import io.inprice.scrapper.common.models.Link;
-import io.inprice.scrapper.common.models.LinkHistory;
-import io.inprice.scrapper.common.models.LinkSpec;
+import io.inprice.scrapper.common.models.Competitor;
+import io.inprice.scrapper.common.models.CompetitorHistory;
+import io.inprice.scrapper.common.models.CompetitorSpec;
 import io.inprice.scrapper.manager.config.Props;
 
-public class LinkRepository {
+public class CompetitorRepository {
 
-  private static final Logger log = LoggerFactory.getLogger(LinkRepository.class);
+  private static final Logger log = LoggerFactory.getLogger(CompetitorRepository.class);
   private static final Database db = Beans.getSingleton(Database.class);
 
   /**
-   * This method can be used for both links and imported products at the same
+   * This method can be used for both competitors and imported products at the same
    * time.
    *
    */
-  public List<Link> getLinks(LinkStatus status) {
+  public List<Competitor> getCompetitors(CompetitorStatus status) {
     final String query = String.format(
-        "select l.*, p.price as product_price from link as l " + 
+        "select l.*, p.price as product_price from competitor as l " + 
         "inner join product as p on p.id = l.product_id " + 
         "inner join company as c on c.id = l.company_id " +
         "where l.status = '%s' " + 
@@ -47,13 +47,13 @@ public class LinkRepository {
   }
 
   /**
-   * This method can be used for both links and imported products at the same
+   * This method can be used for both competitors and imported products at the same
    * time.
    *
    */
-  public List<Link> getFailedLinks(LinkStatus status, int retryLimit) {
+  public List<Competitor> getFailedCompetitors(CompetitorStatus status, int retryLimit) {
     final String query = String.format(
-        "select l.*, p.price as product_price from link as l " +
+        "select l.*, p.price as product_price from competitor as l " +
         "inner join product as p on p.id = l.product_id " +
         "inner join company as c on c.id = l.company_id " +
         "where l.status = '%s' " + 
@@ -69,7 +69,7 @@ public class LinkRepository {
 
   public void setLastCheckTime(String ids, boolean increaseRetry) {
     final String query = 
-        "update link " + 
+        "update competitor " + 
         "set last_check=now() " + (increaseRetry ? ", retry=retry+1 " : "") +
         "where id in (" + ids + ") ";
 
@@ -77,17 +77,17 @@ public class LinkRepository {
   }
 
   /**
-   * A link which is in NEW status becomes AVAILABLE with the help of this method.
+   * A competitor which is in NEW status becomes AVAILABLE with the help of this method.
    * This method does several database operations, please see below;
    *
-   * - All the basic information of the link is set first 
-   * - In order to add a status change into link_history table, changeStatus method is called 
-   * - and also changePrice method is called for adding a price change row into link_price table
-   * - lastly, specs of the link are added
+   * - All the basic information of the competitor is set first 
+   * - In order to add a status change into competitor_history table, changeStatus method is called 
+   * - and also changePrice method is called for adding a price change row into competitor_price table
+   * - lastly, specs of the competitor are added
    *
    * @return boolean
    */
-  public boolean makeAvailable(Link link) {
+  public boolean makeAvailable(Competitor competitor) {
     boolean result = false;
 
     Connection con = null;
@@ -95,7 +95,7 @@ public class LinkRepository {
       con = db.getTransactionalConnection();
 
       final String q1 = 
-        "update link " + 
+        "update competitor " + 
         "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, pre_status=status, status=?, " +
         "site_id=?, website_class_name=?, last_update=now(), retry=0, http_status=0 " +
         "where id = ? " + 
@@ -103,51 +103,51 @@ public class LinkRepository {
 
       try (PreparedStatement pst = con.prepareStatement(q1)) {
         int i = 0;
-        pst.setString(++i, link.getName());
-        pst.setString(++i, link.getSku());
-        pst.setString(++i, link.getBrand());
-        pst.setString(++i, link.getSeller());
-        pst.setString(++i, link.getShipment());
-        pst.setBigDecimal(++i, link.getPrice());
-        pst.setString(++i, link.getStatus().name());
-        pst.setLong(++i, link.getSiteId());
-        pst.setString(++i, link.getWebsiteClassName());
-        pst.setLong(++i, link.getId());
-        pst.setString(++i, link.getStatus().name());
+        pst.setString(++i, competitor.getName());
+        pst.setString(++i, competitor.getSku());
+        pst.setString(++i, competitor.getBrand());
+        pst.setString(++i, competitor.getSeller());
+        pst.setString(++i, competitor.getShipment());
+        pst.setBigDecimal(++i, competitor.getPrice());
+        pst.setString(++i, competitor.getStatus().name());
+        pst.setLong(++i, competitor.getSiteId());
+        pst.setString(++i, competitor.getWebsiteClassName());
+        pst.setLong(++i, competitor.getId());
+        pst.setString(++i, competitor.getStatus().name());
 
         result = (pst.executeUpdate() > 0);
       } catch (Exception e) {
-        log.error("Failed to make a link available. Link Id: " + link.getId(), e);
+        log.error("Failed to make a competitor available. competitor Id: " + competitor.getId(), e);
       }
 
       if (result) {
 
-        addStatusChangeHistory(con, link);
-        addPriceChangeHistory(con, link);
+        addStatusChangeHistory(con, competitor);
+        addPriceChangeHistory(con, competitor);
 
-        if (link.getSpecList() != null && link.getSpecList().size() > 0) {
+        if (competitor.getSpecList() != null && competitor.getSpecList().size() > 0) {
           // deleting old specs if any
-          executeSimpleQuery(con, "delete from link_spec where link_id=" + link.getId());
+          executeSimpleQuery(con, "delete from competitor_spec where competitor_id=" + competitor.getId());
 
           int j;
-          final String q3 = "insert into link_spec (link_id, _key, _value, product_id, company_id) values (?, ?, ?, ?, ?)";
+          final String q3 = "insert into competitor_spec (competitor_id, _key, _value, product_id, company_id) values (?, ?, ?, ?, ?)";
           try (PreparedStatement pst = con.prepareStatement(q3)) {
-            for (int i = 0; i < link.getSpecList().size(); i++) {
-              LinkSpec spec = link.getSpecList().get(i);
+            for (int i = 0; i < competitor.getSpecList().size(); i++) {
+              CompetitorSpec spec = competitor.getSpecList().get(i);
 
               j = 0;
-              pst.setLong(++j, link.getId());
+              pst.setLong(++j, competitor.getId());
               pst.setString(++j, spec.getKey());
               pst.setString(++j, spec.getValue());
-              pst.setLong(++j, link.getProductId());
-              pst.setLong(++j, link.getCompanyId());
+              pst.setLong(++j, competitor.getProductId());
+              pst.setLong(++j, competitor.getCompanyId());
               pst.addBatch();
             }
             pst.executeBatch();
           }
         }
       } else {
-        log.warn("Link is already in {} status. Link Id: {} ", link.getStatus().name(), link.getId());
+        log.warn("competitor is already in {} status. competitor Id: {} ", competitor.getStatus().name(), competitor.getId());
       }
 
       if (result) {
@@ -159,7 +159,7 @@ public class LinkRepository {
     } catch (SQLException e) {
       if (con != null)
         db.rollback(con);
-      log.error("Failed to make available a link. Link Id: " + link.getId(), e);
+      log.error("Failed to make available a competitor. competitor Id: " + competitor.getId(), e);
     } finally {
       if (con != null)
         db.close(con);
@@ -176,22 +176,22 @@ public class LinkRepository {
       con = db.getTransactionalConnection();
 
       final String oldStatusName = change.getOldStatus().name();
-      String newStatusName = change.getLink().getStatus().name();
+      String newStatusName = change.getCompetitor().getStatus().name();
 
-      if (change.getLink().getHttpStatus() == null)
-        change.getLink().setHttpStatus(0);
+      if (change.getCompetitor().getHttpStatus() == null)
+        change.getCompetitor().setHttpStatus(0);
 
-      if (LinkStatus.RESUMED.equals(change.getLink().getStatus())) {
-        LinkStatus originalStatus = findThirdBackStatusForResumedLinks(con, change.getLink().getId());
+      if (CompetitorStatus.RESUMED.equals(change.getCompetitor().getStatus())) {
+        CompetitorStatus originalStatus = findThirdBackStatusForResumedCompetitors(con, change.getCompetitor().getId());
         if (originalStatus != null) {
           newStatusName = originalStatus.name();
         }
       }
 
       final String q1 = 
-        "update link " + 
+        "update competitor " + 
         "set status=?, pre_status=?, http_status=?, last_update=now() " +
-        (change.getLink().getHttpStatus() != 0 ? ", retry=retry+1 " : "") + 
+        (change.getCompetitor().getHttpStatus() != 0 ? ", retry=retry+1 " : "") + 
         "where id=? " + 
         "  and status!=?";
 
@@ -199,18 +199,18 @@ public class LinkRepository {
         int i = 0;
         pst.setString(++i, newStatusName);
         pst.setString(++i, oldStatusName);
-        pst.setInt(++i, change.getLink().getHttpStatus());
-        pst.setLong(++i, change.getLink().getId());
+        pst.setInt(++i, change.getCompetitor().getHttpStatus());
+        pst.setLong(++i, change.getCompetitor().getId());
         pst.setString(++i, newStatusName);
 
         result = (pst.executeUpdate() > 0);
       }
 
       if (result) {
-        addStatusChangeHistory(con, change.getLink());
+        addStatusChangeHistory(con, change.getCompetitor());
       } else {
-        log.warn("Link's status is already changed! Link Id: {}, Old Status: {}, New Status: {}",
-            change.getLink().getId(), oldStatusName, newStatusName);
+        log.warn("competitor's status is already changed! competitor Id: {}, Old Status: {}, New Status: {}",
+            change.getCompetitor().getId(), oldStatusName, newStatusName);
       }
 
       if (result) {
@@ -222,7 +222,7 @@ public class LinkRepository {
     } catch (SQLException e) {
       if (con != null)
         db.rollback(con);
-      log.error("Failed to add a new status. Link Id: " + change.getLink().getId(), e);
+      log.error("Failed to add a new status. competitor Id: " + change.getCompetitor().getId(), e);
     } finally {
       if (con != null)
         db.close(con);
@@ -239,7 +239,7 @@ public class LinkRepository {
       con = db.getTransactionalConnection();
 
       final String q1 = 
-        "update link " + 
+        "update competitor " + 
         "set price=?, last_update=now() " + 
         "where id=? " + 
         "  and price<>?";
@@ -247,11 +247,11 @@ public class LinkRepository {
       try (PreparedStatement pst = con.prepareStatement(q1)) {
         int i = 0;
         pst.setBigDecimal(++i, change.getNewPrice());
-        pst.setLong(++i, change.getLinkId());
+        pst.setLong(++i, change.getCompetitorId());
         pst.setBigDecimal(++i, change.getNewPrice());
         result = (pst.executeUpdate() > 0);
       } catch (Exception e) {
-        log.error("Failed to change price of a link at step 1. Link Id: " + change.getLinkId(), e);
+        log.error("Failed to change price of a competitor at step 1. competitor Id: " + change.getCompetitorId(), e);
       }
 
       if (result) {
@@ -263,7 +263,7 @@ public class LinkRepository {
 
     } catch (SQLException e) {
       db.rollback(con);
-      log.error("Failed to change price. Link Id: {}, Price: {}", change.getLinkId(), change.getNewPrice(), e);
+      log.error("Failed to change price. competitor Id: {}, Price: {}", change.getCompetitorId(), change.getNewPrice(), e);
     } finally {
       if (con != null)
         db.close(con);
@@ -272,30 +272,30 @@ public class LinkRepository {
     return result;
   }
 
-  private void addStatusChangeHistory(Connection con, Link link) {
+  private void addStatusChangeHistory(Connection con, Competitor competitor) {
     executeSimpleQuery(con,
       String.format(
-        "insert into link_history (link_id, status, http_status, product_id, company_id) " +
+        "insert into competitor_history (competitor_id, status, http_status, product_id, company_id) " +
         "values (%d, '%s', %d, %d, %d)",
-        link.getId(), link.getStatus(), link.getHttpStatus(), link.getProductId(), link.getCompanyId()));
+        competitor.getId(), competitor.getStatus(), competitor.getHttpStatus(), competitor.getProductId(), competitor.getCompanyId()));
   }
 
   /**
-   * Since the previous status of a resumed link must be PAUSED (thus, nonsens to
+   * Since the previous status of a resumed competitor must be PAUSED (thus, nonsens to
    * return back to PAUSED from RESUMED) We need to find the third status in back
    * which means we find the status before PAUSED
    *
-   * 1- Link is in any status 2- passes in PAUSED 3- passes in RESUMED 4- we must
+   * 1- competitor is in any status 2- passes in PAUSED 3- passes in RESUMED 4- we must
    * return back to the status in first step
    */
-  private LinkStatus findThirdBackStatusForResumedLinks(Connection con, Long linkId) {
+  private CompetitorStatus findThirdBackStatusForResumedCompetitors(Connection con, Long competitorId) {
     final String query = String.format(
-        "select * from link_history " + 
-        "where link_id = %d " + 
+        "select * from competitor_history " + 
+        "where competitor_id = %d " + 
         "order by created_at desc " + 
-        "limit 3 ", linkId);
+        "limit 3 ", competitorId);
 
-    List<LinkHistory> historyList = db.findMultiple(con, query, this::historyMap);
+    List<CompetitorHistory> historyList = db.findMultiple(con, query, this::historyMap);
     if (historyList != null && historyList.size() > 2) {
       return historyList.get(2).getStatus();
     }
@@ -303,18 +303,18 @@ public class LinkRepository {
     return null;
   }
 
-  private void addPriceChangeHistory(Connection con, Link link) {
-    addPriceChangeHistory(con, link.getId(), link.getPrice(), link.getProductId(), link.getCompanyId());
+  private void addPriceChangeHistory(Connection con, Competitor competitor) {
+    addPriceChangeHistory(con, competitor.getId(), competitor.getPrice(), competitor.getProductId(), competitor.getCompanyId());
   }
 
   private void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
-    addPriceChangeHistory(con, priceInfo.getLinkId(), priceInfo.getNewPrice(), priceInfo.getProductId(), priceInfo.getCompanyId());
+    addPriceChangeHistory(con, priceInfo.getCompetitorId(), priceInfo.getNewPrice(), priceInfo.getProductId(), priceInfo.getCompanyId());
   }
 
-  private void addPriceChangeHistory(Connection con, long linkId, BigDecimal price, long productId, long companyId) {
+  private void addPriceChangeHistory(Connection con, long competitorId, BigDecimal price, long productId, long companyId) {
     executeSimpleQuery(con, String.format(
-        "insert into link_price (link_id, price, product_id, company_id) values (%d, %f, %d, %d)",
-        linkId, price, productId, companyId));
+        "insert into competitor_price (competitor_id, price, product_id, company_id) values (%d, %f, %d, %d)",
+        competitorId, price, productId, companyId));
   }
 
   private void executeSimpleQuery(Connection con, String query) {
@@ -325,13 +325,13 @@ public class LinkRepository {
     }
   }
 
-  private List<Link> findAll(String query) {
+  private List<Competitor> findAll(String query) {
     return db.findMultiple(query, this::map);
   }
 
-  private Link map(ResultSet rs) {
+  private Competitor map(ResultSet rs) {
     try {
-      Link model = new Link(rs.getString("url"));
+      Competitor model = new Competitor(rs.getString("url"));
       model.setId(rs.getLong("id"));
       model.setName(rs.getString("name"));
       model.setSku(rs.getString("sku"));
@@ -341,9 +341,9 @@ public class LinkRepository {
       model.setPrice(rs.getBigDecimal("price"));
       model.setLastCheck(rs.getTimestamp("last_check"));
       model.setLastUpdate(rs.getTimestamp("last_update"));
-      model.setStatus(LinkStatus.valueOf(rs.getString("status")));
+      model.setStatus(CompetitorStatus.valueOf(rs.getString("status")));
       model.setHttpStatus(rs.getInt("http_status"));
-      model.setPreStatus(LinkStatus.valueOf(rs.getString("pre_status")));
+      model.setPreStatus(CompetitorStatus.valueOf(rs.getString("pre_status")));
       model.setRetry(rs.getInt("retry"));
       model.setWebsiteClassName(rs.getString("website_class_name"));
       model.setCompanyId(rs.getLong("company_id"));
@@ -355,24 +355,24 @@ public class LinkRepository {
 
       return model;
     } catch (SQLException e) {
-      log.error("Failed to set link's properties", e);
+      log.error("Failed to set competitor's properties", e);
     }
     return null;
   }
 
-  private LinkHistory historyMap(ResultSet rs) {
+  private CompetitorHistory historyMap(ResultSet rs) {
     try {
-      LinkHistory model = new LinkHistory();
+      CompetitorHistory model = new CompetitorHistory();
       model.setId(rs.getLong("id"));
-      model.setLinkId(rs.getLong("link_id"));
-      model.setStatus(LinkStatus.valueOf(rs.getString("status")));
+      model.setCompetitorId(rs.getLong("competitor_id"));
+      model.setStatus(CompetitorStatus.valueOf(rs.getString("status")));
       model.setHttpStatus(rs.getInt("http_status"));
       model.setCompanyId(rs.getLong("company_id"));
       model.setCreatedAt(rs.getTimestamp("created_at"));
 
       return model;
     } catch (SQLException e) {
-      log.error("Failed to set link's history properties", e);
+      log.error("Failed to set competitor's history properties", e);
     }
     return null;
   }

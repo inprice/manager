@@ -13,14 +13,14 @@ import io.inprice.scrapper.manager.scheduled.Task;
 
 public class MemebershipRemover implements Task {
 
-  private static final String NAME = "Link Cleaner for Imported Products";
+  private static final String NAME = "competitor Cleaner for Imported Products";
 
   private static final Logger log = LoggerFactory.getLogger(MemebershipRemover.class);
   private static final MembershipRepository repository = Beans.getSingleton(MembershipRepository.class);
 
   @Override
   public TimePeriod getTimePeriod() {
-    return DateUtils.parseTimePeriod(Props.TIMING_FOR_CLEANING_LINKS());
+    return DateUtils.parseTimePeriod(Props.TIMING_FOR_CLEANING_COMPETITORS());
   }
 
   @Override

@@ -21,8 +21,8 @@ public class TaskManager {
         loadTask(new PriceUpdater());
         loadTask(new MemebershipRemover());
 
-        loadTask(new NEW_Publisher());
-        loadTask(new RENEWED_Publisher());
+        loadTask(new TOBE_CLASSIFIED_Publisher());
+        loadTask(new TOBE_RENEWED_Publisher());
         loadTask(new IMPLEMENTED_Publisher());
         loadTask(new RESUMED_Publisher());
         loadTask(new AVAILABLE_Publisher());

@@ -12,18 +12,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.config.SysProps;
+import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
-import io.inprice.scrapper.manager.helpers.Beans;
 import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
-import io.inprice.scrapper.manager.repository.LinkRepository;
+import io.inprice.scrapper.manager.repository.CompetitorRepository;
 
 public class PriceChangeConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(PriceChangeConsumer.class);
-  private static final LinkRepository linkRepository = Beans.getSingleton(LinkRepository.class);
+  private static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
   public static void start() {
     log.info("Price change consumer is up and running.");
@@ -37,7 +37,7 @@ public class PriceChangeConsumer {
           try {
             PriceUpdateInfo pui = JsonConverter.fromJson(new String(body), PriceUpdateInfo.class);
             if (pui != null) {
-              boolean isOK = linkRepository.changePrice(pui);
+              boolean isOK = competitorRepository.changePrice(pui);
               if (isOK) {
                 RedisClient.addPriceChanging(pui.getProductId());
                 channel.basicAck(envelope.getDeliveryTag(), false);
