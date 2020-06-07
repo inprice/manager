@@ -16,7 +16,6 @@ import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
 import io.inprice.scrapper.common.models.Competitor;
-import io.inprice.scrapper.manager.helpers.RedisClient;
 import io.inprice.scrapper.manager.helpers.ThreadPools;
 import io.inprice.scrapper.manager.repository.CompetitorRepository;
 
@@ -42,7 +41,11 @@ public class TobeAvailableCompetitorsConsumer {
             if (competitor != null) {
               boolean isOK = competitorRepository.makeAvailable(competitor);
               if (isOK) {
-                RedisClient.addPriceChanging(competitor.getProductId());
+
+                // first method is much efficient in terms of db
+                // RedisClient.addPriceChanging(competitor.getProductId());
+                RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_PRICE_REFRESH_ROUTING(), competitor.getProductId().toString());
+
                 channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while activating a competitor!");
