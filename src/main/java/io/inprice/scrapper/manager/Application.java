@@ -33,10 +33,11 @@ public class Application {
 			Global.isApplicationRunning = true;
 
 			TaskManager.start();
-			TobeAvailableCompetitorsConsumer.start();
-			StatusChangeConsumer.start();
-			PriceChangeConsumer.start();
-			PriceRefreshConsumer.start();
+      
+      new TobeAvailableCompetitorsConsumer().start();
+			new StatusChangeConsumer().start();
+			new PriceChangeConsumer().start();
+			new PriceRefreshConsumer().start();
 
 		}, "app-starter").start();
 

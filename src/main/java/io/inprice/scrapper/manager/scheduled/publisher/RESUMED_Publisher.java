@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.rabbitmq.client.Channel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
@@ -18,6 +21,8 @@ import io.inprice.scrapper.manager.config.Props;
  * @author mdpinar
  */
 public class RESUMED_Publisher extends AbstractCompetitorPublisher {
+
+  private static final Logger log = LoggerFactory.getLogger(RESUMED_Publisher.class);
 
   @Override
   CompetitorStatus getStatus() {
@@ -43,7 +48,7 @@ public class RESUMED_Publisher extends AbstractCompetitorPublisher {
         RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), getMQRoutingKey(), JsonConverter.toJson(change));
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Failed to hande resumed competitors", e);
     }
     RabbitMQ.closeChannel(channel);
   }

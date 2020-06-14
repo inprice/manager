@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.scrapper.common.helpers.Beans;
 import io.inprice.scrapper.common.helpers.Database;
+import io.inprice.scrapper.common.helpers.RepositoryHelper;
 import io.inprice.scrapper.common.info.PriceUpdateInfo;
 import io.inprice.scrapper.common.info.StatusChange;
 import io.inprice.scrapper.common.meta.CompetitorStatus;
@@ -34,8 +35,8 @@ public class CompetitorRepository {
   public List<Competitor> getCompetitors(CompetitorStatus status) {
     final String query = String.format(
         "select l.*, p.price as product_price from competitor as l " + 
-        "inner join product as p on p.id = l.product_id " + 
         "inner join company as c on c.id = l.company_id " +
+        "left join product as p on p.id = l.product_id " + 
         "where l.status = '%s' " + 
         "  and c.plan_status = '%s' " + 
         "  and c.due_date >= now() " + 
@@ -54,8 +55,8 @@ public class CompetitorRepository {
   public List<Competitor> getFailedCompetitors(CompetitorStatus status, int retryLimit) {
     final String query = String.format(
         "select l.*, p.price as product_price from competitor as l " +
-        "inner join product as p on p.id = l.product_id " +
         "inner join company as c on c.id = l.company_id " +
+        "left join product as p on p.id = l.product_id " +
         "where l.status = '%s' " + 
         "  and l.retry < %d " + 
         "  and c.plan_status = '%s' " + 
@@ -120,7 +121,7 @@ public class CompetitorRepository {
         log.error("Failed to make a competitor available. competitor Id: " + competitor.getId(), e);
       }
 
-      if (result) {
+      if (result && competitor.getProductId() != null) {
 
         addStatusChangeHistory(con, competitor);
         addPriceChangeHistory(con, competitor);
@@ -206,11 +207,13 @@ public class CompetitorRepository {
         result = (pst.executeUpdate() > 0);
       }
 
-      if (result) {
-        addStatusChangeHistory(con, change.getCompetitor());
-      } else {
-        log.warn("competitor's status is already changed! competitor Id: {}, Old Status: {}, New Status: {}",
-            change.getCompetitor().getId(), oldStatusName, newStatusName);
+      if (change.getCompetitor().getProductId() != null) {
+        if (result) {
+          addStatusChangeHistory(con, change.getCompetitor());
+        } else {
+          log.warn("competitor's status is already changed! competitor Id: {}, Old Status: {}, New Status: {}",
+              change.getCompetitor().getId(), oldStatusName, newStatusName);
+        }
       }
 
       if (result) {
@@ -346,9 +349,9 @@ public class CompetitorRepository {
       model.setPreStatus(CompetitorStatus.valueOf(rs.getString("pre_status")));
       model.setRetry(rs.getInt("retry"));
       model.setWebsiteClassName(rs.getString("website_class_name"));
-      model.setCompanyId(rs.getLong("company_id"));
-      model.setProductId(rs.getLong("product_id"));
-      model.setSiteId(rs.getLong("site_id"));
+      model.setCompanyId(RepositoryHelper.nullLongHandler(rs, "company_id"));
+      model.setProductId(RepositoryHelper.nullLongHandler(rs, "product_id"));
+      model.setSiteId(RepositoryHelper.nullLongHandler(rs, "site_id"));
       model.setCreatedAt(rs.getTimestamp("created_at"));
 
       model.setProductPrice(rs.getBigDecimal("product_price"));

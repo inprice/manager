@@ -25,7 +25,7 @@ public class PriceChangeConsumer {
   private static final Logger log = LoggerFactory.getLogger(PriceChangeConsumer.class);
   private static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
-  public static void start() {
+  public void start() {
     log.info("Price change consumer is up and running.");
 
     final Channel channel = RabbitMQ.openChannel();

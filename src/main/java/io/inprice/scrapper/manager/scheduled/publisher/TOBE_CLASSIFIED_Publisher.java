@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.rabbitmq.client.Channel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.inprice.scrapper.common.config.SysProps;
 import io.inprice.scrapper.common.helpers.JsonConverter;
 import io.inprice.scrapper.common.helpers.RabbitMQ;
@@ -21,6 +24,8 @@ import io.inprice.scrapper.manager.helpers.SiteFinder;
  * @author mdpinar
  */
 public class TOBE_CLASSIFIED_Publisher extends AbstractCompetitorPublisher {
+
+  private static final Logger log = LoggerFactory.getLogger(TOBE_CLASSIFIED_Publisher.class);
 
   @Override
   CompetitorStatus getStatus() {
@@ -56,11 +61,11 @@ public class TOBE_CLASSIFIED_Publisher extends AbstractCompetitorPublisher {
       }
 
       if (competitor.getStatus().equals(oldStatus)) {
-        // the consumer class is in Worker, NewCompetitorsConsumer
+        // the consumer class is in Worker, TobeClassifiedCompetitorsConsumer
         try {
           RabbitMQ.publishCompetitor(channel, getMQRoutingKey(), JsonConverter.toJson(competitor));
         } catch (Exception e) {
-          e.printStackTrace();
+          log.error("Failed to publish tobe classified competitor. Case 1", e);
         }
       } else {
         // the consumer class is here, StatusChangeConsumer
@@ -68,7 +73,7 @@ public class TOBE_CLASSIFIED_Publisher extends AbstractCompetitorPublisher {
         try {
           RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_STATUS_CHANGES_ROUTING(), JsonConverter.toJson(change));
         } catch (Exception e) {
-          e.printStackTrace();
+          log.error("Failed to publish tobe classified competitor. Case 2", e);
         }
       }
     }

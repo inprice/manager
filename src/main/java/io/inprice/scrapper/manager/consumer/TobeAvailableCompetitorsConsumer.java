@@ -27,7 +27,7 @@ public class TobeAvailableCompetitorsConsumer {
   private static final Logger log = LoggerFactory.getLogger(TobeAvailableCompetitorsConsumer.class);
   private static final CompetitorRepository competitorRepository = Beans.getSingleton(CompetitorRepository.class);
 
-  public static void start() {
+  public void start() {
     log.info("TO BE AVAILABLE competitors consumer is up and running.");
 
     final Channel channel = RabbitMQ.openChannel();
@@ -41,11 +41,9 @@ public class TobeAvailableCompetitorsConsumer {
             if (competitor != null) {
               boolean isOK = competitorRepository.makeAvailable(competitor);
               if (isOK) {
-
-                // first method is much efficient in terms of db
-                // RedisClient.addPriceChanging(competitor.getProductId());
-                RabbitMQ.publish(channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_PRICE_REFRESH_ROUTING(), competitor.getProductId().toString());
-
+                RabbitMQ.publish(
+                  channel, SysProps.MQ_CHANGES_EXCHANGE(), SysProps.MQ_PRICE_REFRESH_ROUTING(), competitor.getProductId().toString()
+                );
                 channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while activating a competitor!");

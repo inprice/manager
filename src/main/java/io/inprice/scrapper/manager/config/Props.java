@@ -46,6 +46,10 @@ public class Props {
     return System.getenv().getOrDefault("TIMING_FOR_SOCKET_ERRORS", "8M");
   }
 
+  public static String TIMING_NO_DATA_ERRORS() {
+    return System.getenv().getOrDefault("TIMING_NO_DATA_ERRORS", "10M");
+  }
+
   public static String TIMING_FOR_NETWORK_ERRORS() {
     return System.getenv().getOrDefault("TIMING_FOR_NETWORK_ERRORS", "3H");
   }

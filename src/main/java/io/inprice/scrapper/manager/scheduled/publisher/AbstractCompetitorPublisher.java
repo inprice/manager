@@ -68,13 +68,13 @@ public abstract class AbstractCompetitorPublisher implements Task {
       }
 
       if (counter > 0)
-        log.info("{} competitor(s) is handled successfully. Number: {}, Time: {}", getStatus().name(),
+        log.info("{} competitor(s) is handled successfully. Number: {}, Time: {}", getStatus(),
             counter, (System.currentTimeMillis() - startTime));
       else
-        log.info("No competitor {} status found.", getStatus().name());
+        log.info("No competitor {} status found.", getStatus());
 
     } catch (Exception e) {
-      log.error(String.format("Failed to completed %s task!", getStatus().name()), e);
+      log.error(String.format("Failed to completed %s task!", getStatus()), e);
     } finally {
       Global.setTaskRunningStatus(getStatus().name(), false);
     }
@@ -93,7 +93,7 @@ public abstract class AbstractCompetitorPublisher implements Task {
         RabbitMQ.publishCompetitor(channel, getMQRoutingKey(), JsonConverter.toJson(competitor));
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error(String.format("Failed to handle competitors!", getStatus()), e);
     }
     RabbitMQ.closeChannel(channel);
   }

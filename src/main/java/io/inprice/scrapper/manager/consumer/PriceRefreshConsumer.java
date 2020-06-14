@@ -30,7 +30,7 @@ public class PriceRefreshConsumer {
   private static final Database db = Beans.getSingleton(Database.class);
   private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
 
-  public static void start() {
+  public void start() {
     log.info("Price refresh consumer is up and running.");
 
     final Channel channel = RabbitMQ.openChannel();
