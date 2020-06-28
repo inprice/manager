@@ -157,7 +157,7 @@ public class CompetitorRepository {
         db.rollback(con);
       }
 
-    } catch (SQLException e) {
+    } catch (Exception e) {
       if (con != null)
         db.rollback(con);
       log.error("Failed to make available a competitor. competitor Id: " + competitor.getId(), e);
@@ -222,11 +222,13 @@ public class CompetitorRepository {
         db.rollback(con);
       }
 
-    } catch (SQLException e) {
+    } catch (Exception e) {
+
       if (con != null)
         db.rollback(con);
       log.error("Failed to add a new status. competitor Id: " + change.getCompetitor().getId(), e);
     } finally {
+
       if (con != null)
         db.close(con);
     }
@@ -264,7 +266,7 @@ public class CompetitorRepository {
         db.rollback(con);
       }
 
-    } catch (SQLException e) {
+    } catch (Exception e) {
       db.rollback(con);
       log.error("Failed to change price. competitor Id: {}, Price: {}", change.getCompetitorId(), change.getNewPrice(), e);
     } finally {

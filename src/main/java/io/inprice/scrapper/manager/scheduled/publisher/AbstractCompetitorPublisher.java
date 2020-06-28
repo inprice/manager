@@ -67,11 +67,10 @@ public abstract class AbstractCompetitorPublisher implements Task {
         }
       }
 
-      if (counter > 0)
+      if (counter > 0) {
         log.info("{} competitor(s) is handled successfully. Number: {}, Time: {}", getStatus(),
             counter, (System.currentTimeMillis() - startTime));
-      else
-        log.info("No competitor {} status found.", getStatus());
+      }
 
     } catch (Exception e) {
       log.error(String.format("Failed to completed %s task!", getStatus()), e);

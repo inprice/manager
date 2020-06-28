@@ -36,12 +36,13 @@ public class StatusChangeConsumer {
           try {
             StatusChange change = JsonConverter.fromJson(new String(body), StatusChange.class);
             if (change != null) {
+
               boolean isOK = competitorRepository.changeStatus(change);
               if (isOK) {
                 //RedisClient.addPriceChanging(change.getCompetitor().getProductId());
                 channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
-                log.error("DB problem while changing competitor status!");
+                log.error("DB problem while changing competitor status! " + change.getCompetitor().toString());
               }
             } else {
               log.error("Status change object is null!");

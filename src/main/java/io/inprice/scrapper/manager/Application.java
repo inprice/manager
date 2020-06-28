@@ -37,7 +37,7 @@ public class Application {
       new TobeAvailableCompetitorsConsumer().start();
 			new StatusChangeConsumer().start();
 			new PriceChangeConsumer().start();
-			new PriceRefreshConsumer().start();
+      new PriceRefreshConsumer().start();
 
 		}, "app-starter").start();
 

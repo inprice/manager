@@ -63,7 +63,11 @@ public class RedisClient {
   }
 
   public static void shutdown() {
-    client.shutdown();
+    if (client != null) {
+      client.shutdown();
+    } else {
+      log.warn("No redis client found!");
+    }
   }
 
 }

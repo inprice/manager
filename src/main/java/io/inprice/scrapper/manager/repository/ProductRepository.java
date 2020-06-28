@@ -224,7 +224,7 @@ public class ProductRepository {
         db.rollback(con);
       }
 
-    } catch (SQLException e) {
+    } catch (Exception e) {
       if (con != null)
         db.rollback(con);
       success = false;

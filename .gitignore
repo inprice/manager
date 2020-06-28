@@ -17,10 +17,7 @@
 hs_err_pid*
 /target/*
 
-.idea/
-
 .classpath
-.history/
+.history
 .project
-.settings/
-
+.settings
