@@ -43,24 +43,18 @@ public class PriceRefreshConsumer {
             Long productId = NumberUtils.toLong(new String(body));
             if (productId != null && productId > 0) {
               refreshPrice(productId);
-              channel.basicAck(envelope.getDeliveryTag(), false);
             } else {
               log.error("Invalid product id value!");
             }
           } catch (Exception e) {
-            log.error("Failed to submit Tasks into ThreadPool", e);
-            try {
-              channel.basicNack(envelope.getDeliveryTag(), false, false);
-            } catch (IOException e1) {
-              log.error("Failed to send a message to dlq", e1);
-            }
+            log.error("Failed to handle price refreshing", e);
           }
         });
       }
     };
 
     try {
-      channel.basicConsume(SysProps.MQ_PRICE_REFRESH_QUEUE(), false, consumer);
+      channel.basicConsume(SysProps.MQ_PRICE_REFRESH_QUEUE(), true, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for deleted competitors.", e);
     }

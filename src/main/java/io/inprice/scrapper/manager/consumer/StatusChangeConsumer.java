@@ -40,7 +40,6 @@ public class StatusChangeConsumer {
               boolean isOK = competitorRepository.changeStatus(change);
               if (isOK) {
                 //RedisClient.addPriceChanging(change.getCompetitor().getProductId());
-                channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while changing competitor status! " + change.getCompetitor().toString());
               }
@@ -49,18 +48,13 @@ public class StatusChangeConsumer {
             }
           } catch (Exception e) {
             log.error("Failed to submit Tasks into ThreadPool", e);
-            try {
-              channel.basicNack(envelope.getDeliveryTag(), false, false);
-            } catch (IOException e1) {
-              log.error("Failed to send a message to dlq", e1);
-            }
           }
         });
       }
     };
 
     try {
-      channel.basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), false, consumer);
+      channel.basicConsume(SysProps.MQ_STATUS_CHANGE_QUEUE(), true, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting status changes.", e);
     }

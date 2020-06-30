@@ -40,7 +40,6 @@ public class PriceChangeConsumer {
               boolean isOK = competitorRepository.changePrice(pui);
               if (isOK) {
                 RedisClient.addPriceChanging(pui.getProductId());
-                channel.basicAck(envelope.getDeliveryTag(), false);
               } else {
                 log.error("DB problem while changing Price!");
               }
@@ -48,19 +47,14 @@ public class PriceChangeConsumer {
               log.error("PriceUpdateInfo object is null!");
             }
           } catch (Exception e) {
-            log.error("Failed to submit Tasks into ThreadPool", e);
-            try {
-              channel.basicNack(envelope.getDeliveryTag(), false, false);
-            } catch (IOException e1) {
-              log.error("Failed to send a message to dlq", e1);
-            }
+            log.error("Failed to handle price changing", e);
           }
         });
       }
     };
 
     try {
-      channel.basicConsume(SysProps.MQ_PRICE_CHANGE_QUEUE(), false, consumer);
+      channel.basicConsume(SysProps.MQ_PRICE_CHANGE_QUEUE(), true, consumer);
     } catch (IOException e) {
       log.error("Failed to set a queue up for getting price changes.", e);
     }
