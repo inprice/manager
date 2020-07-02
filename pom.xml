@@ -7,7 +7,7 @@
   <groupId>io.inprice.website</groupId>
   <artifactId>manager</artifactId>
   <version>1.0.0</version>
-  <name>Manager project of Scrapping system</name>
+  <packaging>jar</packaging>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,7 +16,7 @@
 
   <dependencies>
 		<dependency>
-			<groupId>io.inprice.scrapper</groupId>
+			<groupId>io.inprice</groupId>
 			<artifactId>common</artifactId>
 			<version>1.0.0</version>
 		</dependency>

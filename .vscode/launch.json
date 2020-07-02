@@ -5,7 +5,7 @@
       "type": "java",
       "name": "CodeLens (Launch) - Test",
       "request": "launch",
-      "mainClass": "io.inprice.scrapper.manager.Test",
+      "mainClass": "io.inprice.manager.Test",
       "projectName": "manager"
     },
     {
@@ -13,7 +13,7 @@
       "name": "Debug API",
       "request": "launch",
       "projectName": "manager",
-      "mainClass": "io.inprice.scrapper.manager.Application",
+      "mainClass": "io.inprice.manager.Application",
       "env": {
         "APP_ENV": "DEV",
         "WAITING_TIME_FOR_FETCHING_COMPETITORS": 3,
