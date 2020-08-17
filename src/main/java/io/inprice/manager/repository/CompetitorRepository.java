@@ -15,7 +15,6 @@ import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.RepositoryHelper;
 import io.inprice.common.info.PriceUpdateInfo;
 import io.inprice.common.info.StatusChange;
-import io.inprice.common.meta.CompanyStatus;
 import io.inprice.common.meta.CompetitorStatus;
 import io.inprice.common.models.Competitor;
 import io.inprice.common.models.CompetitorHistory;
@@ -38,11 +37,10 @@ public class CompetitorRepository {
         "inner join company as c on c.id = l.company_id " +
         "left join product as p on p.id = l.product_id " + 
         "where l.status = '%s' " + 
-        "  and c.status = '%s' " + 
-        "  and c.due_date >= now() " + 
-        "  and (l.last_check is null or l.last_check < now() - interval 30 minute) " + 
+        "  and c.subs_renewal_at >= now() " + 
+        "  and l.last_check < now() - interval 30 minute " + 
         "limit %d",
-        status.name(), CompanyStatus.ACTIVE.name(), Props.DB_FETCH_LIMIT());
+        status.name(), Props.DB_FETCH_LIMIT());
 
     return findAll(query);
   }
@@ -59,11 +57,10 @@ public class CompetitorRepository {
         "left join product as p on p.id = l.product_id " +
         "where l.status = '%s' " + 
         "  and l.retry < %d " + 
-        "  and c.status = '%s' " + 
-        "  and c.due_date >= now() " + 
-        "  and (l.last_check is null or l.last_check < now() - interval 30 minute) " + 
+        "  and c.subs_renewal_at >= now() " + 
+        "  and l.last_check < now() - interval 30 minute " + 
         "limit %d",
-        status.name(), retryLimit, CompanyStatus.ACTIVE.name(), Props.DB_FETCH_LIMIT());
+        status.name(), retryLimit, Props.DB_FETCH_LIMIT());
 
     return findAll(query);
   }
