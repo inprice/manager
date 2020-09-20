@@ -1,6 +1,5 @@
 package io.inprice.manager.repository;
 
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -68,7 +67,8 @@ public class CompetitorRepository {
   public void setLastCheckTime(String ids, boolean increaseRetry) {
     final String query = 
         "update competitor " + 
-        "set last_check=now() " + (increaseRetry ? ", retry=retry+1 " : "") +
+        "set last_check=now() " + 
+        (increaseRetry ? ", retry=retry+1 " : "") +
         "where id in (" + ids + ") ";
 
     db.executeQuery(query, "Failed to set last check time of ids: " + ids);
@@ -94,7 +94,7 @@ public class CompetitorRepository {
 
       final String q1 = 
         "update competitor " + 
-        "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, pre_status=status, status=?, " +
+        "set name=?, sku=?, brand=?, seller=?, shipment=?, price=?, position=?, pre_status=status, status=?, " +
         "site_id=?, website_class_name=?, last_update=now(), retry=0, http_status=0 " +
         "where id = ? " + 
         "  and status != ?";
@@ -107,6 +107,7 @@ public class CompetitorRepository {
         pst.setString(++i, competitor.getSeller());
         pst.setString(++i, competitor.getShipment());
         pst.setBigDecimal(++i, competitor.getPrice());
+        pst.setInt(++i, competitor.getPosition());
         pst.setString(++i, competitor.getStatus().name());
         pst.setLong(++i, competitor.getSiteId());
         pst.setString(++i, competitor.getWebsiteClassName());
@@ -119,9 +120,7 @@ public class CompetitorRepository {
       }
 
       if (result && competitor.getProductId() != null) {
-
         addStatusChangeHistory(con, competitor);
-        addPriceChangeHistory(con, competitor);
 
         if (competitor.getSpecList() != null && competitor.getSpecList().size() > 0) {
           // deleting old specs if any
@@ -253,11 +252,10 @@ public class CompetitorRepository {
         pst.setBigDecimal(++i, change.getNewPrice());
         result = (pst.executeUpdate() > 0);
       } catch (Exception e) {
-        log.error("Failed to change price of a competitor at step 1. competitor Id: " + change.getCompetitorId(), e);
+        log.error("Failed to change price of a competitor at step 1. Competitor Id: " + change.getCompetitorId(), e);
       }
 
       if (result) {
-        addPriceChangeHistory(con, change);
         db.commit(con);
       } else {
         db.rollback(con);
@@ -265,7 +263,7 @@ public class CompetitorRepository {
 
     } catch (Exception e) {
       db.rollback(con);
-      log.error("Failed to change price. competitor Id: {}, Price: {}", change.getCompetitorId(), change.getNewPrice(), e);
+      log.error("Failed to change price. Competitor Id: {}, Price: {}", change.getCompetitorId(), change.getNewPrice(), e);
     } finally {
       if (con != null)
         db.close(con);
@@ -303,20 +301,6 @@ public class CompetitorRepository {
     }
 
     return null;
-  }
-
-  private void addPriceChangeHistory(Connection con, Competitor competitor) {
-    addPriceChangeHistory(con, competitor.getId(), competitor.getPrice(), competitor.getProductId(), competitor.getCompanyId());
-  }
-
-  private void addPriceChangeHistory(Connection con, PriceUpdateInfo priceInfo) {
-    addPriceChangeHistory(con, priceInfo.getCompetitorId(), priceInfo.getNewPrice(), priceInfo.getProductId(), priceInfo.getCompanyId());
-  }
-
-  private void addPriceChangeHistory(Connection con, long competitorId, BigDecimal price, long productId, long companyId) {
-    executeSimpleQuery(con, String.format(
-        "insert into competitor_price (competitor_id, price, product_id, company_id) values (%d, %f, %d, %d)",
-        competitorId, price, productId, companyId));
   }
 
   private void executeSimpleQuery(Connection con, String query) {

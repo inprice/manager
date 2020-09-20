@@ -35,7 +35,7 @@ public class RedisClient {
       try {
         client = Redisson.create(config);
 
-        priceChangingProductsIdSet = client.getSet("manager:price-changing:product-ips");
+        priceChangingProductsIdSet = client.getSet("manager:price-changing:product-ids");
         isHealthy = true;
       } catch (Exception e) {
         log.error("Failed to connect to Redis server, trying again in 3 seconds!", e.getMessage());

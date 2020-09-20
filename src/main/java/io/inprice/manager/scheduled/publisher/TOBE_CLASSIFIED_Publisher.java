@@ -53,6 +53,8 @@ public class TOBE_CLASSIFIED_Publisher extends AbstractCompetitorPublisher {
         if (site != null) {
           competitor.setSiteId(site.getId());
           competitor.setWebsiteClassName(site.getClassName());
+          // if site is in a status then each competitor pointing this site should be the same status
+          if (site.getStatus() != null) competitor.setStatus(CompetitorStatus.valueOf(site.getStatus()));
         } else {
           competitor.setStatus(CompetitorStatus.TOBE_IMPLEMENTED);
         }

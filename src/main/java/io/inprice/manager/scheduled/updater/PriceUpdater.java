@@ -25,7 +25,7 @@ public class PriceUpdater implements Task {
 
   private static final Logger log = LoggerFactory.getLogger(PriceUpdater.class);
   private static final Database db = Beans.getSingleton(Database.class);
-  private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
+  private static final ProductRepository productRepository = Beans.getSingleton(ProductRepository.class);
 
   @Override
   public TimePeriod getTimePeriod() {
@@ -53,7 +53,7 @@ public class PriceUpdater implements Task {
       while (!RedisClient.isPriceChangingSetEmpty()) {
         Long productId = RedisClient.pollPriceChanging();
         if (productId != null) {
-          ProductPrice pi = repository.getProductCompetitors(con, productId);
+          ProductPrice pi = productRepository.getProductPrice(con, productId);
           if (pi != null) {
             ppList.add(pi);
           } else { // product and product_price relation must be removed since there is no price info
@@ -65,14 +65,14 @@ public class PriceUpdater implements Task {
       }
 
       if (ppList.size() > 0) {
-        boolean result = repository.updatePrice(con, ppList, zeroizedSB.toString());
+        boolean result = productRepository.updatePrice(con, ppList, zeroizedSB.toString());
         if (result) {
           log.info("Prices of {} products have been updated!", ppList.size());
         } else {
           log.warn("An error occurred during updating products' prices!");
         }
       } else if (zeroizedSB.length() > 1) {
-        boolean result = repository.updatePrice(con, null, zeroizedSB.toString());
+        boolean result = productRepository.updatePrice(con, null, zeroizedSB.toString());
         if (result) {
           log.info("{} products' price info is zeroized.", StringUtils.countMatches(zeroizedSB.toString(), ","));
         } else {

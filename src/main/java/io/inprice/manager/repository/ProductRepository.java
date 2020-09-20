@@ -15,16 +15,15 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Beans;
 import io.inprice.common.helpers.Database;
+import io.inprice.common.info.ProductCompetitor;
+import io.inprice.common.meta.CompetitorStatus;
 import io.inprice.common.models.Competitor;
 import io.inprice.common.models.ProductPrice;
-import io.inprice.manager.info.ProductCompetitors;
 
 public class ProductRepository {
 
   private static final Logger log = LoggerFactory.getLogger(ProductRepository.class);
   private static final Database db = Beans.getSingleton(Database.class);
-
-  private static final BigDecimal BigDecimal_AHUNDRED = new BigDecimal(100);
 
   public boolean createAProductFromCompetitor(Connection con, Competitor competitor) throws SQLException {
     final String query = 
@@ -38,97 +37,101 @@ public class ProductRepository {
       pst.setString(++i, competitor.getName());
       pst.setString(++i, competitor.getBrand());
       pst.setBigDecimal(++i, competitor.getPrice());
+      pst.setInt(++i, competitor.getPosition());
       pst.setLong(++i, competitor.getCompanyId());
 
       return (pst.executeUpdate() > 0);
     }
   }
 
-  public ProductPrice getProductCompetitors(Connection con, Long productId) {
+  public ProductPrice getProductPrice(Connection con, Long productId) {
     ProductPrice result = null;
 
-    List<ProductCompetitors> prodCompetitors = db.findMultiple(con,
+    List<ProductCompetitor> prodCompList = db.findMultiple(con,
       String.format(
-        "select p.id as prod_id, p.price as prod_price, l.id as competitor_id, l.price as competitor_price, l.seller, p.company_id, s.domain as site_name, " +
-        "dense_rank() over (order by l.price) as ranking " +
-        "from product as p " +
-        "inner join competitor as l on l.product_id = p.id " +
-        "inner join site as s on s.id = l.site_id " +
-        "where p.id = %d " +
-        "  and p.price > 0 " +
-        "  and l.price > 0 " +
-        "order by l.price",
-        productId),
-      this::mapProductCompetitors
+        "select id, product_id, price, position, seller, company_id, s.domain as site_name, " +
+        "dense_rank() over (order by price) as ranking " +
+        "from competitor " +
+        "inner join site as s on s.id = site_id " +
+        "where product_id = %d " +
+        "  and status = '%s' " +
+        "  and price > 0 " +
+        "order by price",
+        productId, CompetitorStatus.AVAILABLE.name()),
+      this::mapProductCompetitor
     );
 
-    if (prodCompetitors.size() > 0) {
-      ProductCompetitors plFirst = prodCompetitors.get(0);
-      ProductCompetitors plLast = prodCompetitors.get(prodCompetitors.size() - 1);
+    if (prodCompList.size() > 0) {
+      BigDecimal productPrice = findPriceById(con, productId);
 
-      result = new ProductPrice();
-      result.setProductId(plFirst.getProductId());
-      result.setPrice(plFirst.getProductPrice());
-      result.setCompetitors(prodCompetitors.size());
-      result.setCompanyId(plFirst.getCompanyId());
-      result.setMinPlatform(plFirst.getSiteName());
-      result.setMinSeller(plFirst.getSeller());
-      result.setMinPrice(plFirst.getCompetitorPrice());
-      result.setAvgPrice(plFirst.getProductPrice());
-      result.setMaxPlatform(plLast.getSiteName());
-      result.setMaxSeller(plLast.getSeller());
-      result.setMaxPrice(plLast.getCompetitorPrice());
-      result.setSuggestedPrice(plFirst.getProductPrice());
+      if (productPrice != null) {
+        ProductCompetitor pcFirst = prodCompList.get(0);
+        ProductCompetitor pcLast = prodCompList.get(prodCompList.size() - 1);
 
-      //finding total, ranking and rankingWith
-      int ranking = 0;
-      int rankingWith = 0;
-      BigDecimal total = BigDecimal.ZERO;
-      for (ProductCompetitors pl : prodCompetitors) {
-        total = total.add(pl.getCompetitorPrice());
-        if (pl.getProductPrice().compareTo(pl.getCompetitorPrice()) <= 0) {
-          ranking = pl.getRanking();
+        result = new ProductPrice();
+        result.setProductId(pcFirst.getProductId());
+        result.setPrice(productPrice);
+        result.setCompetitors(prodCompList.size());
+        result.setCompanyId(pcFirst.getCompanyId());
+        result.setMinPlatform(pcFirst.getSiteName());
+        result.setMinSeller(pcFirst.getSeller());
+        result.setMinPrice(pcFirst.getPrice());
+        result.setAvgPrice(productPrice);
+        result.setMaxPlatform(pcLast.getSiteName());
+        result.setMaxSeller(pcLast.getSeller());
+        result.setMaxPrice(pcLast.getPrice());
+        result.setSuggestedPrice(productPrice);
+
+        //finding total, ranking and rankingWith
+        int ranking = 0;
+        int rankingWith = 0;
+        BigDecimal total = BigDecimal.ZERO;
+        for (ProductCompetitor pc: prodCompList) {
+          total = total.add(pc.getPrice());
+          if (ranking == 0 && productPrice.compareTo(pc.getPrice()) <= 0) {
+            ranking = pc.getRanking();
+          }
+          if (productPrice.compareTo(pc.getPrice()) == 0) {
+            rankingWith++;
+          }
         }
-        if (pl.getProductPrice().compareTo(pl.getCompetitorPrice()) == 0) {
-          rankingWith++;
+        if (ranking == 0) {
+          ranking = pcLast.getRanking() + 1;
         }
-      }
-      if (ranking == 0) {
-        ranking = plLast.getRanking() + 1;
-      }
-      result.setRanking(ranking);
-      result.setRankingWith(rankingWith);
+        result.setRanking(ranking);
+        result.setRankingWith(rankingWith);
 
-      // finding avg price
-      if (total.compareTo(BigDecimal.ZERO) > 0) {
-        result.setAvgPrice(total.divide(BigDecimal.valueOf(prodCompetitors.size()), 2, BigDecimal.ROUND_HALF_UP));
-      }
+        // finding avg price
+        if (total.compareTo(BigDecimal.ZERO) > 0) {
+          result.setAvgPrice(total.divide(BigDecimal.valueOf(prodCompList.size()), 2, BigDecimal.ROUND_HALF_UP));
+        }
 
-      // setting diffs
-      result.setMinDiff(findDiff(result.getPrice(), plFirst.getCompetitorPrice()));
-      result.setAvgDiff(findDiff(result.getPrice(), result.getAvgPrice()));
-      result.setMaxDiff(findDiff(result.getPrice(), plLast.getCompetitorPrice()));
+        // setting diffs
+        result.setMinDiff(findDiff(result.getPrice(), pcFirst.getPrice()));
+        result.setAvgDiff(findDiff(result.getPrice(), result.getAvgPrice()));
+        result.setMaxDiff(findDiff(result.getPrice(), pcLast.getPrice()));
 
-      //finding position
-      result.setPosition(3);// average
-      BigDecimal basePrice = plFirst.getProductPrice();
-
-      if (basePrice.compareTo(result.getMinPrice()) <= 0) {
-        result.setPosition(1);
-        result.setMinPlatform("Yours");
-        result.setMinSeller("You");
-        result.setMinPrice(plFirst.getProductPrice());
-        result.setMinDiff(BigDecimal.ZERO);
-      } else if (basePrice.compareTo(result.getAvgPrice()) < 0) {
-        result.setPosition(2);
-      } else if (basePrice.compareTo(result.getMaxPrice()) < 0) {
-        result.setPosition(4);
-      } else {
-        result.setPosition(5);
-        result.setMaxPlatform("Yours");
-        result.setMaxSeller("You");
-        result.setMaxPrice(plLast.getProductPrice());
-        result.setMaxDiff(BigDecimal.ZERO);
+        //finding product position
+        if (productPrice.compareTo(result.getMinPrice()) <= 0) {
+          result.setPosition(1);
+          result.setMinPlatform("Yours");
+          result.setMinSeller("You");
+          result.setMinPrice(productPrice);
+          result.setMinDiff(BigDecimal.ZERO);
+        } else if (productPrice.compareTo(result.getAvgPrice()) < 0) {
+          result.setPosition(2);
+        } else if (productPrice.compareTo(result.getAvgPrice()) == 0) {
+          result.setPosition(3);
+        } else if (productPrice.compareTo(result.getMaxPrice()) < 0) {
+          result.setPosition(4);
+        } else {
+          result.setPosition(5);
+          result.setMaxPlatform("Yours");
+          result.setMaxSeller("You");
+          result.setMaxPrice(productPrice);
+          result.setMaxDiff(BigDecimal.ZERO);
+        }
+        result.setProdCompList(prodCompList);
       }
     }
 
@@ -136,6 +139,7 @@ public class ProductRepository {
   }
 
   private BigDecimal findDiff(BigDecimal first, BigDecimal second) {
+    BigDecimal BigDecimal_AHUNDRED = new BigDecimal(100);
     BigDecimal result = BigDecimal_AHUNDRED;
     if (first.compareTo(BigDecimal.ZERO) > 0 && second.compareTo(BigDecimal.ZERO) > 0) {
      result = second.divide(first, 4, RoundingMode.HALF_UP).subtract(BigDecimal.ONE).multiply(BigDecimal_AHUNDRED).setScale(2);
@@ -144,12 +148,6 @@ public class ProductRepository {
   }
 
   public boolean updatePrice(Connection con, List<ProductPrice> ppList, String zeroizedIds) {
-    final String q1 =
-      "insert into product_price " +
-      "(product_id, price, min_platform, min_seller, min_price, min_diff, avg_price, avg_diff, " +
-        "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, suggested_price, company_id) " + 
-      "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-
     boolean success = false;
     int successCounter = 0;
     try {
@@ -158,6 +156,12 @@ public class ProductRepository {
         for (ProductPrice pp : ppList) {
           Long lastPriceId = null;
 
+          final String q1 =
+            "insert into product_price " +
+            "(product_id, price, min_platform, min_seller, min_price, min_diff, avg_price, avg_diff, " +
+              "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, suggested_price, company_id) " + 
+            "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    
           try (PreparedStatement pst = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS)) {
             int i = 0;
             pst.setLong(++i, pp.getProductId());
@@ -190,7 +194,7 @@ public class ProductRepository {
           if (lastPriceId != null) {
             final String q2 =
               "update product " +
-              "set price=?, last_price_id=?, updated_at=now() " +
+              "set price=?, position=?, last_price_id=?, updated_at=now() " +
               "where id=? " +
               "  and company_id=?";
 
@@ -198,10 +202,36 @@ public class ProductRepository {
               int i = 0;
               pst.setBigDecimal(++i, pp.getPrice());
               pst.setLong(++i, lastPriceId);
+              pst.setInt(++i, pp.getPosition());
               pst.setLong(++i, pp.getProductId());
               pst.setLong(++i, pp.getCompanyId());
               if (pst.executeUpdate() > 0) {
                 successCounter++;
+
+                //if any competitor position changed then review and update its all competitors' positions
+                for (ProductCompetitor pc: pp.getProdCompList()) {
+                  int newPosition = pc.getPosition();
+                  if (pc.getPrice().compareTo(pp.getMinPrice()) <= 0) {
+                    newPosition = 1;
+                  } else if (pc.getPrice().compareTo(pp.getAvgPrice()) < 0) {
+                    newPosition = 2;
+                  } else if (pc.getPrice().compareTo(pp.getAvgPrice()) == 0) {
+                    newPosition = 3;
+                  } else if (pc.getPrice().compareTo(pp.getMaxPrice()) < 0) {
+                    newPosition = 4;
+                  } else {
+                    newPosition = 5;
+                  }
+                  if (newPosition != pc.getPosition().intValue()) {
+                    addCompetitorPriceChange(con,
+                      pc.getId(),
+                      pc.getPrice(),
+                      newPosition,
+                      pc.getProductId(),
+                      pc.getCompanyId()
+                    );
+                  }
+                }
               }
             }
           }
@@ -212,7 +242,7 @@ public class ProductRepository {
       if (StringUtils.isNotBlank(zeroizedIds)) {
         zeroized = db.executeQuery(
           con, 
-          "update product set last_price_id=null, updated_at=now() where id in (" + zeroizedIds + ")", 
+          "update product set position=3, last_price_id=null, updated_at=now() where id in (" + zeroizedIds + ")", 
           "Failed to zeroize some product price info"
         );
       }
@@ -237,22 +267,63 @@ public class ProductRepository {
     return success;
   }
 
-  private ProductCompetitors mapProductCompetitors(ResultSet rs) {
-    ProductCompetitors pl = new ProductCompetitors();
+  private void addCompetitorPriceChange(Connection con, long competitorId, BigDecimal price, int position, long productId, long companyId) {
+    final String q1 = 
+      "update competitor " + 
+      "set position=?, last_update=now() " + 
+      "where id=?";
+
+    try (PreparedStatement pst1 = con.prepareStatement(q1)) {
+      int i = 0;
+      pst1.setInt(++i, position);
+      pst1.setLong(++i, competitorId);
+
+      if (pst1.executeUpdate() > 0) {
+        String q2 = "insert into competitor_price (competitor_id, price, position, product_id, company_id) values (?, ?, ?, ?, ?)";
+        try (PreparedStatement pst2 = con.prepareStatement(q2)) {
+          int j = 0;
+          pst2.setLong(++j, competitorId);
+          pst2.setBigDecimal(++i, price);
+          pst2.setInt(++j, position);
+          pst2.setLong(++j, productId);
+          pst2.setLong(++j, companyId);
+          pst2.executeUpdate();
+        }
+        
+      }
+    } catch (Exception e) {
+      log.error("Failed to add a competitor price change.", e);
+    }
+  }
+
+  private BigDecimal findPriceById(Connection con, Long id) {
+    try (PreparedStatement pst = con.prepareStatement("select price from product where id="+id); 
+      ResultSet rs = pst.executeQuery()) {
+      if (rs.next()) {
+        return rs.getBigDecimal("price");
+      }
+    } catch (Exception e) {
+      log.error("Failed to find product price by id.", e);
+    }
+    return null;
+  }
+
+  private ProductCompetitor mapProductCompetitor(ResultSet rs) {
+    ProductCompetitor pc = new ProductCompetitor();
     try {
-      pl.setProductId(rs.getLong("prod_id"));
-      pl.setProductPrice(rs.getBigDecimal("prod_price"));
-      pl.setCompetitorId(rs.getLong("competitor_id"));
-      pl.setCompetitorPrice(rs.getBigDecimal("competitor_price"));
-      pl.setSeller(rs.getString("seller"));
-      pl.setSiteName(rs.getString("site_name"));
-      pl.setRanking(rs.getInt("ranking"));
-      pl.setCompanyId(rs.getLong("company_id"));
+      pc.setId(rs.getLong("id"));
+      pc.setProductId(rs.getLong("product_id"));
+      pc.setPrice(rs.getBigDecimal("price"));
+      pc.setPosition(rs.getInt("position"));
+      pc.setSeller(rs.getString("seller"));
+      pc.setSiteName(rs.getString("site_name"));
+      pc.setRanking(rs.getInt("ranking"));
+      pc.setCompanyId(rs.getLong("company_id"));
 
     } catch (SQLException e) {
       log.error("Failed to set product competitors properties", e);
     }
-    return pl;
+    return pc;
   }
 
 }

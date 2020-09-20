@@ -28,7 +28,7 @@ public class PriceRefreshConsumer {
 
   private static final Logger log = LoggerFactory.getLogger(PriceRefreshConsumer.class);
   private static final Database db = Beans.getSingleton(Database.class);
-  private static final ProductRepository repository = Beans.getSingleton(ProductRepository.class);
+  private static final ProductRepository productRepository = Beans.getSingleton(ProductRepository.class);
 
   public void start() {
     log.info("Price refresh consumer is up and running.");
@@ -60,7 +60,6 @@ public class PriceRefreshConsumer {
     }
   }
 
-
   private static boolean refreshPrice(Long productId) {
     boolean result = false;
 
@@ -72,7 +71,7 @@ public class PriceRefreshConsumer {
       List<ProductPrice> ppList = new ArrayList<>();
 
       log.info("Price refresher is started for Id: {}", productId);
-      ProductPrice pi = repository.getProductCompetitors(con, productId);
+      ProductPrice pi = productRepository.getProductPrice(con, productId);
       if (pi != null) {
         ppList.add(pi);
       } else { // product and product_price relation must be removed since there is no price info
@@ -81,14 +80,14 @@ public class PriceRefreshConsumer {
       log.info("Price refresher is completed for Id: {}", productId);
 
       if (ppList.size() > 0) {
-        boolean res = repository.updatePrice(con, ppList, zeroize);
+        boolean res = productRepository.updatePrice(con, ppList, zeroize);
         if (res) {
           log.info("Prices of {} products have been updated!", ppList.size());
         } else {
           log.warn("An error occurred during updating products' prices!");
         }
       } else if (StringUtils.isNotBlank(zeroize)) {
-        boolean res = repository.updatePrice(con, null, zeroize);
+        boolean res = productRepository.updatePrice(con, null, zeroize);
         if (res) {
           log.info("{} products' price info is zeroized. For Id: {}", zeroize);
         } else {
