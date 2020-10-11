@@ -1,14 +1,19 @@
 package io.inprice.manager.helpers;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
-import org.redisson.api.RSet;
+import org.redisson.api.RTopic;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.config.SysProps;
+import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.models.Link;
 
 public class RedisClient {
 
@@ -17,7 +22,7 @@ public class RedisClient {
   private static boolean isHealthy;
   private static RedissonClient client;
 
-  private static RSet<Long> priceChangingProductsIdSet;
+  private static final Map<LinkStatus, RTopic> topicMap = new HashMap<>();
 
   static {
     final String redisPass = SysProps.REDIS_PASSWORD();
@@ -34,8 +39,6 @@ public class RedisClient {
     while (!isHealthy && Global.isApplicationRunning) {
       try {
         client = Redisson.create(config);
-
-        priceChangingProductsIdSet = client.getSet("manager:price-changing:product-ids");
         isHealthy = true;
       } catch (Exception e) {
         log.error("Failed to connect to Redis server, trying again in 3 seconds!", e.getMessage());
@@ -47,19 +50,12 @@ public class RedisClient {
         
   }
 
-  public static void addPriceChanging(Long id) {
-    priceChangingProductsIdSet.add(id);
-  }
-
-  public static Long pollPriceChanging() {
-    if (!priceChangingProductsIdSet.isEmpty())
-      return priceChangingProductsIdSet.removeRandom();
-    else
-      return null;
-  }
-
-  public static boolean isPriceChangingSetEmpty() {
-    return priceChangingProductsIdSet.isEmpty();
+  public static void publish(Link link) {
+    if (isHealthy) {
+      topicMap.computeIfAbsent(link.getStatus(), t -> client.getTopic(link.getStatus().name())).publish(link);
+    } else {
+      log.warn("Redis connection is not healthy, so publishing messages avoided! Status: " + link.getStatus());
+    }
   }
 
   public static void shutdown() {

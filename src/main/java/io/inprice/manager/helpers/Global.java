@@ -1,22 +1,24 @@
 package io.inprice.manager.helpers;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Global {
 
   public static volatile boolean isApplicationRunning;
-  private static volatile Map<String, Boolean> runningTasksMap = new ConcurrentHashMap<>();
 
-  public static void setTaskRunningStatus(String taskName, boolean status) {
-    runningTasksMap.put(taskName, status);
+  private static volatile Set<String> runningTasksSet = new HashSet<>();
+
+  public static void startTask(String name) {
+    runningTasksSet.add(name);
   }
 
-  public static boolean isTaskRunning(String taskName) {
-    Boolean result = runningTasksMap.get(taskName);
-    if (result != null)
-      return result;
-    return false;
+  public static void stopTask(String name) {
+    runningTasksSet.remove(name);
+  }
+
+  public static boolean isTaskRunning(String name) {
+    return runningTasksSet.contains(name);
   }
 
 }

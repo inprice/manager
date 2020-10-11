@@ -5,14 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import io.inprice.common.helpers.Beans;
+import org.jdbi.v3.core.Handle;
+
+import io.inprice.common.helpers.Database;
 import io.inprice.common.models.Site;
 import io.inprice.common.utils.URLUtils;
-import io.inprice.manager.repository.SiteRepository;
+import io.inprice.manager.dao.SiteDao;
 
 public class SiteFinder {
-
-  private static final SiteRepository repository = Beans.getSingleton(SiteRepository.class);
 
   private static final Object lock = new Object();
   private static Map<String, Site> sitesByDomain;
@@ -40,13 +40,15 @@ public class SiteFinder {
     if (sitesByDomain == null) {
       synchronized (lock) {
         if (sitesByDomain == null) {
-          List<Site> siteList = repository.getAll();
-          sitesByDomain = new TreeMap<>(Collections.reverseOrder());
-          siteList.forEach(site -> sitesByDomain.put(site.getDomain(), site));
+          try (Handle handle = Database.getHandle()) {
+            SiteDao siteDao = handle.attach(SiteDao.class);
+            List<Site> siteList = siteDao.findAll();
+            sitesByDomain = new TreeMap<>(Collections.reverseOrder());
+            siteList.forEach(site -> sitesByDomain.put(site.getDomain(), site));
+          }
         }
       }
     }
-
     return sitesByDomain;
   }
 

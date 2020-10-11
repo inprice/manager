@@ -4,6 +4,6 @@ import io.inprice.common.info.TimePeriod;
 
 public interface Task extends Runnable {
 
-    TimePeriod getTimePeriod();
+  TimePeriod getTimePeriod();
 
 }

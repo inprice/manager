@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Beans;
 import io.inprice.common.helpers.Database;
-import io.inprice.common.info.ProductCompetitor;
-import io.inprice.common.meta.CompetitorStatus;
-import io.inprice.common.models.Competitor;
+import io.inprice.common.info.ProductLink;
+import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.models.Link;
 import io.inprice.common.models.ProductPrice;
 
 public class ProductRepository {
@@ -25,7 +25,7 @@ public class ProductRepository {
   private static final Logger log = LoggerFactory.getLogger(ProductRepository.class);
   private static final Database db = Beans.getSingleton(Database.class);
 
-  public boolean createAProductFromCompetitor(Connection con, Competitor competitor) throws SQLException {
+  public boolean createAProductFromLink(Connection con, Link link) throws SQLException {
     final String query = 
       "insert into product " + 
       "(code, name, brand, price, company_id) " + 
@@ -33,12 +33,12 @@ public class ProductRepository {
 
     try (PreparedStatement pst = con.prepareStatement(query)) {
       int i = 0;
-      pst.setString(++i, competitor.getSku());
-      pst.setString(++i, competitor.getName());
-      pst.setString(++i, competitor.getBrand());
-      pst.setBigDecimal(++i, competitor.getPrice());
-      pst.setInt(++i, competitor.getPosition());
-      pst.setLong(++i, competitor.getCompanyId());
+      pst.setString(++i, link.getSku());
+      pst.setString(++i, link.getName());
+      pst.setString(++i, link.getBrand());
+      pst.setBigDecimal(++i, link.getPrice());
+      pst.setInt(++i, link.getPosition());
+      pst.setLong(++i, link.getCompanyId());
 
       return (pst.executeUpdate() > 0);
     }
@@ -47,31 +47,31 @@ public class ProductRepository {
   public ProductPrice getProductPrice(Connection con, Long productId) {
     ProductPrice result = null;
 
-    List<ProductCompetitor> prodCompList = db.findMultiple(con,
+    List<ProductLink> prodCompList = db.findMultiple(con,
       String.format(
         "select id, product_id, price, position, seller, company_id, s.domain as site_name, " +
         "dense_rank() over (order by price) as ranking " +
-        "from competitor " +
+        "from link " +
         "inner join site as s on s.id = site_id " +
         "where product_id = %d " +
         "  and status = '%s' " +
         "  and price > 0 " +
         "order by price",
-        productId, CompetitorStatus.AVAILABLE.name()),
-      this::mapProductCompetitor
+        productId, LinkStatus.AVAILABLE.name()),
+      this::mapProductLink
     );
 
     if (prodCompList.size() > 0) {
       BigDecimal productPrice = findPriceById(con, productId);
 
       if (productPrice != null) {
-        ProductCompetitor pcFirst = prodCompList.get(0);
-        ProductCompetitor pcLast = prodCompList.get(prodCompList.size() - 1);
+        ProductLink pcFirst = prodCompList.get(0);
+        ProductLink pcLast = prodCompList.get(prodCompList.size() - 1);
 
         result = new ProductPrice();
         result.setProductId(pcFirst.getProductId());
         result.setPrice(productPrice);
-        result.setCompetitors(prodCompList.size());
+        result.setLinks(prodCompList.size());
         result.setCompanyId(pcFirst.getCompanyId());
         result.setMinPlatform(pcFirst.getSiteName());
         result.setMinSeller(pcFirst.getSeller());
@@ -86,7 +86,7 @@ public class ProductRepository {
         int ranking = 0;
         int rankingWith = 0;
         BigDecimal total = BigDecimal.ZERO;
-        for (ProductCompetitor pc: prodCompList) {
+        for (ProductLink pc: prodCompList) {
           total = total.add(pc.getPrice());
           if (ranking == 0 && productPrice.compareTo(pc.getPrice()) <= 0) {
             ranking = pc.getRanking();
@@ -159,7 +159,7 @@ public class ProductRepository {
           final String q1 =
             "insert into product_price " +
             "(product_id, price, min_platform, min_seller, min_price, min_diff, avg_price, avg_diff, " +
-              "max_platform, max_seller, max_price, max_diff, competitors, position, ranking, ranking_with, suggested_price, company_id) " + 
+              "max_platform, max_seller, max_price, max_diff, links, position, ranking, ranking_with, suggested_price, company_id) " + 
             "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     
           try (PreparedStatement pst = con.prepareStatement(q1, Statement.RETURN_GENERATED_KEYS)) {
@@ -176,7 +176,7 @@ public class ProductRepository {
             pst.setString(++i, pp.getMaxSeller());
             pst.setBigDecimal(++i, pp.getMaxPrice());
             pst.setBigDecimal(++i, pp.getMaxDiff());
-            pst.setInt(++i, pp.getCompetitors());
+            pst.setInt(++i, pp.getLinks());
             pst.setInt(++i, pp.getPosition());
             pst.setInt(++i, pp.getRanking());
             pst.setInt(++i, pp.getRankingWith());
@@ -208,8 +208,8 @@ public class ProductRepository {
               if (pst.executeUpdate() > 0) {
                 successCounter++;
 
-                //if any competitor position changed then review and update its all competitors' positions
-                for (ProductCompetitor pc: pp.getProdCompList()) {
+                //if any link position changed then review and update its all links' positions
+                for (ProductLink pc: pp.getProdCompList()) {
                   int newPosition = pc.getPosition();
                   if (pc.getPrice().compareTo(pp.getMinPrice()) <= 0) {
                     newPosition = 1;
@@ -223,7 +223,7 @@ public class ProductRepository {
                     newPosition = 5;
                   }
                   if (newPosition != pc.getPosition().intValue()) {
-                    addCompetitorPriceChange(con,
+                    addLinkPriceChange(con,
                       pc.getId(),
                       pc.getPrice(),
                       newPosition,
@@ -267,22 +267,22 @@ public class ProductRepository {
     return success;
   }
 
-  private void addCompetitorPriceChange(Connection con, long competitorId, BigDecimal price, int position, long productId, long companyId) {
+  private void addLinkPriceChange(Connection con, long linkId, BigDecimal price, int position, long productId, long companyId) {
     final String q1 = 
-      "update competitor " + 
+      "update link " + 
       "set position=?, last_update=now() " + 
       "where id=?";
 
     try (PreparedStatement pst1 = con.prepareStatement(q1)) {
       int i = 0;
       pst1.setInt(++i, position);
-      pst1.setLong(++i, competitorId);
+      pst1.setLong(++i, linkId);
 
       if (pst1.executeUpdate() > 0) {
-        String q2 = "insert into competitor_price (competitor_id, price, position, product_id, company_id) values (?, ?, ?, ?, ?)";
+        String q2 = "insert into link_price (link_id, price, position, product_id, company_id) values (?, ?, ?, ?, ?)";
         try (PreparedStatement pst2 = con.prepareStatement(q2)) {
           int j = 0;
-          pst2.setLong(++j, competitorId);
+          pst2.setLong(++j, linkId);
           pst2.setBigDecimal(++i, price);
           pst2.setInt(++j, position);
           pst2.setLong(++j, productId);
@@ -292,7 +292,7 @@ public class ProductRepository {
         
       }
     } catch (Exception e) {
-      log.error("Failed to add a competitor price change.", e);
+      log.error("Failed to add a link price change.", e);
     }
   }
 
@@ -308,8 +308,8 @@ public class ProductRepository {
     return null;
   }
 
-  private ProductCompetitor mapProductCompetitor(ResultSet rs) {
-    ProductCompetitor pc = new ProductCompetitor();
+  private ProductLink mapProductLink(ResultSet rs) {
+    ProductLink pc = new ProductLink();
     try {
       pc.setId(rs.getLong("id"));
       pc.setProductId(rs.getLong("product_id"));
@@ -321,7 +321,7 @@ public class ProductRepository {
       pc.setCompanyId(rs.getLong("company_id"));
 
     } catch (SQLException e) {
-      log.error("Failed to set product competitors properties", e);
+      log.error("Failed to set product links properties", e);
     }
     return pc;
   }

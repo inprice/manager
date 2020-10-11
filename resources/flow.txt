@@ -1,109 +1,108 @@
-TOBE_AVAILABLE
-    - Kendi tetikleyicisi var: NewCompetitorPublisher
-	- İlk defa kaydedilen competitorler bu statüyü alırlar.
-	- Periodik olarak tetiklenen zamanlayıcı ile veritabanından bu durumdaki competitorler toplanarak kontrolden geçirilirler.
+TOBE_CLASSIFIED
+	- İlk defa kaydedilen linkler bu statüyü alırlar.
+	- Periodik olarak tetiklenen zamanlayıcı ile veritabanından bu durumdaki linkler toplanarak kontrolden geçirilirler.
 	- Kontrol esnasında URL bilgisine bakılarak hangi siteye ait olduğu bulunur
-	- Herhangi bir sorun yoksa RABBITMQ_TOBE_CLASSIFIED_COMPETITORS_QUEUE kanalı ile Worker tarafına gonderilir
+	- Herhangi bir sorun yoksa RABBITMQ_TOBE_CLASSIFIED_LINKS_QUEUE kanalı ile Worker tarafına gonderilir
 	- Sorun olursa RABBITMQ_STATUS_CHANGE_QUEUE ya gönderilmeden önce
 	    a) veritabanına kayıt esnasında sorun oluşmuşsa Status.INTERNAL_ERROR olarak,
 	    b) sitesi bulunamazsa Status.TOBE_IMPLEMENTED olarak,
 	    c) uygunsuz bir url e sahipse Status.IMPROPER olarak setlenir
     - Akış
-        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_COMPETITORS_QUEUE     :: sorunsuz durumda worker verileri çekip işlesin diye,
+        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_LINKS_QUEUE     :: sorunsuz durumda worker verileri çekip işlesin diye,
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: sorun olması durumunda manager durumunu değiştirsin diye
 
 TOBE_IMPLEMENTED
     - Kendi başına tetiklenmez
-    - TOBE_AVAILABLE statüsündeyken site bilgisi bulunamayan/eşleşmeyen competitorler bu duruma geçirilirler.
-    - Bu durumdaki competitorler developer tarafından ele alınacaktır.
-    - competitor sitesinin implementasyonu yapıldıktan sonra manuel olarak TOBE_AVAILABLE statusune geçirilir.
+    - TOBE_AVAILABLE statüsündeyken site bilgisi bulunamayan/eşleşmeyen linkler bu duruma geçirilirler.
+    - Bu durumdaki linkler developer tarafından ele alınacaktır.
+    - link sitesinin implementasyonu yapıldıktan sonra manuel olarak TOBE_AVAILABLE statusune geçirilir.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 IMPLEMENTED
-    - Kendi tetikleyicisi var: CommonCompetitorPublisher(Status.IMPLEMENTED)
-    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki competitorler toplanıp
-    - Tıpkı TOBE_AVAILABLE competitorler gibi değerlendirilmek üzere Worker tarafına gönderilir
-    - Henüz implemente edilmiş website lerin competitorleri Admin tarafından bu duruma getirilir
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.IMPLEMENTED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Tıpkı TOBE_AVAILABLE linkler gibi değerlendirilmek üzere Worker tarafına gönderilir
+    - Henüz implemente edilmiş website lerin linkleri Admin tarafından bu duruma getirilir
     - Akış
-        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_COMPETITORS_QUEUE     :: worker verileri çekip işlesin diye,
+        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_LINKS_QUEUE     :: worker verileri çekip işlesin diye,
 
 TOBE_RENEWED
-    - Kendi tetikleyicisi var: CommonCompetitorPublisher(Status.TOBE_RENEWED)
-    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki competitorler toplanıp
-    - Tıpkı TOBE_AVAILABLE competitorler gibi değerlendirilmek üzere Worker tarafına gönderilir
-    - Kullanıcı ya da Admin competitori bu duruma getirebilir
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.TOBE_RENEWED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Tıpkı TOBE_AVAILABLE linkler gibi değerlendirilmek üzere Worker tarafına gönderilir
+    - Kullanıcı ya da Admin linki bu duruma getirebilir
     - Akış
-        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_COMPETITORS_QUEUE     :: worker verileri çekip işlesin diye,
+        manager to worker  --> RABBITMQ_TOBE_CLASSIFIED_LINKS_QUEUE     :: worker verileri çekip işlesin diye,
 
 AVAILABLE
-    - Kendi tetikleyicisi var: CommonCompetitorPublisher(Status.AVAILABLE)
-    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki competitorler toplanıp
-    - Herhangi bir kontrol yapılmadan doğrudan RABBITMQ_AVAILABLE_COMPETITORS_QUEUE kanalı ile Worker tarafına gonderilirler
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.AVAILABLE)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
+    - Herhangi bir kontrol yapılmadan doğrudan RABBITMQ_AVAILABLE_LINKS_QUEUE kanalı ile Worker tarafına gonderilirler
     - Akış
-        manager to worker --> RABBITMQ_AVAILABLE_COMPETITORS_QUEUE  :: worker verileri çekip işlesin diye,
+        manager to worker --> RABBITMQ_AVAILABLE_LINKS_QUEUE  :: worker verileri çekip işlesin diye,
 
 WONT_BE_IMPLEMENTED
     - Kendi başına tetiklenmez, bu duruma geçişe developer karar verir.
     - Daha çok TOBE_AVAILABLE statüsünden bu duruma geçilebilir.
-    - Bu durumdaki competitorler hiçbir zaman ele alınmayacaktır.
+    - Bu durumdaki linkler hiçbir zaman ele alınmayacaktır.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 IMPROPER
     - Kendi başına tetiklenmez
     - Sadece TOBE_AVAILABLE statüsünden bu duruma geçilebilir
-    - asdf, ftp://doysa.com, null... vb hatalı URL bilgisine sahip TOBE_AVAILABLE durumundaki competitorler bu duruma çekilirler.
-    - Bu durumdaki competitorler kullanıcının itirazı durumunda developer tarafından incelenerek ya TOBE_IMPLEMENTED ya da WONT_BE_IMPLEMENTED durumuna geçirilir.
+    - asdf, ftp://doysa.com, null... vb hatalı URL bilgisine sahip TOBE_AVAILABLE durumundaki linkler bu duruma çekilirler.
+    - Bu durumdaki linkler kullanıcının itirazı durumunda developer tarafından incelenerek ya TOBE_IMPLEMENTED ya da WONT_BE_IMPLEMENTED durumuna geçirilir.
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 NOT_AVAILABLE
-    - Kendi tetikleyicisi var: FailedCompetitorPublisher(Status.NOT_AVAILABLE)
-    - AVAILABLE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan ya da satışı durdurulmuş competitorler bu duruma getirilir.
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.NOT_AVAILABLE)
+    - AVAILABLE durumda olup, worker tarafından ele alındığında yeterli stok miktarı bulunmayan ya da satışı durdurulmuş linkler bu duruma getirilir.
     - Parametrik bir gün sayısı kadar kontrol edilir.
     - Stok miktarı ya da erişilebilirlik durumu değişmezse bu durumda kalır,
-    - Worker, stoğun miktarında pozitif bir değişim ya da artık erişilebilir olduğunu görürse bir önceki durumuna (competitor.previousStatus) geçirilmek üzere manager e gönderir.
+    - Worker, stoğun miktarında pozitif bir değişim ya da artık erişilebilir olduğunu görürse bir önceki durumuna (link.previousStatus) geçirilmek üzere manager e gönderir.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir competitor UNAVAILABLE durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_FAILED_COMPETITORS_QUEUE  :: manager belli aralıklarla bu durumdaki competitorleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link UNAVAILABLE durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 SOCKET_ERROR
-    - Kendi tetikleyicisi var: FailedCompetitorPublisher(Status.SOCKET_ERROR)
-    - Competitorlerin ait oldukları siteler tarafından erişim engeli olduğu zaman bu sorun ile karşılaşılır.
-    - Bu durumdaki competitorler sürekli olarak denetlenirler.
-    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (competitor.previousStatus) geçirilirler.
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.SOCKET_ERROR)
+    - Linklerin ait oldukları siteler tarafından erişim engeli olduğu zaman bu sorun ile karşılaşılır.
+    - Bu durumdaki linkler sürekli olarak denetlenirler.
+    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (link.previousStatus) geçirilirler.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir competitor SOCKET_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_FAILED_COMPETITORS_QUEUE  :: manager belli aralıklarla bu durumdaki competitorleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link SOCKET_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 NETWORK_ERROR
-    - Kendi tetikleyicisi var: FailedCompetitorPublisher(Status.NETWORK_ERROR)
-    - Http Status kodu 400 ve üzeri olan competitorler bu duruma çekilirler.
-    - Bu durumdaki competitorler belli aralıklarla parametrik bir gün sayısı kadar denetlenirler.
-    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (competitor.previousStatus) geçirilirler.
+    - Kendi tetikleyicisi var: FailedLinkPublisher(Status.NETWORK_ERROR)
+    - Http Status kodu 400 ve üzeri olan linkler bu duruma çekilirler.
+    - Bu durumdaki linkler belli aralıklarla parametrik bir gün sayısı kadar denetlenirler.
+    - Worker tarafından erişilebildikleri zaman manager tarafından bir önceki durumlarına (link.previousStatus) geçirilirler.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir competitor NETWORK_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
-        manager to worker --> RABBITMQ_FAILED_COMPETITORS_QUEUE  :: manager belli aralıklarla bu durumdaki competitorleri veritabanından toplayarak worker'a gönderip kontrol ettirir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE :: worker tarafında bir link NETWORK_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        manager to worker --> RABBITMQ_FAILED_LINKS_QUEUE  :: manager belli aralıklarla bu durumdaki linkleri veritabanından toplayarak worker'a gönderip kontrol ettirir
 
 CLASS_PROBLEM ve INTERNAL_ERROR
     - Her iki durum da kendi başına tetiklenmez
-    - TOBE_AVAILABLE durumundaki competitorler ilk kez ele alınırken bu sorunlar ortaya çıkabilir.
-    - Bu durumdaki competitorler developer tarafından ele alınır ve manuel olarak competitor.previousStatus durumuna getirilirler.
+    - TOBE_AVAILABLE durumundaki linkler ilk kez ele alınırken bu sorunlar ortaya çıkabilir.
+    - Bu durumdaki linkler developer tarafından ele alınır ve manuel olarak link.previousStatus durumuna getirilirler.
     - Akış
-        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE   :: worker tarafında bir competitor CLASS_PROBLEM veya INTERNAL_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
+        worker to manager --> RABBITMQ_STATUS_CHANGE_QUEUE   :: worker tarafında bir link CLASS_PROBLEM veya INTERNAL_ERROR durumuna geçerse bu queue kullanılarak manager'e bildirilir
 
 PAUSED
     - Kendi başına tetiklenmez
-    - Kullanıcı tarafından istenilen competitorler bu duruma getirilebilir.
-    - Manager bu durumdaki competitorleri pass geçecektir.
-    - Kullanıcı manuel olarak tekrar eski haline (competitor.previousStatus) getirebilir
+    - Kullanıcı tarafından istenilen linkler bu duruma getirilebilir.
+    - Manager bu durumdaki linkleri pass geçecektir.
+    - Kullanıcı manuel olarak tekrar eski haline (link.previousStatus) getirebilir
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 RESUMED
-    - Kendi tetikleyicisi var: CommonCompetitorPublisher(Status.RESUMED)
-    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki competitorler toplanıp
+    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.RESUMED)
+    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
     - Manager tarafından bir önceki durumlarına getirilirler
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
@@ -113,11 +112,11 @@ Notlar
         RABBITMQ_STATUS_CHANGE_QUEUE
        kullanılır.
 
-    2) AVAILABLE ve TOBE_AVAILABLE durumunda olan competitorler için fiyat değişikliği gözlemlenirse
+    2) AVAILABLE ve TOBE_AVAILABLE durumunda olan linkler için fiyat değişikliği gözlemlenirse
         RABBITMQ_PRICE_CHANGE_QUEUE
        kullanılarak ilerlenir
 
-    3) Silinen competitorler RABBITMQ_DELETED_COMPETITORS_QUEUE kuyruğuna gönderilerek fiyatlama yapılması sağlanır
+    3) Silinen linkler RABBITMQ_DELETED_LINKS_QUEUE kuyruğuna gönderilerek fiyatlama yapılması sağlanır
 
 
 ---------------------------------------------
@@ -134,31 +133,31 @@ Publisher: Manager ve Worker
 Consumer: Manager (StatusChangeConsumer)
 
 ---------------------------------------------
-RABBITMQ_TOBE_CLASSIFIED_COMPETITORS_QUEUE
+RABBITMQ_TOBE_CLASSIFIED_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Manager
-Consumer: Worker (NewCompetitorConsumer)
+Consumer: Worker (NewLinkConsumer)
 
 ---------------------------------------------
-RABBITMQ_AVAILABLE_COMPETITORS_QUEUE
+RABBITMQ_AVAILABLE_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Manager
-Consumer: Worker (ActiveCompetitorConsumer)
+Consumer: Worker (ActiveLinkConsumer)
 
 ---------------------------------------------
 RABBITMQ_PRICE_CHANGE_QUEUE
 ---------------------------------------------
 Publisher: Worker
-Consumer: Manager (CompetitorPriceChangeConsumer)
+Consumer: Manager (LinkPriceChangeConsumer)
 
 ---------------------------------------------
-RABBITMQ_DELETED_COMPETITORS_QUEUE
+RABBITMQ_DELETED_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Api
-Consumer: Manager (DeletedCompetitorsConsumer)
+Consumer: Manager (DeletedLinksConsumer)
 
 ---------------------------------------------
-RABBITMQ_FAILED_COMPETITORS_QUEUE
+RABBITMQ_FAILED_LINKS_QUEUE
 ---------------------------------------------
 Publisher: Worker
 Consumer: Manager (StatusChangeConsumer)
