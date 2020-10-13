@@ -5,23 +5,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.common.info.TimePeriod;
 import io.inprice.common.meta.UserStatus;
-import io.inprice.common.utils.DateUtils;
-import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.MemberDao;
 import io.inprice.manager.helpers.Global;
 
-public class MemberRemover implements Task {
+public class MemberRemover implements Runnable {
 
   private static final Logger log = LoggerFactory.getLogger(MemberRemover.class);
 
   private final String clazz = getClass().getSimpleName();
-
-  @Override
-  public TimePeriod getTimePeriod() {
-    return DateUtils.parseTimePeriod(Props.TIMING_FOR_CLEANING_MEMBERS());
-  }
 
   @Override
   public void run() {
@@ -37,14 +29,19 @@ public class MemberRemover implements Task {
       try (Handle handle = Database.getHandle()) {
         handle.inTransaction(transaction -> {
           MemberDao memberDao = transaction.attach(MemberDao.class);
-          boolean isOK = memberDao.permenantlyDelete(UserStatus.DELETED.name());
-          return isOK;
+          int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
+          if (affected > 0) {
+            log.info("{} member(s) in total set to be DELETED!", affected);
+          } else {
+            log.info("No deleted member found!");
+          }
+          return (affected > 0);
         });
       }
       
     } finally {
-      log.info(clazz + " is completed.");
       Global.stopTask(clazz);
     }
   }
+
 }

@@ -8,41 +8,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.common.info.TimePeriod;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
-import io.inprice.common.models.Site;
-import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 import io.inprice.manager.helpers.Global;
 import io.inprice.manager.helpers.RedisClient;
-import io.inprice.manager.helpers.SiteFinder;
 
 /**
  * Contains common functions used by all the publishers.
- * Since quartz needs to create publisher classes through their default (without args)
- * constructors, in each publisher, please add a default constructor referencing
- * this class's constructors.
- *
+ * 
  * @author mdpinar
  */
-class LinkPublisher implements Task {
+class LinkPublisher implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger("StandardLinkPublisher");
+  private static final Logger log = LoggerFactory.getLogger(LinkPublisher.class);
 
   private LinkStatus status;
-  private TimePeriod timePeriod;
   private int retryLimit;
 
-  LinkPublisher(LinkStatus status, String timePeriodStatement) {
-    this(status, timePeriodStatement, 0);
-  }
-
-  LinkPublisher(LinkStatus status, String timePeriodStatement, int retryLimit) {
+  LinkPublisher(LinkStatus status) {
     this.status = status;
-    this.timePeriod = DateUtils.parseTimePeriod(timePeriodStatement);
-    this.retryLimit = retryLimit;
+    if (LinkStatus.FAILED_GROUP.equals(status.getGroup())) {
+      this.retryLimit = Props.RETRY_LIMIT_FOR(status);
+    }
+    log.info("{} publisher is up.", status);
   }
 
   @Override
@@ -81,15 +71,12 @@ class LinkPublisher implements Task {
       if (counter > 0) {
         log.info("{} link(s) handled successfully. Count: {}, Time: {}", 
           this.status, counter, (System.currentTimeMillis() - startTime));
+      } else {
+        log.info("No {} link found!", status);
       }
       Global.stopTask(this.status.name());
     }
 
-  }
-
-  @Override
-  public TimePeriod getTimePeriod() {
-    return this.timePeriod;
   }
 
   private List<Link> findLinks() {
@@ -105,30 +92,6 @@ class LinkPublisher implements Task {
 
   private void handleLinks(List<Link> links) {
     for (Link link: links) {
-
-      switch (link.getStatus()) {
-        case TOBE_CLASSIFIED: {
-          Site site = SiteFinder.findSiteByUrl(link.getUrl());
-          if (site != null) {
-            link.setSiteId(site.getId());
-            link.setWebsiteClassName(site.getClassName());
-            if (site.getStatus() != null) {
-              LinkStatus siteStatus = LinkStatus.valueOf(site.getStatus());
-              if (!LinkStatus.AVAILABLE.equals(siteStatus)) link.setStatus(siteStatus);
-            } else {
-              link.setStatus(LinkStatus.CLASSIFIED);
-            }
-          } else {
-            link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
-            //TODO: bu durumda publish etmeye gerek yok!
-            //common projesindeki CommonRepository ile sadece db level statu degisikligi yeterli olacaktır!
-          }
-          break;
-        }
-        default:
-          break;
-      }
-
       RedisClient.publish(link);
     }
   }

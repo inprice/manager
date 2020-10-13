@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import io.inprice.common.helpers.Database;
 import io.inprice.manager.helpers.Global;
 import io.inprice.manager.helpers.RedisClient;
-import io.inprice.manager.helpers.ThreadPools;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
@@ -34,9 +33,6 @@ public class Application {
 
 			log.info(" - TaskManager is shutting down...");
 			TaskManager.stop();
-
-			log.info(" - Thread pools are shutting down...");
-			ThreadPools.shutdown();
 
 			log.info(" - Redis connection is closing...");
 			RedisClient.shutdown();

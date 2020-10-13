@@ -1,14 +1,15 @@
 package io.inprice.manager.scheduled;
 
-import io.inprice.common.info.TimePeriod;
-import io.inprice.common.meta.LinkStatus;
-import io.inprice.manager.config.Props;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import io.inprice.common.info.TimePeriod;
+import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.utils.DateUtils;
+import io.inprice.manager.config.Props;
 
 public class TaskManager {
 
@@ -17,33 +18,33 @@ public class TaskManager {
   private static ScheduledExecutorService scheduler;
 
   public static void start() {
-    log.info("TaskManager is starting up...");
+    log.info("TaskManager is starting...");
 
-    scheduler = Executors.newScheduledThreadPool(11);
+    //finding corePoolSize for scheduler service. the +one is for MemberRemover
+    int corePoolSize = 1;
+    for (LinkStatus status: LinkStatus.values()) {
+      if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+        corePoolSize++;
+      }
+    }
+
+    scheduler = Executors.newScheduledThreadPool(corePoolSize);
+
+    //publishing links
+    for (LinkStatus status: LinkStatus.values()) {
+      if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+        loadTask(new LinkPublisher(status), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF(status)));
+      }
+    }
 
     //updaters
-    loadTask(new MemberRemover());
+    loadTask(new MemberRemover(), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
 
-    //standard links
-    loadTask(new LinkPublisher(LinkStatus.TOBE_CLASSIFIED, Props.TIMING_FOR_TOBE_CLASSIFIED_LINKS()));
-    loadTask(new LinkPublisher(LinkStatus.CLASSIFIED, Props.TIMING_FOR_CLASSIFIED_LINKS()));
-    loadTask(new LinkPublisher(LinkStatus.IMPLEMENTED, Props.TIMING_FOR_IMPLEMENTED_LINKS()));
-    loadTask(new LinkPublisher(LinkStatus.AVAILABLE, Props.TIMING_FOR_AVAILABLE_LINKS()));
-    loadTask(new LinkPublisher(LinkStatus.TOBE_RENEWED, Props.TIMING_FOR_TOBE_RENEWED_LINKS()));
-    loadTask(new LinkPublisher(LinkStatus.RESUMED, Props.TIMING_FOR_RESUMED_LINKS()));
-
-    //failed links
-    loadTask(new LinkPublisher(LinkStatus.NO_DATA, Props.TIMING_FOR_NO_DATA_ERRORS(), Props.RETRY_LIMIT_FOR_FAILED_LINKS_G1()));
-    loadTask(new LinkPublisher(LinkStatus.NOT_AVAILABLE, Props.TIMING_FOR_NOT_AVAILABLE_LINKS(), Props.RETRY_LIMIT_FOR_FAILED_LINKS_G3()));
-    loadTask(new LinkPublisher(LinkStatus.SOCKET_ERROR, Props.TIMING_FOR_SOCKET_ERRORS(), Props.RETRY_LIMIT_FOR_FAILED_LINKS_G3()));
-    loadTask(new LinkPublisher(LinkStatus.NETWORK_ERROR, Props.TIMING_FOR_NETWORK_ERRORS(), Props.RETRY_LIMIT_FOR_FAILED_LINKS_G3()));
-
-    log.info("TaskManager is started.");
+    log.info("TaskManager is started with {} workers.", corePoolSize);
   }
 
-  private static void loadTask(Task task) {
-    TimePeriod tp = task.getTimePeriod();
-    scheduler.scheduleAtFixedRate(task, 0, tp.getInterval(), tp.getTimeUnit());
+  private static void loadTask(Runnable task, TimePeriod timePeriod) {
+    scheduler.scheduleAtFixedRate(task, 0, timePeriod.getInterval(), timePeriod.getTimeUnit());
   }
 
   public static void stop() {
