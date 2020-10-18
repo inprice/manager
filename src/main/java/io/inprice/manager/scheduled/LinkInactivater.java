@@ -5,13 +5,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.common.meta.UserStatus;
-import io.inprice.manager.dao.MemberDao;
+import io.inprice.manager.dao.CompanyDao;
 import io.inprice.manager.helpers.Global;
 
-public class MemberRemover implements Runnable {
+public class LinkInactivater implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(MemberRemover.class);
+  private static final Logger log = LoggerFactory.getLogger(LinkInactivater.class);
 
   private final String clazz = getClass().getSimpleName();
 
@@ -28,12 +27,12 @@ public class MemberRemover implements Runnable {
       log.info(clazz + " is triggered.");
       try (Handle handle = Database.getHandle()) {
         handle.inTransaction(transactional -> {
-          MemberDao memberDao = transactional.attach(MemberDao.class);
-          int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
+          CompanyDao companyDao = transactional.attach(CompanyDao.class);
+          int affected = companyDao.inactivateLinks();
           if (affected > 0) {
-            log.info("{} member(s) in total set to be DELETED!", affected);
+            log.info("{} link(s) in total inactivated!", affected);
           } else {
-            log.info("No deleted member found!");
+            log.info("No link to inactivate was found!");
           }
           return (affected > 0);
         });

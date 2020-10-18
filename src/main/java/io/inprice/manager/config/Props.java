@@ -1,6 +1,7 @@
 package io.inprice.manager.config;
 
 import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.utils.NumberUtils;
 
 public class Props {
 
@@ -16,12 +17,20 @@ public class Props {
     return System.getenv().getOrDefault("TIME_PERIOD_OF_REMOVING_MEMBERS", "5s");
   }
 
+  public static String TIME_PERIOD_OF_INACTIVATING_LINKS() {
+    return System.getenv().getOrDefault("TIME_PERIOD_OF_INACTIVATING_LINKS", "1h");
+  }
+
   public static int DB_FETCH_LIMIT() {
     return new Integer(System.getenv().getOrDefault("DB_FETCH_LIMIT", "100"));
   }
 
   public static int WAITING_TIME_FOR_FETCHING_LINKS() {
     return new Integer(System.getenv().getOrDefault("WAITING_TIME_FOR_FETCHING_LINKS", "3"));
+  }
+
+  public static int STATUS_CHANGE_CONSUMER_TPOOL_CAPACITY() {
+    return NumberUtils.toInteger(System.getenv().getOrDefault("STATUS_CHANGE_CONSUMER_TPOOL_CAPACITY", "4"));
   }
 
 }

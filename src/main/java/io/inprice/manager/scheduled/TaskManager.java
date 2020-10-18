@@ -20,8 +20,10 @@ public class TaskManager {
   public static void start() {
     log.info("TaskManager is starting...");
 
-    //finding corePoolSize for scheduler service. the +one is for MemberRemover
-    int corePoolSize = 1;
+    //two is the number of updaters below
+    int corePoolSize = 2;
+
+    //all the links other than passive are available
     for (LinkStatus status: LinkStatus.values()) {
       if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
         corePoolSize++;
@@ -39,6 +41,7 @@ public class TaskManager {
 
     //updaters
     loadTask(new MemberRemover(), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
+    loadTask(new LinkInactivater(), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
 
     log.info("TaskManager is started with {} workers.", corePoolSize);
   }

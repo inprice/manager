@@ -1,6 +1,5 @@
 package io.inprice.manager.scheduled;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.jdbi.v3.core.Handle;
@@ -32,7 +31,7 @@ class LinkPublisher implements Runnable {
     if (LinkStatus.FAILED_GROUP.equals(status.getGroup())) {
       this.retryLimit = Props.RETRY_LIMIT_FOR(status);
     }
-    log.info("{} publisher is up.", status);
+    log.info("{} link publisher is up.", status);
   }
 
   @Override
@@ -49,11 +48,12 @@ class LinkPublisher implements Runnable {
       Global.startTask(this.status.name());
 
       List<Link> links = findLinks();
-      while (links.size() > 0) {
+      while (links.size() > 0) { 
         counter += links.size();
 
-        handleLinks(links);
-        setLastCheckTime(links);
+        for (Link link: links) {
+          RedisClient.publish(link);
+        }
 
         if (links.size() >= Props.DB_FETCH_LIMIT()) {
           try {
@@ -68,12 +68,7 @@ class LinkPublisher implements Runnable {
     } catch (Exception e) {
       log.error(String.format("Failed to completed %s task!", this.status), e);
     } finally {
-      if (counter > 0) {
-        log.info("{} link(s) handled successfully. Count: {}, Time: {}", 
-          this.status, counter, (System.currentTimeMillis() - startTime));
-      } else {
-        log.info("No {} link found!", status);
-      }
+      log.info("{} link(s) handled successfully. Count: {}, Time: {}", this.status, counter, (System.currentTimeMillis() - startTime));
       Global.stopTask(this.status.name());
     }
 
@@ -87,29 +82,6 @@ class LinkPublisher implements Runnable {
       } else {
         return linkDao.findFailedListByStatus(this.status.name(), this.retryLimit, Props.DB_FETCH_LIMIT());
       }
-    }
-  }
-
-  private void handleLinks(List<Link> links) {
-    for (Link link: links) {
-      RedisClient.publish(link);
-    }
-  }
-
-  private void setLastCheckTime(List<Link> links) {
-    //gathering all ids
-    List<Long> idList = new ArrayList<>(links.size());
-    for (Link link: links) {
-      idList.add(link.getId());
-    }
-
-    //updating their last check date
-    try (Handle handle = Database.getHandle()) {
-      handle.inTransaction(transaction -> {
-        LinkDao linkDao = transaction.attach(LinkDao.class);
-        linkDao.setLastCheckTime(idList, (this.retryLimit > 0 ? 1 : 0));
-        return true;
-      });
     }
   }
 
