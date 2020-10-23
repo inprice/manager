@@ -32,22 +32,22 @@ public class TaskManager {
 
     scheduler = Executors.newScheduledThreadPool(corePoolSize);
 
+    //updaters are started immediately
+    loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
+    loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
+
     //publishing links
     for (LinkStatus status: LinkStatus.values()) {
       if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
-        loadTask(new LinkPublisher(status), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF(status)));
+        loadTask(new LinkPublisher(status), 1, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF(status)));
       }
     }
-
-    //updaters
-    loadTask(new MemberRemover(), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
-    loadTask(new LinkInactivater(), DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
 
     log.info("TaskManager is started with {} workers.", corePoolSize);
   }
 
-  private static void loadTask(Runnable task, TimePeriod timePeriod) {
-    scheduler.scheduleAtFixedRate(task, 0, timePeriod.getInterval(), timePeriod.getTimeUnit());
+  private static void loadTask(Runnable task, int delay, TimePeriod timePeriod) {
+    scheduler.scheduleAtFixedRate(task, delay, timePeriod.getInterval(), timePeriod.getTimeUnit());
   }
 
   public static void stop() {
