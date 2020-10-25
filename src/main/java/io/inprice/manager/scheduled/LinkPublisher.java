@@ -1,5 +1,6 @@
 package io.inprice.manager.scheduled;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.jdbi.v3.core.Handle;
@@ -47,21 +48,28 @@ class LinkPublisher implements Runnable {
     try {
       Global.startTask(this.status.name());
 
-      List<Link> links = findLinks();
-      while (links.size() > 0) { 
-        counter += links.size();
+      try (Handle handle = Database.getHandle()) {
+        LinkDao linkDao = handle.attach(LinkDao.class);
+  
+        List<Link> links = findLinks(linkDao);
+        while (links.size() > 0) { 
+          counter += links.size();
 
-        for (Link link: links) {
-          RedisClient.publish(link);
-        }
+          List<Long> linkIds = new ArrayList<>(links.size());
+          for (Link link: links) {
+            linkIds.add(link.getId());
+            RedisClient.publish(link);
+          }
+          linkDao.bulkUpdateLastCheck(linkIds);
 
-        if (links.size() >= Props.DB_FETCH_LIMIT()) {
-          try {
-            Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS());
-          } catch (InterruptedException e) { }
-          links = findLinks();
-        } else {
-          links.clear();
+          if (links.size() >= Props.DB_FETCH_LIMIT()) {
+            try {
+              Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS());
+            } catch (InterruptedException e) { }
+            links = findLinks(linkDao);
+          } else {
+            links.clear();
+          }
         }
       }
 
@@ -74,14 +82,11 @@ class LinkPublisher implements Runnable {
 
   }
 
-  private List<Link> findLinks() {
-    try (Handle handle = Database.getHandle()) {
-      LinkDao linkDao = handle.attach(LinkDao.class);
-      if (this.retryLimit < 1) {
-        return linkDao.findListByStatus(this.status.name(), Props.DB_FETCH_LIMIT());
-      } else {
-        return linkDao.findFailedListByStatus(this.status.name(), this.retryLimit, Props.DB_FETCH_LIMIT());
-      }
+  private List<Link> findLinks(LinkDao linkDao) {
+    if (this.retryLimit < 1) {
+      return linkDao.findListByStatus(this.status.name(), Props.DB_FETCH_LIMIT());
+    } else {
+      return linkDao.findFailedListByStatus(this.status.name(), this.retryLimit, Props.DB_FETCH_LIMIT());
     }
   }
 

@@ -52,7 +52,7 @@ public class RedisClient {
 
   public static void publish(Link link) {
     if (isHealthy) {
-      linksTopic.publish(link);
+      linksTopic.publishAsync(link);
     } else {
       log.warn("Redis connection is not healthy, so publishing messages avoided! Status: " + link.getStatus());
     }

@@ -32,14 +32,14 @@ public class TaskManager {
 
     scheduler = Executors.newScheduledThreadPool(corePoolSize);
 
-    //updaters are started immediately
+    //updaters must be started immediately
     loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
     loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
 
-    //publishing links
+    //publishing links (start after some delay)
     for (LinkStatus status: LinkStatus.values()) {
       if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
-        loadTask(new LinkPublisher(status), 1, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF(status)));
+        loadTask(new LinkPublisher(status), 1, DateUtils.parseTimePeriod(Props.COLLECTING_PERIOD_OF(status)));
       }
     }
 
