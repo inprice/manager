@@ -24,7 +24,8 @@ public interface LinkDao {
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findListByStatus(@Bind("status") String status, @Define("limit") int limit);
+  List<Link> findListByStatus(@Bind("status") String status,
+    @Define("interval") int interval, @Define("limit") int limit);
 
   @SqlQuery(
     "select l.*, p.price as product_price from link as l " + 
@@ -36,7 +37,8 @@ public interface LinkDao {
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findFailedListByStatus(@Bind("status") String status, @Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findFailedListByStatus(@Bind("status") String status, 
+    @Define("interval") int interval, @Define("retry") int retry, @Define("limit") int limit);
 
   @Transaction
   @SqlUpdate("update link set last_check=now() where id in (<linkIds>)")

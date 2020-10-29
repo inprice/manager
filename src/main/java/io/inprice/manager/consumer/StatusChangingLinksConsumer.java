@@ -19,22 +19,22 @@ import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.LinkSpec;
 import io.inprice.common.repository.CommonRepository;
-import io.inprice.manager.config.Props;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Consumes all the parsed links by the parser
- * Mainly handles two operations; status and price change.
+ * Operates for two type operations; status and price change.
  * 
  * @author mdpinar
  * @since 2020-10-18
  */
-public class ParsedLinksConsumer {
+public class StatusChangingLinksConsumer {
 
-  private static final Logger logger = LoggerFactory.getLogger(ParsedLinksConsumer.class);
+  private static final Logger logger = LoggerFactory.getLogger(StatusChangingLinksConsumer.class);
 
   private static final RTopic topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
-  //since parallel status changes for the links of one product can cause wrongly calculated fields such as avg and mac prices
+
+  //since parallel status changes operations for the links of one product can cause wrongly 
+  //calculated fields such as avg and mac prices
   //this thread pool must be the capacity of 1
   private static final ExecutorService tPool = Executors.newFixedThreadPool(1);
   
@@ -58,35 +58,41 @@ public class ParsedLinksConsumer {
           if (isStatusChanged) {
             try {
               if (isNowAvailable) {
-                queries.add(generateMakeAvailableQuery(link));
-                queries.addAll(generateRefreshSpecListQueries(link));
+                queries.add(getQueryForMakingAvailable(link));
+                queries.addAll(getQueryForSpecListRefresh(link));
               } else {
                 if (isFailing) {
-                  queries.add(generateFailingQuery(link));
-                } else { // must be passive
-                  queries.add(generateJustStatusUpdateQuery(link));
+                  queries.add(getQueryForFailingLink(link));
+                } else {
+                  if (LinkStatus.RESUMED.equals(link.getStatus())) link.setStatus(link.getPreStatus());
+                  queries.add(getQueryForStatusUpdate(link));
+                }
+                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getSiteId() != null) {
+                  queries.add(getQueryForSiteInfoUpdate(link));
                 }
                 willPriceBeRefreshed[0] = wasPreviouslyAvailable;
               }
-              queries.add(generateLinkHistoryQuery(link));
+              queries.add(getQueryForInsertLinkHistory(link));
             } catch (Exception e) {
               logger.error("Failed to generate queries for status change", e);
             }
-          } 
-          
+          } else if (LinkStatus.FAILED_GROUP.equals(link.getStatus().getGroup())) {
+            queries.add(getQueryForIncreasingRetry(link.getId()));
+            willPriceBeRefreshed[0] = false;
+          }
+
           try (Handle handle = Database.getHandle()) {
             handle.inTransaction(transactional -> {
               if (queries.size() > 0) {
                 Batch batch = transactional.createBatch();
                 for (String query: queries) {
-                  System.out.println(query);
                   batch.add(query);
                 }
                 batch.execute();
               }
 
               if (willPriceBeRefreshed[0]) {
-                Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to create a link_price history row
+                Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
                 CommonRepository.adjustProductPrice(transactional, link.getProductId(), link.getProductPrice(), priceChangingLinkId);
               }
               return true;
@@ -109,7 +115,7 @@ public class ParsedLinksConsumer {
     } catch (InterruptedException e) { }
   }
 
-  private static String generateMakeAvailableQuery(Link link) {
+  private static String getQueryForMakingAvailable(Link link) {
     return
       String.format(
         "update link " + 
@@ -130,7 +136,29 @@ public class ParsedLinksConsumer {
       );
   }
 
-  private static String generateFailingQuery(Link link) {
+  private static String getQueryForIncreasingRetry(Long linkId) {
+    return
+      String.format(
+        "update link " + 
+        "set retry=retry+1, last_update=now() " +
+        "where id=%d ",
+        linkId
+      );
+  }
+
+  private static String getQueryForSiteInfoUpdate(Link link) {
+    return
+      String.format(
+        "update link " + 
+        "set site_id=%d, website_class_name='%s' " +
+        "where id=%d ",
+        link.getSiteId(),
+        link.getWebsiteClassName(),
+        link.getId()
+      );
+  }
+
+  private static String getQueryForFailingLink(Link link) {
     return
       String.format(
         "update link " + 
@@ -143,7 +171,7 @@ public class ParsedLinksConsumer {
       );
   }
 
-  private static String generateJustStatusUpdateQuery(Link link) {
+  private static String getQueryForStatusUpdate(Link link) {
     return
       String.format(
         "update link " + 
@@ -154,7 +182,7 @@ public class ParsedLinksConsumer {
       );
   }
 
-  private static String generateLinkHistoryQuery(Link link) {
+  private static String getQueryForInsertLinkHistory(Link link) {
     String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
     return
       String.format(
@@ -168,7 +196,7 @@ public class ParsedLinksConsumer {
       );
   }
 
-  private static List<String> generateRefreshSpecListQueries(Link link) {
+  private static List<String> getQueryForSpecListRefresh(Link link) {
     List<String> list = new ArrayList<>();
 
     //deleting old specs

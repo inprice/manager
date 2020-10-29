@@ -58,7 +58,7 @@ class LinkPublisher implements Runnable {
           List<Long> linkIds = new ArrayList<>(links.size());
           for (Link link: links) {
             linkIds.add(link.getId());
-            RedisClient.publish(link);
+            RedisClient.publishActiveLink(link);
           }
           linkDao.bulkUpdateLastCheck(linkIds);
 
@@ -84,9 +84,9 @@ class LinkPublisher implements Runnable {
 
   private List<Link> findLinks(LinkDao linkDao) {
     if (this.retryLimit < 1) {
-      return linkDao.findListByStatus(this.status.name(), Props.DB_FETCH_LIMIT());
+      return linkDao.findListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), Props.DB_FETCH_LIMIT());
     } else {
-      return linkDao.findFailedListByStatus(this.status.name(), this.retryLimit, Props.DB_FETCH_LIMIT());
+      return linkDao.findFailedListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), this.retryLimit, Props.DB_FETCH_LIMIT());
     }
   }
 

@@ -23,9 +23,9 @@ public class TaskManager {
     //two is the number of updaters below
     int corePoolSize = 2;
 
-    //all the links other than passive are available
+    //all the links other than passive status are suitable candidates
     for (LinkStatus status: LinkStatus.values()) {
-      if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+      if (! LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
         corePoolSize++;
       }
     }
@@ -36,9 +36,10 @@ public class TaskManager {
     loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
     loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
 
-    //publishing links (start after some delay)
+    //publishing links
+    //in order to giving an opportunity for LinkInactivater, collectors start after some time later
     for (LinkStatus status: LinkStatus.values()) {
-      if (!LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+      if (! LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
         loadTask(new LinkPublisher(status), 1, DateUtils.parseTimePeriod(Props.COLLECTING_PERIOD_OF(status)));
       }
     }
