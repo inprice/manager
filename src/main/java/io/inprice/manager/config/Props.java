@@ -14,7 +14,7 @@ public class Props {
   }
 
   public static int INTERVAL_FOR_LINK_COLLECTION() {
-    return new Integer(System.getenv().getOrDefault("INTERVAL_FOR_LINK_COLLECTION", "30"));
+    return new Integer(System.getenv().getOrDefault("INTERVAL_FOR_LINK_COLLECTION", "3"));
   }
 
   public static String TIME_PERIOD_OF_REMOVING_MEMBERS() {

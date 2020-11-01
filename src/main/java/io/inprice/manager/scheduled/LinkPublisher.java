@@ -84,7 +84,8 @@ class LinkPublisher implements Runnable {
 
   private List<Link> findLinks(LinkDao linkDao) {
     if (this.retryLimit < 1) {
-      return linkDao.findListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), Props.DB_FETCH_LIMIT());
+      String extraCondition = (LinkStatus.TOBE_CLASSIFIED.equals(status) ? "l.last_check is null OR" : "");
+      return linkDao.findListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), Props.DB_FETCH_LIMIT(), extraCondition);
     } else {
       return linkDao.findFailedListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), this.retryLimit, Props.DB_FETCH_LIMIT());
     }

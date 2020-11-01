@@ -20,12 +20,12 @@ public interface LinkDao {
     "inner join product as p on p.id = l.product_id " + 
     "where l.active=true " + 
     "  and l.status=:status " + 
-    "  and (l.last_check is null OR l.last_check < now() - interval 30 minute) " + 
+    "  and (<extraCondition> l.last_check < now() - interval <interval> minute) " + 
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
   List<Link> findListByStatus(@Bind("status") String status,
-    @Define("interval") int interval, @Define("limit") int limit);
+    @Define("interval") int interval, @Define("limit") int limit, @Define("extraCondition") String extraCondition);
 
   @SqlQuery(
     "select l.*, p.price as product_price from link as l " + 
@@ -33,7 +33,7 @@ public interface LinkDao {
     "where l.active=true " + 
     "  and l.status=:status " + 
     "  and l.retry < <retry> " + 
-    "  and l.last_check < now() - interval 30 minute " + 
+    "  and l.last_check < now() - interval <interval> minute " + 
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)

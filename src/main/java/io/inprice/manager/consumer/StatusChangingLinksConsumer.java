@@ -55,6 +55,10 @@ public class StatusChangingLinksConsumer {
           
           final boolean[] willPriceBeRefreshed = { (! change.getOldPrice().equals(link.getPrice())) };
 
+          logger.info("isStatusChanged: {}, isNowAvailable: {}, wasPreviouslyAvailable: {}, isFailing: {}, willPriceBeRefreshed: {}", 
+            isStatusChanged, isNowAvailable, wasPreviouslyAvailable, isFailing, willPriceBeRefreshed[0]
+          );
+
           if (isStatusChanged) {
             try {
               if (isNowAvailable) {
@@ -86,15 +90,21 @@ public class StatusChangingLinksConsumer {
               if (queries.size() > 0) {
                 Batch batch = transactional.createBatch();
                 for (String query: queries) {
+                  logger.info(" -- Q: " + query);
                   batch.add(query);
                 }
                 batch.execute();
               }
 
+              logger.info("Step 1");
+
               if (willPriceBeRefreshed[0]) {
+                logger.info("Step 2");
                 Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
-                CommonRepository.adjustProductPrice(transactional, link.getProductId(), link.getProductPrice(), priceChangingLinkId);
+                logger.info("Step 3.  priceChangingLinkId: {}", priceChangingLinkId);
+                CommonRepository.adjustProductPrice(transactional, link.getProductId(), priceChangingLinkId);
               }
+              logger.info("Step 4");
               return true;
             });
           } catch (Exception e) {
