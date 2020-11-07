@@ -1,73 +1,42 @@
 package io.inprice.manager.helpers;
 
-import org.apache.commons.lang3.StringUtils;
-import org.redisson.Redisson;
-import org.redisson.api.RSet;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
+import org.redisson.api.RTopic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.config.SysProps;
+import io.inprice.common.helpers.BaseRedisClient;
+import io.inprice.common.models.Link;
 
 public class RedisClient {
 
   private static final Logger log = LoggerFactory.getLogger(RedisClient.class);
 
-  private static boolean isHealthy;
-  private static RedissonClient client;
-
-  private static RSet<Long> priceChangingProductsIdSet;
+  private static BaseRedisClient baseClient;
+  private static RTopic activeLinksTopic;
 
   static {
-    final String redisPass = SysProps.REDIS_PASSWORD();
-    Config config = new Config();
-    config
-      .useSingleServer()
-      .setAddress(String.format("redis://%s:%d", SysProps.REDIS_HOST(), SysProps.REDIS_PORT()))
-      .setPassword(!StringUtils.isBlank(redisPass) ? redisPass : null)
-      .setConnectionPoolSize(10)
-      .setConnectionMinimumIdleSize(1)
-      .setIdleConnectionTimeout(5000)
-      .setTimeout(5000);
+    baseClient = new BaseRedisClient();
+    baseClient.open(() -> {
+      activeLinksTopic = createTopic(SysProps.REDIS_ACTIVE_LINKS_TOPIC());
+    });
+  }
 
-    while (!isHealthy && Global.isApplicationRunning) {
-      try {
-        client = Redisson.create(config);
+  public static RTopic createTopic(String topic) {
+    return baseClient.getClient().getTopic(topic);
+  }
 
-        priceChangingProductsIdSet = client.getSet("manager:price-changing:product-ips");
-        isHealthy = true;
-      } catch (Exception e) {
-        log.error("Failed to connect to Redis server, trying again in 3 seconds!", e.getMessage());
-        try {
-          Thread.sleep(3000);
-        } catch (InterruptedException ignored) { }
-      }
+  public static void publishActiveLink(Link link) {
+    if (baseClient.isHealthy()) {
+      activeLinksTopic.publishAsync(link);
+    } else {
+      log.warn("Redis connection is not healthy. Publishing active link avoided! Status: {}, Url: {}", link.getStatus(), link.getUrl());
     }
-        
-  }
-
-  public static void addPriceChanging(Long id) {
-    priceChangingProductsIdSet.add(id);
-  }
-
-  public static Long pollPriceChanging() {
-    if (!priceChangingProductsIdSet.isEmpty())
-      return priceChangingProductsIdSet.removeRandom();
-    else
-      return null;
-  }
-
-  public static boolean isPriceChangingSetEmpty() {
-    return priceChangingProductsIdSet.isEmpty();
   }
 
   public static void shutdown() {
-    if (client != null) {
-      client.shutdown();
-    } else {
-      log.warn("No redis client found!");
-    }
+    activeLinksTopic.removeAllListeners();
+    baseClient.shutdown();
   }
 
 }

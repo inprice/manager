@@ -1,41 +1,54 @@
 package io.inprice.manager.scheduled;
 
-import io.inprice.common.info.TimePeriod;
-import io.inprice.manager.scheduled.publisher.*;
-import io.inprice.manager.scheduled.updater.MemebershipRemover;
-import io.inprice.manager.scheduled.updater.PriceUpdater;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import io.inprice.common.info.TimePeriod;
+import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.utils.DateUtils;
+import io.inprice.manager.config.Props;
 
 public class TaskManager {
 
   private static final Logger log = LoggerFactory.getLogger(TaskManager.class);
-  private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(14);
+
+  private static ScheduledExecutorService scheduler;
 
   public static void start() {
-    log.info("TaskManager is up.");
+    log.info("TaskManager is starting...");
 
-    loadTask(new PriceUpdater());
-    loadTask(new MemebershipRemover());
+    //two is the number of updaters below
+    int corePoolSize = 2;
 
-    loadTask(new TOBE_RENEWED_Publisher());
-    loadTask(new RESUMED_Publisher());
-    loadTask(new NOT_AVAILABLE_Publisher());
-    loadTask(new AVAILABLE_Publisher());
+    //all the links other than passive status are suitable candidates
+    for (LinkStatus status: LinkStatus.values()) {
+      if (! LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+        corePoolSize++;
+      }
+    }
 
-    loadTask(new TOBE_CLASSIFIED_Publisher());
-    loadTask(new IMPLEMENTED_Publisher());
-    loadTask(new NETWORK_ERROR_Publisher());
-    loadTask(new SOCKET_ERROR_Publisher());
-    loadTask(new NO_DATA_ERROR_Publisher());
+    scheduler = Executors.newScheduledThreadPool(corePoolSize);
+
+    //updaters must be started immediately
+    loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
+    loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
+
+    //publishing links
+    //in order to giving an opportunity for LinkInactivater, collectors start after some time later
+    for (LinkStatus status: LinkStatus.values()) {
+      if (! LinkStatus.PASSIVE_GROUP.equals(status.getGroup())) {
+        loadTask(new LinkPublisher(status), 1, DateUtils.parseTimePeriod(Props.COLLECTING_PERIOD_OF(status)));
+      }
+    }
+
+    log.info("TaskManager is started with {} workers.", corePoolSize);
   }
 
-  private static void loadTask(Task task) {
-    TimePeriod tp = task.getTimePeriod();
-    scheduler.scheduleAtFixedRate(task, 0, tp.getInterval(), tp.getTimeUnit());
+  private static void loadTask(Runnable task, int delay, TimePeriod timePeriod) {
+    scheduler.scheduleAtFixedRate(task, delay, timePeriod.getInterval(), timePeriod.getTimeUnit());
   }
 
   public static void stop() {
