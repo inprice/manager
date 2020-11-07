@@ -90,21 +90,15 @@ public class StatusChangingLinksConsumer {
               if (queries.size() > 0) {
                 Batch batch = transactional.createBatch();
                 for (String query: queries) {
-                  logger.info(" -- Q: " + query);
                   batch.add(query);
                 }
                 batch.execute();
               }
 
-              logger.info("Step 1");
-
               if (willPriceBeRefreshed[0]) {
-                logger.info("Step 2");
                 Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
-                logger.info("Step 3.  priceChangingLinkId: {}", priceChangingLinkId);
                 CommonRepository.adjustProductPrice(transactional, link.getProductId(), priceChangingLinkId);
               }
-              logger.info("Step 4");
               return true;
             });
           } catch (Exception e) {

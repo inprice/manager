@@ -17,7 +17,8 @@
       "env": {
         "APP_ENV": "DEV",
         "WAITING_TIME_FOR_FETCHING_LINKS": 3,
-        "COLLECTING_PERIOD_OF_TOBE_CLASSIFIED": "10s"
+        "COLLECTING_PERIOD_OF_TOBE_CLASSIFIED": "10s",
+        "APP_SHOW_QUERIES": false
       }
     }
   ]
