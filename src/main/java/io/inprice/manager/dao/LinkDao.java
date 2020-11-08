@@ -21,6 +21,7 @@ public interface LinkDao {
     "where l.active=true " + 
     "  and l.status=:status " + 
     "  and (<extraCondition> l.last_check < now() - interval <interval> minute) " + 
+    "  and l.imbort_type!='CSV' " + 
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
@@ -34,6 +35,7 @@ public interface LinkDao {
     "  and l.status=:status " + 
     "  and l.retry < <retry> " + 
     "  and l.last_check < now() - interval <interval> minute " + 
+    "  and l.imbort_type!='CSV' " + 
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)

@@ -22,7 +22,7 @@ import io.inprice.common.repository.CommonRepository;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Operates for two type operations; status and price change.
+ * Handles status change, price change and imported products via link records
  * 
  * @author mdpinar
  * @since 2020-10-18
@@ -48,6 +48,8 @@ public class StatusChangingLinksConsumer {
           Link link = change.getLink();
           List<String> queries = new ArrayList<>();
 
+          boolean isImportedProduct = (link.getImportId() != null);
+
           boolean isStatusChanged = (! change.getOldStatus().equals(link.getStatus()));
           boolean isNowAvailable = (LinkStatus.AVAILABLE.equals(link.getStatus()));
           boolean wasPreviouslyAvailable = (LinkStatus.AVAILABLE.equals(link.getPreStatus()));
@@ -55,15 +57,15 @@ public class StatusChangingLinksConsumer {
           
           final boolean[] willPriceBeRefreshed = { (! change.getOldPrice().equals(link.getPrice())) };
 
-          logger.info("isStatusChanged: {}, isNowAvailable: {}, wasPreviouslyAvailable: {}, isFailing: {}, willPriceBeRefreshed: {}", 
-            isStatusChanged, isNowAvailable, wasPreviouslyAvailable, isFailing, willPriceBeRefreshed[0]
-          );
-
           if (isStatusChanged) {
             try {
               if (isNowAvailable) {
                 queries.add(getQueryForMakingAvailable(link));
-                queries.addAll(getQueryForSpecListRefresh(link));
+                if (isImportedProduct) {
+                  queries.addAll(getQueryForCreateProductViaLink(link));
+                } else {
+                  queries.addAll(getQueryForSpecListRefresh(link));
+                }
               } else {
                 if (isFailing) {
                   queries.add(getQueryForFailingLink(link));
@@ -71,12 +73,12 @@ public class StatusChangingLinksConsumer {
                   if (LinkStatus.RESUMED.equals(link.getStatus())) link.setStatus(link.getPreStatus());
                   queries.add(getQueryForStatusUpdate(link));
                 }
-                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getSiteId() != null) {
-                  queries.add(getQueryForSiteInfoUpdate(link));
+                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatform() != null) {
+                  queries.add(getQueryForPlatformInfoUpdate(link));
                 }
                 willPriceBeRefreshed[0] = wasPreviouslyAvailable;
               }
-              queries.add(getQueryForInsertLinkHistory(link));
+              if (! isImportedProduct) queries.add(getQueryForInsertLinkHistory(link));
             } catch (Exception e) {
               logger.error("Failed to generate queries for status change", e);
             }
@@ -95,7 +97,7 @@ public class StatusChangingLinksConsumer {
                 batch.execute();
               }
 
-              if (willPriceBeRefreshed[0]) {
+              if (!isImportedProduct && willPriceBeRefreshed[0]) {
                 Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
                 CommonRepository.adjustProductPrice(transactional, link.getProductId(), priceChangingLinkId);
               }
@@ -124,7 +126,7 @@ public class StatusChangingLinksConsumer {
       String.format(
         "update link " + 
         "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', " +
-        "site_id=%d, website_class_name='%s', retry=0, http_status=%d, problem=null, last_update=now() " +
+        "class_name='%s', platform='%s', retry=0, http_status=%d, problem=null, last_update=now() " +
         "where id=%d ",
         link.getSku(),
         link.getName(),
@@ -133,8 +135,8 @@ public class StatusChangingLinksConsumer {
         link.getShipment(),
         link.getPrice(),
         link.getStatus().name(),
-        link.getSiteId(),
-        link.getWebsiteClassName(),
+        link.getClassName(),
+        link.getPlatform(),
         link.getHttpStatus(),
         link.getId()
       );
@@ -150,16 +152,35 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String getQueryForSiteInfoUpdate(Link link) {
+  private static String getQueryForPlatformInfoUpdate(Link link) {
     return
       String.format(
         "update link " + 
-        "set site_id=%d, website_class_name='%s' " +
+        "set class_name='%s', platform='%s' " +
         "where id=%d ",
-        link.getSiteId(),
-        link.getWebsiteClassName(),
+        link.getClassName(),
+        link.getPlatform(),
         link.getId()
       );
+  }
+
+  private static List<String> getQueryForCreateProductViaLink(Link link) {
+    List<String> list = new ArrayList<>(2);
+
+    link.setStatus(LinkStatus.IMPORTED);
+    list.add(getQueryForStatusUpdate(link));
+
+    list.add(
+      String.format(
+        "insert into product (code, name, price, company_id) values ('%s', '%s', %f, %d) ",
+        link.getSku(),
+        link.getName(),
+        link.getPrice(),
+        link.getCompanyId()
+      )
+    );
+
+    return list;
   }
 
   private static String getQueryForFailingLink(Link link) {
