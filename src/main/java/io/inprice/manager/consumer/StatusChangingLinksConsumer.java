@@ -48,7 +48,7 @@ public class StatusChangingLinksConsumer {
           Link link = change.getLink();
           List<String> queries = new ArrayList<>();
 
-          boolean isImportedProduct = (link.getImportId() != null);
+          boolean isImportedProduct = (link.getImportDetailId() != null);
 
           boolean isStatusChanged = (! change.getOldStatus().equals(link.getStatus()));
           boolean isNowAvailable = (LinkStatus.AVAILABLE.equals(link.getStatus()));
@@ -60,31 +60,37 @@ public class StatusChangingLinksConsumer {
           if (isStatusChanged) {
             try {
               if (isNowAvailable) {
-                queries.add(getQueryForMakingAvailable(link));
+                queries.add(queryMakeAvailable(link));
                 if (isImportedProduct) {
-                  queries.addAll(getQueryForCreateProductViaLink(link));
+                  queries.addAll(queryCreateProductViaLink(link));
                 } else {
-                  queries.addAll(getQueryForSpecListRefresh(link));
+                  queries.addAll(queryRefreshSpecList(link));
                 }
               } else {
                 if (isFailing) {
-                  queries.add(getQueryForFailingLink(link));
+                  queries.add(queryMakeFailingLink(link));
                 } else {
                   if (LinkStatus.RESUMED.equals(link.getStatus())) link.setStatus(link.getPreStatus());
-                  queries.add(getQueryForStatusUpdate(link));
+                  queries.add(queryUpdateStatus(link));
                 }
                 if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatform() != null) {
-                  queries.add(getQueryForPlatformInfoUpdate(link));
+                  queries.add(queryPlatformInfoUpdate(link));
                 }
                 willPriceBeRefreshed[0] = wasPreviouslyAvailable;
               }
-              if (! isImportedProduct) queries.add(getQueryForInsertLinkHistory(link));
+              if (!isImportedProduct) {
+                queries.add(queryInsertLinkHistory(link));
+              }
             } catch (Exception e) {
               logger.error("Failed to generate queries for status change", e);
             }
           } else if (LinkStatus.FAILED_GROUP.equals(link.getStatus().getGroup())) {
-            queries.add(getQueryForIncreasingRetry(link.getId()));
+            queries.add(queryIncreaseRetry(link.getId()));
             willPriceBeRefreshed[0] = false;
+          }
+
+          if (isImportedProduct && !isNowAvailable) {
+            queries.add(queryUpdateImportDetailLastCheck(link));
           }
 
           try (Handle handle = Database.getHandle()) {
@@ -121,7 +127,7 @@ public class StatusChangingLinksConsumer {
     } catch (InterruptedException e) { }
   }
 
-  private static String getQueryForMakingAvailable(Link link) {
+  private static String queryMakeAvailable(Link link) {
     return
       String.format(
         "update link " + 
@@ -142,7 +148,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String getQueryForIncreasingRetry(Long linkId) {
+  private static String queryIncreaseRetry(Long linkId) {
     return
       String.format(
         "update link " + 
@@ -152,7 +158,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String getQueryForPlatformInfoUpdate(Link link) {
+  private static String queryPlatformInfoUpdate(Link link) {
     return
       String.format(
         "update link " + 
@@ -164,11 +170,24 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static List<String> getQueryForCreateProductViaLink(Link link) {
+  private static String queryUpdateImportDetailLastCheck(Link link) {
+    return
+      String.format(
+        "update import_detail " + 
+        "set problem=%s, last_check=now() " +
+        "where id=%d ",
+        (link.getProblem() != null ? "'"+link.getProblem()+"'" : null),
+        link.getImportDetailId()
+      );
+  }
+
+  private static List<String> queryCreateProductViaLink(Link link) {
     List<String> list = new ArrayList<>(2);
 
     link.setStatus(LinkStatus.IMPORTED);
-    list.add(getQueryForStatusUpdate(link));
+    list.add(queryUpdateStatus(link));
+
+    list.add("update import_detail set imported=true, problem=null, last_check=now() where id=" + link.getImportDetailId());
 
     list.add(
       String.format(
@@ -183,7 +202,7 @@ public class StatusChangingLinksConsumer {
     return list;
   }
 
-  private static String getQueryForFailingLink(Link link) {
+  private static String queryMakeFailingLink(Link link) {
     return
       String.format(
         "update link " + 
@@ -196,7 +215,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String getQueryForStatusUpdate(Link link) {
+  private static String queryUpdateStatus(Link link) {
     return
       String.format(
         "update link " + 
@@ -207,7 +226,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String getQueryForInsertLinkHistory(Link link) {
+  private static String queryInsertLinkHistory(Link link) {
     String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
     return
       String.format(
@@ -221,7 +240,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static List<String> getQueryForSpecListRefresh(Link link) {
+  private static List<String> queryRefreshSpecList(Link link) {
     List<String> list = new ArrayList<>();
 
     //deleting old specs
