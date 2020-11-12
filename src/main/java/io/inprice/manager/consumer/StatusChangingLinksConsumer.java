@@ -74,7 +74,7 @@ public class StatusChangingLinksConsumer {
                   queries.add(queryUpdateStatus(link));
                 }
                 if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatform() != null) {
-                  queries.add(queryPlatformInfoUpdate(link));
+                  queries.add(queryUpdatePlatformInfo(link));
                 }
                 willPriceBeRefreshed[0] = wasPreviouslyAvailable;
               }
@@ -158,7 +158,7 @@ public class StatusChangingLinksConsumer {
       );
   }
 
-  private static String queryPlatformInfoUpdate(Link link) {
+  private static String queryUpdatePlatformInfo(Link link) {
     return
       String.format(
         "update link " + 
@@ -189,13 +189,20 @@ public class StatusChangingLinksConsumer {
 
     list.add("update import_detail set imported=true, problem=null, last_check=now() where id=" + link.getImportDetailId());
 
+    // before this is resolved, user may add a product with the same code. let's be cautious!
     list.add(
       String.format(
-        "insert into product (code, name, price, company_id) values ('%s', '%s', %f, %d) ",
+        "insert into product (code, name, price, company_id) " +
+        "select * from " +
+        "(select '%s' as code, '%s' as name, %f as price, %d as company_id) as tmp " +
+        "  where not exists ( " +
+        "    select code from product where code = '%s' " +
+        ") limit 1 ",
         link.getSku(),
         link.getName(),
         link.getPrice(),
-        link.getCompanyId()
+        link.getCompanyId(),
+        link.getSku()
       )
     );
 
