@@ -17,7 +17,7 @@ public interface LinkDao {
 
   @SqlQuery(
     "select l.*, p.price as product_price from link as l " + 
-    "inner join product as p on p.id = l.product_id " + 
+    "left join product as p on p.id = l.product_id " + 
     "where l.active=true " + 
     "  and l.status=:status " + 
     "  and (<extraCondition> l.last_check < now() - interval <interval> minute) " + 
@@ -29,7 +29,7 @@ public interface LinkDao {
 
   @SqlQuery(
     "select l.*, p.price as product_price from link as l " + 
-    "inner join product as p on p.id = l.product_id " + 
+    "left join product as p on p.id = l.product_id " + 
     "where l.active=true " + 
     "  and l.status=:status " + 
     "  and l.retry < <retry> " + 
