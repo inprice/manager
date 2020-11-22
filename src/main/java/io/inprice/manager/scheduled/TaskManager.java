@@ -34,7 +34,8 @@ public class TaskManager {
 
     //updaters must be started immediately
     loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
-    loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS()));
+    loadTask(new LinkInactivater(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_INACTIVATING_LINKS())); // from inactive companies
+    loadTask(new ImportedLinksRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_DELETING_IMPORTED_LINKS()));
 
     //publishing links
     //in order to giving an opportunity for LinkInactivater, collectors start after some time later

@@ -8,6 +8,12 @@ import io.inprice.common.helpers.Database;
 import io.inprice.manager.dao.CompanyDao;
 import io.inprice.manager.helpers.Global;
 
+/**
+ * Sets false to active fields of the links added by a company which has been inactive for a while.
+ * 
+ * @since 202-10-25
+ * @author mdpinar
+ */
 public class LinkInactivater implements Runnable {
 
   private static final Logger log = LoggerFactory.getLogger(LinkInactivater.class);
