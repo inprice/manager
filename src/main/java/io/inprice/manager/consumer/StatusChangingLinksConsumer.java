@@ -54,7 +54,7 @@ public class StatusChangingLinksConsumer {
           boolean isNowAvailable = (LinkStatus.AVAILABLE.equals(link.getStatus()));
           boolean wasPreviouslyAvailable = (LinkStatus.AVAILABLE.equals(link.getPreStatus()));
           boolean isFailing = LinkStatus.FAILED_GROUP.equals(link.getStatus().getGroup());
-          
+
           final boolean[] willPriceBeRefreshed = { (! change.getOldPrice().equals(link.getPrice())) };
 
           if (isStatusChanged) {

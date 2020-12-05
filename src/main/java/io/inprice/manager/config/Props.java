@@ -21,8 +21,8 @@ public class Props {
     return System.getenv().getOrDefault("TIME_PERIOD_OF_REMOVING_MEMBERS", "3h");
   }
 
-  public static String TIME_PERIOD_OF_INACTIVATING_LINKS() {
-    return System.getenv().getOrDefault("TIME_PERIOD_OF_INACTIVATING_LINKS", "1h");
+  public static String TIME_PERIOD_OF_STOPPING_COMPANIES() {
+    return System.getenv().getOrDefault("TIME_PERIOD_OF_STOPPING_COMPANIES", "1h");
   }
 
   public static String TIME_PERIOD_OF_DELETING_IMPORTED_LINKS() {
