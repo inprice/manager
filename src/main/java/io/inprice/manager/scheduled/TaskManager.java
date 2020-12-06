@@ -20,8 +20,8 @@ public class TaskManager {
   public static void start() {
     log.info("TaskManager is starting...");
 
-    //two is the number of updaters below
-    int corePoolSize = 2;
+    //four is the number of updaters below
+    int corePoolSize = 4;
 
     //all the links other than passive status are suitable candidates
     for (LinkStatus status: LinkStatus.values()) {
@@ -34,7 +34,8 @@ public class TaskManager {
 
     //updaters must be started immediately
     loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
-    loadTask(new CompanyStopper(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_STOPPING_COMPANIES()));
+    loadTask(new FreeCompanyStopper(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_STOPPING_FREE_COMPANIES()));
+    loadTask(new SubscribedCompanyStopper(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_STOPPING_SUBSCRIBED_COMPANIES()));
     loadTask(new ImportedLinksRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_DELETING_IMPORTED_LINKS()));
 
     //publishing links

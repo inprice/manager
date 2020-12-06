@@ -1,6 +1,7 @@
 package io.inprice.manager.scheduled;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.jdbi.v3.core.Handle;
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
+import io.inprice.common.meta.CompanyStatus;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
@@ -27,11 +29,19 @@ class LinkPublisher implements Runnable {
   private LinkStatus status;
   private int retryLimit;
 
+  private List<String> activeCompanyStatuses;
+
   LinkPublisher(LinkStatus status) {
     this.status = status;
     if (LinkStatus.FAILED_GROUP.equals(status.getGroup())) {
       this.retryLimit = Props.RETRY_LIMIT_FOR(status);
     }
+    this.activeCompanyStatuses = 
+      Arrays.asList(
+        CompanyStatus.FREE.name(),
+        CompanyStatus.COUPONED.name(),
+        CompanyStatus.SUBSCRIBED.name()
+      );
     log.info("{} link publisher is up.", status);
   }
 
@@ -85,9 +95,21 @@ class LinkPublisher implements Runnable {
   private List<Link> findLinks(LinkDao linkDao) {
     if (this.retryLimit < 1) {
       String extraCondition = (LinkStatus.TOBE_CLASSIFIED.equals(status) ? "l.last_check is null OR" : "");
-      return linkDao.findListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), Props.DB_FETCH_LIMIT(), extraCondition);
+      return 
+        linkDao.findListByStatus(
+          activeCompanyStatuses,
+          this.status.name(),
+          Props.INTERVAL_FOR_LINK_COLLECTION(),
+          Props.DB_FETCH_LIMIT(), extraCondition
+        );
     } else {
-      return linkDao.findFailedListByStatus(this.status.name(), Props.INTERVAL_FOR_LINK_COLLECTION(), this.retryLimit, Props.DB_FETCH_LIMIT());
+      return
+        linkDao.findFailedListByStatus(
+          activeCompanyStatuses,
+          this.status.name(),
+          Props.INTERVAL_FOR_LINK_COLLECTION(),
+          this.retryLimit, Props.DB_FETCH_LIMIT()
+        );
     }
   }
 
