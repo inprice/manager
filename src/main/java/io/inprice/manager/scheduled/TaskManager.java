@@ -34,8 +34,6 @@ public class TaskManager {
 
     //updaters must be started immediately
     loadTask(new MemberRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_REMOVING_MEMBERS()));
-    loadTask(new FreeCompanyStopper(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_STOPPING_FREE_COMPANIES()));
-    loadTask(new SubscribedCompanyStopper(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_STOPPING_SUBSCRIBED_COMPANIES()));
     loadTask(new ImportedLinksRemover(), 0, DateUtils.parseTimePeriod(Props.TIME_PERIOD_OF_DELETING_IMPORTED_LINKS()));
 
     //publishing links

@@ -21,14 +21,6 @@ public class Props {
     return System.getenv().getOrDefault("TIME_PERIOD_OF_REMOVING_MEMBERS", "3h");
   }
 
-  public static String TIME_PERIOD_OF_STOPPING_FREE_COMPANIES() {
-    return System.getenv().getOrDefault("TIME_PERIOD_OF_STOPPING_FREE_COMPANIES", "1h");
-  }
-
-  public static String TIME_PERIOD_OF_STOPPING_SUBSCRIBED_COMPANIES() {
-    return System.getenv().getOrDefault("TIME_PERIOD_OF_STOPPING_SUBSCRIBED_COMPANIES", "57m");
-  }
-
   public static String TIME_PERIOD_OF_DELETING_IMPORTED_LINKS() {
     return System.getenv().getOrDefault("TIME_PERIOD_OF_DELETING_IMPORTED_LINKS", "53m");
   }
