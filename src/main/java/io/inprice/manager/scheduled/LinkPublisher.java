@@ -81,6 +81,8 @@ class LinkPublisher implements Runnable {
             links.clear();
           }
         }
+      } catch (Exception e) {
+        log.error("Failed to trigger " + this.status.name() , e);
       }
 
     } catch (Exception e) {

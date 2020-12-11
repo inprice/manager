@@ -44,6 +44,8 @@ public class MemberRemover implements Runnable {
           }
           return (affected > 0);
         });
+      } catch (Exception e) {
+        log.error("Failed to trigger " + clazz , e);
       }
       
     } finally {
