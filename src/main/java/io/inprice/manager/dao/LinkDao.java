@@ -47,7 +47,7 @@ public interface LinkDao {
   void bulkUpdateLastCheck(@BindList("linkIds") List<Long> linkIds);
 
   @Transaction
-  @SqlUpdate("delete from link where import_detail_id is not null and (status = <status> or retry >= <retryLimit>)")
-  int deleteImportedLinks(@Define("status") String status, @Define("retryLimit") int retryLimit);
+  @SqlUpdate("delete from link where import_detail_id is not null and (status =:status or retry >= <retryLimit>)")
+  int deleteImportedLinks(@Bind("status") String status, @Define("retryLimit") int retryLimit);
 
 }
