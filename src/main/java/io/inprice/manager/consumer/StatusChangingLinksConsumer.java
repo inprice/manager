@@ -192,16 +192,16 @@ public class StatusChangingLinksConsumer {
     // before this is resolved, user may add a product with the same code. let's be cautious!
     list.add(
       String.format(
-        "insert into product (code, name, price, company_id) " +
+        "insert into product (code, name, price, account_id) " +
         "select * from " +
-        "(select '%s' as code, '%s' as name, %f as price, %d as company_id) as tmp " +
+        "(select '%s' as code, '%s' as name, %f as price, %d as account_id) as tmp " +
         "  where not exists ( " +
         "    select code from product where code = '%s' " +
         ") limit 1 ",
         link.getSku(),
         link.getName(),
         link.getPrice(),
-        link.getCompanyId(),
+        link.getAccountId(),
         link.getSku()
       )
     );
@@ -237,13 +237,13 @@ public class StatusChangingLinksConsumer {
     String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
     return
       String.format(
-        "insert into link_history (link_id, status, http_status, problem, product_id, company_id) values (%d, '%s', %d, %s, %d, %d) ",
+        "insert into link_history (link_id, status, http_status, problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
         link.getId(),
         link.getStatus().name(),
         link.getHttpStatus(),
         problemStatement,
         link.getProductId(),
-        link.getCompanyId()
+        link.getAccountId()
       );
   }
 
@@ -263,12 +263,12 @@ public class StatusChangingLinksConsumer {
       for (LinkSpec spec: specList) {
         list.add(
           String.format(
-            "insert into link_spec (link_id, _key, _value, product_id, company_id) values (%d, '%s', '%s', %d, %d)",
+            "insert into link_spec (link_id, _key, _value, product_id, account_id) values (%d, '%s', '%s', %d, %d)",
             link.getId(),
             spec.getKey(),
             spec.getValue(),
             link.getProductId(),
-            link.getCompanyId()
+            link.getAccountId()
           )
         );
       }

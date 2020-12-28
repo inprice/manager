@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.common.meta.CompanyStatus;
+import io.inprice.common.meta.AccountStatus;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
@@ -29,18 +29,18 @@ class LinkPublisher implements Runnable {
   private LinkStatus status;
   private int retryLimit;
 
-  private List<String> activeCompanyStatuses;
+  private List<String> activeAccountStatuses;
 
   LinkPublisher(LinkStatus status) {
     this.status = status;
     if (LinkStatus.FAILED_GROUP.equals(status.getGroup())) {
       this.retryLimit = Props.RETRY_LIMIT_FOR(status);
     }
-    this.activeCompanyStatuses = 
+    this.activeAccountStatuses = 
       Arrays.asList(
-        CompanyStatus.FREE.name(),
-        CompanyStatus.COUPONED.name(),
-        CompanyStatus.SUBSCRIBED.name()
+        AccountStatus.FREE.name(),
+        AccountStatus.COUPONED.name(),
+        AccountStatus.SUBSCRIBED.name()
       );
     log.info("{} link publisher is up.", status);
   }
@@ -99,7 +99,7 @@ class LinkPublisher implements Runnable {
       String extraCondition = (LinkStatus.TOBE_CLASSIFIED.equals(status) ? "l.last_check is null OR" : "");
       return 
         linkDao.findListByStatus(
-          activeCompanyStatuses,
+          activeAccountStatuses,
           this.status.name(),
           Props.INTERVAL_FOR_LINK_COLLECTION(),
           Props.DB_FETCH_LIMIT(), extraCondition
@@ -107,7 +107,7 @@ class LinkPublisher implements Runnable {
     } else {
       return
         linkDao.findFailedListByStatus(
-          activeCompanyStatuses,
+          activeAccountStatuses,
           this.status.name(),
           Props.INTERVAL_FOR_LINK_COLLECTION(),
           this.retryLimit, Props.DB_FETCH_LIMIT()
