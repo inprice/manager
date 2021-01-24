@@ -6,7 +6,7 @@ import io.inprice.common.utils.NumberUtils;
 public class Props {
 
   public static String COLLECTING_PERIOD_OF(LinkStatus status) {
-    return System.getenv().getOrDefault("COLLECTING_PERIOD_OF_" + status.name(), "15s");
+    return System.getenv().getOrDefault("COLLECTING_PERIOD_OF_" + status.name(), "6h");
   }
 
   public static int RETRY_LIMIT_FOR(LinkStatus status) {
@@ -14,7 +14,7 @@ public class Props {
   }
 
   public static int INTERVAL_FOR_LINK_COLLECTION() {
-    return new Integer(System.getenv().getOrDefault("INTERVAL_FOR_LINK_COLLECTION", "3"));
+    return new Integer(System.getenv().getOrDefault("INTERVAL_FOR_LINK_COLLECTION", "30"));
   }
 
   public static String TIME_PERIOD_OF_REMOVING_MEMBERS() {

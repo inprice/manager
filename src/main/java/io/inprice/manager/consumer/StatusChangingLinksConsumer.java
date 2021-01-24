@@ -33,8 +33,8 @@ public class StatusChangingLinksConsumer {
 
   private static final RTopic topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
 
-  //since parallel status changes operations for the links of one product can cause wrongly 
-  //calculated fields such as avg and mac prices
+  //since parallel status change operations for the links under one product can cause fields
+  //to be miscalculated such as avg and mac prices
   //this thread pool must be the capacity of 1
   private static final ExecutorService tPool = Executors.newFixedThreadPool(1);
   
@@ -73,7 +73,7 @@ public class StatusChangingLinksConsumer {
                   if (LinkStatus.RESUMED.equals(link.getStatus())) link.setStatus(link.getPreStatus());
                   queries.add(queryUpdateStatus(link));
                 }
-                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatform() != null) {
+                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatformId() != null) {
                   queries.add(queryUpdatePlatformInfo(link));
                 }
                 willPriceBeRefreshed[0] = wasPreviouslyAvailable;
@@ -132,7 +132,7 @@ public class StatusChangingLinksConsumer {
       String.format(
         "update link " + 
         "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', " +
-        "class_name='%s', platform='%s', retry=0, http_status=%d, problem=null, last_update=now() " +
+        "platform_id=%d, last_retry=0, last_http_status=%d, last_problem=null, last_update=now() " +
         "where id=%d ",
         link.getSku(),
         link.getName(),
@@ -141,9 +141,8 @@ public class StatusChangingLinksConsumer {
         link.getShipment(),
         link.getPrice(),
         link.getStatus().name(),
-        link.getClassName(),
-        link.getPlatform(),
-        link.getHttpStatus(),
+        link.getPlatformId(),
+        link.getLastHttpStatus(),
         link.getId()
       );
   }
@@ -162,32 +161,30 @@ public class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set class_name='%s', platform='%s' " +
+        "set platform_id=%d, status='%s', last_problem='%s' " +
         "where id=%d ",
-        link.getClassName(),
-        link.getPlatform(),
+        link.getPlatformId(),
+        link.getStatus().name(),
+        link.getLastProblem(),
         link.getId()
       );
   }
 
   private static String queryUpdateImportDetailLastCheck(Link link) {
     return
-      String.format(
-        "update import_detail " + 
-        "set problem=%s, last_check=now() " +
-        "where id=%d ",
-        (link.getProblem() != null ? "'"+link.getProblem()+"'" : null),
-        link.getImportDetailId()
-      );
+      "update import_detail " + 
+      "set last_check=now() " + 
+      (link.getLastProblem() != null ? ", status='"+link.getLastProblem()+"'" : "") +
+      " where id=" + link.getImportDetailId();
   }
 
   private static List<String> queryCreateProductViaLink(Link link) {
-    List<String> list = new ArrayList<>(2);
+    List<String> list = new ArrayList<>(4);
 
     link.setStatus(LinkStatus.IMPORTED);
     list.add(queryUpdateStatus(link));
 
-    list.add("update import_detail set imported=true, problem=null, last_check=now() where id=" + link.getImportDetailId());
+    list.add("update import_detail set imported=true, status='IMPORTED', last_check=now() where id=" + link.getImportDetailId());
 
     // before this is resolved, user may add a product with the same code. let's be cautious!
     list.add(
@@ -206,6 +203,8 @@ public class StatusChangingLinksConsumer {
       )
     );
 
+    list.add("update account set product_count=product_count+1 where id=" + link.getAccountId());
+
     return list;
   }
 
@@ -213,10 +212,10 @@ public class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set retry=retry+1, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
+        "set retry=retry+1, last_http_status=%d, last_problem='%s', pre_status=status, status='%s', last_update=now() " +
         "where id=%d ",
-        link.getHttpStatus(),
-        link.getProblem().toUpperCase(),
+        link.getLastHttpStatus(),
+        link.getLastProblem().toUpperCase(),
         link.getStatus().name(),
         link.getId()
       );
@@ -234,13 +233,13 @@ public class StatusChangingLinksConsumer {
   }
 
   private static String queryInsertLinkHistory(Link link) {
-    String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
+    String problemStatement = (link.getLastProblem() != null ? "'"+link.getLastProblem().toUpperCase()+"'" : null);
     return
       String.format(
-        "insert into link_history (link_id, status, http_status, problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
+        "insert into link_history (link_id, status, last_http_status, last_problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
         link.getId(),
         link.getStatus().name(),
-        link.getHttpStatus(),
+        link.getLastHttpStatus(),
         problemStatement,
         link.getProductId(),
         link.getAccountId()

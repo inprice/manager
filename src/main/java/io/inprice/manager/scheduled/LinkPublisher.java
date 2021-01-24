@@ -12,6 +12,8 @@ import io.inprice.common.helpers.Database;
 import io.inprice.common.meta.AccountStatus;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
+import io.inprice.common.models.Platform;
+import io.inprice.common.repository.PlatformRepository;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 import io.inprice.manager.helpers.Global;
@@ -68,7 +70,26 @@ class LinkPublisher implements Runnable {
           List<Long> linkIds = new ArrayList<>(links.size());
           for (Link link: links) {
             linkIds.add(link.getId());
-            RedisClient.publishActiveLink(link);
+
+            if (LinkStatus.TOBE_CLASSIFIED.equals(link.getStatus()) || LinkStatus.RESOLVED.equals(link.getStatus())) {
+              LinkStatus oldStatus = link.getStatus();
+              Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
+              if (platform != null) {
+                link.setPlatform(platform);
+                if (platform.getStatus() != null) {
+                  link.setStatus(platform.getStatus());
+                  link.setLastProblem(platform.getProblem());
+                }
+              } else {
+                link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
+              }
+              if (!link.getStatus().equals(oldStatus)) {
+                RedisClient.publishStatusChange(link, oldStatus);
+              }
+            } 
+            if (!link.getStatus().getGroup().equals(LinkStatus.PASSIVE_GROUP)) {
+              RedisClient.publishActiveLink(link);
+            }
           }
           linkDao.bulkUpdateLastCheck(linkIds);
 
