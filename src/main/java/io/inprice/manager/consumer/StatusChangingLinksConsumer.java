@@ -47,50 +47,60 @@ public class StatusChangingLinksConsumer {
 
           Link link = change.getLink();
           List<String> queries = new ArrayList<>();
+          
+          final LinkStatus newStatus = link.getStatus();
+          final LinkStatus oldStatus = change.getOldStatus();
 
           boolean isImportedProduct = (link.getImportDetailId() != null);
-
-          boolean isStatusChanged = (! change.getOldStatus().equals(link.getStatus()));
           boolean isNowAvailable = (LinkStatus.AVAILABLE.equals(link.getStatus()));
-          boolean wasPreviouslyAvailable = (LinkStatus.AVAILABLE.equals(link.getPreStatus()));
-          boolean isFailing = LinkStatus.FAILED_GROUP.equals(link.getStatus().getGroup());
 
-          final boolean[] willPriceBeRefreshed = { (! change.getOldPrice().equals(link.getPrice())) };
+          boolean isInsertHistory = false;
+          boolean[] isPriceRefresh = { false };
 
-          if (isStatusChanged) {
-            try {
-              if (isNowAvailable) {
+          //if the link is now available
+          if (newStatus.equals(LinkStatus.AVAILABLE)) {
+          	if (oldStatus.equals(newStatus)) { //if it is previously available then check its price if there is a change
+          		isPriceRefresh[0] = (link.getPrice().doubleValue() != change.getOldPrice().doubleValue());
+          	} else {
+              if (isImportedProduct) { //if importing link
+                queries.addAll(queryCreateProductViaLink(link));
+              } else { // if is a normal link
                 queries.add(queryMakeAvailable(link));
-                if (isImportedProduct) {
-                  queries.addAll(queryCreateProductViaLink(link));
-                } else {
-                  queries.addAll(queryRefreshSpecList(link));
-                }
-              } else {
-                if (isFailing) {
-                  queries.add(queryMakeFailingLink(link));
-                } else {
-                  if (LinkStatus.RESUMED.equals(link.getStatus())) link.setStatus(link.getPreStatus());
-                  queries.add(queryUpdateStatus(link));
-                }
-                if (LinkStatus.TOBE_CLASSIFIED.equals(link.getPreStatus()) && link.getPlatformId() != null) {
-                  queries.add(queryUpdatePlatformInfo(link));
-                }
-                willPriceBeRefreshed[0] = wasPreviouslyAvailable;
+              	queries.addAll(queryRefreshSpecList(link));
+        				isInsertHistory = true;
+        				isPriceRefresh[0] = true;
               }
-              if (!isImportedProduct) {
-                queries.add(queryInsertLinkHistory(link));
+          	}
+          }
+          
+          //if it fails 
+          if (newStatus.getGroup().equals(LinkStatus.FAILED_GROUP)) {
+          	if (link.getRetry() < 3) {
+            	if (isImportedProduct) {
+            		queries.add(queryUpdateImportDetailLastCheck(link));
               }
-            } catch (Exception e) {
-              logger.error("Failed to generate queries for status change", e);
-            }
-          } else if (LinkStatus.FAILED_GROUP.equals(link.getStatus().getGroup())) {
-            queries.add(queryIncreaseRetry(link.getId()));
-            willPriceBeRefreshed[0] = false;
+              queries.add(queryIncreaseRetry(link));
+            } else {
+              if (! oldStatus.equals(newStatus)) {
+              	queries.add(queryMakeLinkNonActive(link));
+        				isInsertHistory = true;
+        				isPriceRefresh[0] = oldStatus.equals(LinkStatus.AVAILABLE);
+        			} else {
+        				logger.warn("Link with id {} is in wrong state! New Status: {}, Old Status: {}, Retry: {} ", 
+        						link.getId(), change.getOldStatus(), link.getStatus(), link.getRetry());
+            	}
+      			}
           }
 
-          if (isImportedProduct && !isNowAvailable) {
-            queries.add(queryUpdateImportDetailLastCheck(link));
+          //if it is now passive then lets terminate it, no need to retry
+          if (newStatus.getGroup().equals(LinkStatus.PASSIVE_GROUP)) {
+      			queries.add(queryMakeLinkNonActive(link));
+      			isInsertHistory = true;
+      			isPriceRefresh[0] = oldStatus.equals(LinkStatus.AVAILABLE);
+          }
+
+          if (isInsertHistory) {
+            queries.add(queryInsertLinkHistory(link));
           }
 
           try (Handle handle = Database.getHandle()) {
@@ -103,7 +113,7 @@ public class StatusChangingLinksConsumer {
                 batch.execute();
               }
 
-              if (!isImportedProduct && willPriceBeRefreshed[0]) {
+              if (isPriceRefresh[0]) {
                 Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
                 CommonRepository.adjustProductPrice(transactional, link.getProductId(), priceChangingLinkId);
               }
@@ -132,7 +142,7 @@ public class StatusChangingLinksConsumer {
       String.format(
         "update link " + 
         "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', " +
-        "platform_id=%d, last_retry=0, last_http_status=%d, last_problem=null, last_update=now() " +
+        "platform_id=%d, retry=0, http_status=%d, problem=null, last_update=now() " +
         "where id=%d ",
         link.getSku(),
         link.getName(),
@@ -142,30 +152,19 @@ public class StatusChangingLinksConsumer {
         link.getPrice(),
         link.getStatus().name(),
         link.getPlatformId(),
-        link.getLastHttpStatus(),
+        link.getHttpStatus(),
         link.getId()
       );
   }
 
-  private static String queryIncreaseRetry(Long linkId) {
+  private static String queryIncreaseRetry(Link link) {
     return
       String.format(
         "update link " + 
-        "set retry=retry+1, last_update=now() " +
+        "set retry=retry+1, problem='%s', http_status=%d, last_update=now() " +
         "where id=%d ",
-        linkId
-      );
-  }
-
-  private static String queryUpdatePlatformInfo(Link link) {
-    return
-      String.format(
-        "update link " + 
-        "set platform_id=%d, status='%s', last_problem='%s' " +
-        "where id=%d ",
-        link.getPlatformId(),
-        link.getStatus().name(),
-        link.getLastProblem(),
+        link.getProblem(),
+        link.getHttpStatus(),
         link.getId()
       );
   }
@@ -173,8 +172,8 @@ public class StatusChangingLinksConsumer {
   private static String queryUpdateImportDetailLastCheck(Link link) {
     return
       "update import_detail " + 
-      "set last_check=now() " + 
-      (link.getLastProblem() != null ? ", status='"+link.getLastProblem()+"'" : "") +
+      "set imported=false, last_check=now() " + 
+      (link.getProblem() != null ? ", status='"+link.getProblem()+"'" : "") +
       " where id=" + link.getImportDetailId();
   }
 
@@ -182,6 +181,8 @@ public class StatusChangingLinksConsumer {
     List<String> list = new ArrayList<>(4);
 
     link.setStatus(LinkStatus.IMPORTED);
+    link.setProblem("");
+    link.setHttpStatus(200);
     list.add(queryUpdateStatus(link));
 
     list.add("update import_detail set imported=true, status='IMPORTED', last_check=now() where id=" + link.getImportDetailId());
@@ -208,14 +209,14 @@ public class StatusChangingLinksConsumer {
     return list;
   }
 
-  private static String queryMakeFailingLink(Link link) {
+  private static String queryMakeLinkNonActive(Link link) {
     return
       String.format(
         "update link " + 
-        "set retry=retry+1, last_http_status=%d, last_problem='%s', pre_status=status, status='%s', last_update=now() " +
+        "set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
         "where id=%d ",
-        link.getLastHttpStatus(),
-        link.getLastProblem().toUpperCase(),
+        link.getHttpStatus(),
+        link.getProblem(),
         link.getStatus().name(),
         link.getId()
       );
@@ -225,21 +226,23 @@ public class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set pre_status=status, status='%s', last_update=now() " +
+        "set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
         "where id=%d ",
+        link.getHttpStatus(),
+        link.getProblem(),
         link.getStatus().name(),
         link.getId()
       );
   }
 
   private static String queryInsertLinkHistory(Link link) {
-    String problemStatement = (link.getLastProblem() != null ? "'"+link.getLastProblem().toUpperCase()+"'" : null);
+    String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
     return
       String.format(
-        "insert into link_history (link_id, status, last_http_status, last_problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
+        "insert into link_history (link_id, status, http_status, problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
         link.getId(),
         link.getStatus().name(),
-        link.getLastHttpStatus(),
+        link.getHttpStatus(),
         problemStatement,
         link.getProductId(),
         link.getAccountId()

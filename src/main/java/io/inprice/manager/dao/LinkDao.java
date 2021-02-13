@@ -11,36 +11,24 @@ import org.jdbi.v3.sqlobject.statement.UseRowMapper;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
+import io.inprice.common.meta.AccountStatus;
+import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 
 public interface LinkDao {
 
   @SqlQuery(
     "select l.*, p.price as product_price from link as l " + 
-    "inner join account as c on c.id = l.account_id " + 
+    "inner join account as a on a.id = l.account_id " + 
     "left join product as p on p.id = l.product_id " + 
-    "where c.status in (<activeAccountStatuses>) " + 
-    "  and l.status=:status " + 
-    "  and (<extraCondition> l.last_check < now() - interval <interval> minute) " + 
-    "limit <limit>"
+    "where a.status in (<accountStatuses>) " + 
+    "  and l.status in (<linkStatuses>) " + 
+    "  and <extraCondition> " + 
+    "limit 100"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findListByStatus(@BindList("activeAccountStatuses") List<String> activeAccountStatuses, @Bind("status") String status,
-    @Define("interval") int interval, @Define("limit") int limit, @Define("extraCondition") String extraCondition);
-
-  @SqlQuery(
-    "select l.*, p.price as product_price from link as l " + 
-    "inner join account as c on c.id = l.account_id " + 
-    "left join product as p on p.id = l.product_id " + 
-    "where c.status in (<activeAccountStatuses>) " + 
-    "  and l.status=:status " + 
-    "  and l.retry < <retry> " + 
-    "  and l.last_check < now() - interval <interval> minute " + 
-    "limit <limit>"
-  )
-  @UseRowMapper(LinkMapper.class)
-  List<Link> findFailedListByStatus(@BindList("activeAccountStatuses") List<String> activeAccountStatuses, @Bind("status") String status, 
-    @Define("interval") int interval, @Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findListByStatus(@BindList("accountStatuses") List<AccountStatus> accountStatuses, 
+		@BindList("linkStatuses") List<LinkStatus> linkStatuses, @Define("extraCondition") String extraCondition);
 
   @Transaction
   @SqlUpdate("update link set last_check=now() where id in (<linkIds>)")

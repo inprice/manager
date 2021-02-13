@@ -1,15 +1,16 @@
 package io.inprice.manager.scheduled;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.config.SysProps;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.meta.AccountStatus;
+import io.inprice.common.meta.AppEnv;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.Platform;
@@ -20,37 +21,56 @@ import io.inprice.manager.helpers.Global;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Contains common functions used by all the publishers.
+ * Publishes active links.
  * 
  * @author mdpinar
  */
 class LinkPublisher implements Runnable {
 
   private static final Logger log = LoggerFactory.getLogger(LinkPublisher.class);
+  
+  private String taskName;
+  private StringBuilder condition;
+  private List<LinkStatus> linkStatuses;
 
-  private LinkStatus status;
-  private int retryLimit;
+  LinkPublisher(boolean isForActives, int retry) {
+  	if (isForActives) {
+  		this.taskName = "ACTIVE-LINKS-PUBLISHER-" + retry;
+  		this.linkStatuses = LinkStatus.ACTIVE_STATUSES;
+  	} else {
+  		this.taskName = "FAILED-LINKS-PUBLISHER-" + retry;
+  		this.linkStatuses = LinkStatus.FAILED_STATUSES;
+  	}
 
-  private List<String> activeAccountStatuses;
-
-  LinkPublisher(LinkStatus status) {
-    this.status = status;
-    if (LinkStatus.FAILED_GROUP.equals(status.getGroup())) {
-      this.retryLimit = Props.RETRY_LIMIT_FOR(status);
+  	condition = new StringBuilder("retry = ");
+  	condition.append(retry);
+  	condition.append(" AND ");
+  	
+  	String minorTiming = (SysProps.APP_ENV().equals(AppEnv.PROD) ? " minute" : " second");
+  	String majorTiming = (SysProps.APP_ENV().equals(AppEnv.PROD) ? " hour" : " minute");
+  	
+    if (retry == 0) {
+    	condition.append("(l.last_check is null OR l.last_check <= now() - interval 30 " + minorTiming + ")");
+    } else {
+    	condition.append("l.last_check <= now() - interval " + retry + majorTiming);
     }
-    this.activeAccountStatuses = 
-      Arrays.asList(
-        AccountStatus.FREE.name(),
-        AccountStatus.COUPONED.name(),
-        AccountStatus.SUBSCRIBED.name()
+
+    log.info("{} is up with a retry value: {}.", taskName, retry);
+  }
+
+  private List<Link> findLinks(LinkDao linkDao) {
+    return 
+      linkDao.findListByStatus(
+        AccountStatus.ACTIVE_STATUSES,
+        linkStatuses,
+        condition.toString()
       );
-    log.info("{} link publisher is up.", status);
   }
 
   @Override
   public void run() {
-    if (Global.isTaskRunning(this.status.name())) {
-      log.warn("{} link handler is already triggered!", this.status);
+    if (Global.isTaskRunning(taskName)) {
+      log.warn("{} is already triggered!", taskName);
       return;
     }
 
@@ -58,7 +78,7 @@ class LinkPublisher implements Runnable {
     long startTime = System.currentTimeMillis();
 
     try {
-      Global.startTask(this.status.name());
+      Global.startTask(taskName);
 
       try (Handle handle = Database.getHandle()) {
         LinkDao linkDao = handle.attach(LinkDao.class);
@@ -78,7 +98,7 @@ class LinkPublisher implements Runnable {
                 link.setPlatform(platform);
                 if (platform.getStatus() != null) {
                   link.setStatus(platform.getStatus());
-                  link.setLastProblem(platform.getProblem());
+                  link.setProblem(platform.getProblem());
                 }
               } else {
                 link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
@@ -103,37 +123,16 @@ class LinkPublisher implements Runnable {
           }
         }
       } catch (Exception e) {
-        log.error("Failed to trigger " + this.status.name() , e);
+        log.error(taskName + " failed to trigger!" , e);
       }
 
     } catch (Exception e) {
-      log.error(String.format("Failed to completed %s task!", this.status), e);
+      log.error(String.format("%s failed to complete!", taskName), e);
     } finally {
-      log.info("{} link(s) handled successfully. Count: {}, Time: {}", this.status, counter, (System.currentTimeMillis() - startTime));
-      Global.stopTask(this.status.name());
+      log.info("{} completed successfully. Count: {}, Time: {}", taskName, counter, (System.currentTimeMillis() - startTime));
+      Global.stopTask(taskName);
     }
 
-  }
-
-  private List<Link> findLinks(LinkDao linkDao) {
-    if (this.retryLimit < 1) {
-      String extraCondition = (LinkStatus.TOBE_CLASSIFIED.equals(status) ? "l.last_check is null OR" : "");
-      return 
-        linkDao.findListByStatus(
-          activeAccountStatuses,
-          this.status.name(),
-          Props.INTERVAL_FOR_LINK_COLLECTION(),
-          Props.DB_FETCH_LIMIT(), extraCondition
-        );
-    } else {
-      return
-        linkDao.findFailedListByStatus(
-          activeAccountStatuses,
-          this.status.name(),
-          Props.INTERVAL_FOR_LINK_COLLECTION(),
-          this.retryLimit, Props.DB_FETCH_LIMIT()
-        );
-    }
   }
 
 }
