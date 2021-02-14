@@ -84,7 +84,7 @@ class LinkPublisher implements Runnable {
         LinkDao linkDao = handle.attach(LinkDao.class);
   
         List<Link> links = findLinks(linkDao);
-        while (links.size() > 0) { 
+        while (links.size() > 0) {
           counter += links.size();
 
           List<Long> linkIds = new ArrayList<>(links.size());
@@ -107,9 +107,7 @@ class LinkPublisher implements Runnable {
                 RedisClient.publishStatusChange(link, oldStatus);
               }
             } 
-            if (!link.getStatus().getGroup().equals(LinkStatus.PASSIVE_GROUP)) {
-              RedisClient.publishActiveLink(link);
-            }
+            RedisClient.publishActiveLink(link);
           }
           linkDao.bulkUpdateLastCheck(linkIds);
 

@@ -95,8 +95,12 @@ public class StatusChangingLinksConsumer {
           //if it is now passive then lets terminate it, no need to retry
           if (newStatus.getGroup().equals(LinkStatus.PASSIVE_GROUP)) {
       			queries.add(queryMakeLinkNonActive(link));
-      			isInsertHistory = true;
-      			isPriceRefresh[0] = oldStatus.equals(LinkStatus.AVAILABLE);
+          	if (isImportedProduct) {
+          		queries.add(queryMakeImportDetailNonActive(link));
+            } else {
+        			isInsertHistory = true;
+        			isPriceRefresh[0] = oldStatus.equals(LinkStatus.AVAILABLE);
+            }
           }
 
           if (isInsertHistory) {
@@ -208,17 +212,28 @@ public class StatusChangingLinksConsumer {
 
     return list;
   }
-
+  
   private static String queryMakeLinkNonActive(Link link) {
+  	return
+  			String.format(
+  					"update link " + 
+  							"set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
+  							"where id=%d ",
+  							link.getHttpStatus(),
+  							link.getProblem(),
+  							link.getStatus().name(),
+  							link.getId()
+  					);
+  }
+
+  private static String queryMakeImportDetailNonActive(Link link) {
     return
       String.format(
-        "update link " + 
-        "set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
+        "update import_detail " + 
+        "set status='%s', last_check=now() " +
         "where id=%d ",
-        link.getHttpStatus(),
         link.getProblem(),
-        link.getStatus().name(),
-        link.getId()
+        link.getImportDetailId()
       );
   }
 
