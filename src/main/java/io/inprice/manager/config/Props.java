@@ -1,8 +1,5 @@
 package io.inprice.manager.config;
 
-import io.inprice.common.meta.LinkStatus;
-import io.inprice.common.utils.NumberUtils;
-
 public class Props {
 
   public static int DB_FETCH_LIMIT() {

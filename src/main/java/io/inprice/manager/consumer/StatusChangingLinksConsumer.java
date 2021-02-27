@@ -113,6 +113,7 @@ public class StatusChangingLinksConsumer {
                 Batch batch = transactional.createBatch();
                 for (String query: queries) {
                   batch.add(query);
+                  System.out.println("---" + query);
                 }
                 batch.execute();
               }
@@ -154,7 +155,7 @@ public class StatusChangingLinksConsumer {
         link.getSeller(),
         link.getShipment(),
         link.getPrice(),
-        link.getStatus().name(),
+        link.getStatus(),
         link.getPlatformId(),
         link.getHttpStatus(),
         link.getId()
@@ -215,15 +216,15 @@ public class StatusChangingLinksConsumer {
   
   private static String queryMakeLinkNonActive(Link link) {
   	return
-  			String.format(
-  					"update link " + 
-  							"set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
-  							"where id=%d ",
-  							link.getHttpStatus(),
-  							link.getProblem(),
-  							link.getStatus().name(),
-  							link.getId()
-  					);
+			String.format(
+				"update link " + 
+					"set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', last_update=now() " +
+					"where id=%d ",
+					link.getHttpStatus(),
+					link.getProblem(),
+					link.getStatus(),
+					link.getId()
+				);
   }
 
   private static String queryMakeImportDetailNonActive(Link link) {
@@ -232,7 +233,7 @@ public class StatusChangingLinksConsumer {
         "update import_detail " + 
         "set status='%s', last_check=now() " +
         "where id=%d ",
-        link.getProblem(),
+        link.getStatus(),
         link.getImportDetailId()
       );
   }
@@ -245,7 +246,7 @@ public class StatusChangingLinksConsumer {
         "where id=%d ",
         link.getHttpStatus(),
         link.getProblem(),
-        link.getStatus().name(),
+        link.getStatus(),
         link.getId()
       );
   }
@@ -256,7 +257,7 @@ public class StatusChangingLinksConsumer {
       String.format(
         "insert into link_history (link_id, status, http_status, problem, product_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
         link.getId(),
-        link.getStatus().name(),
+        link.getStatus(),
         link.getHttpStatus(),
         problemStatement,
         link.getProductId(),
