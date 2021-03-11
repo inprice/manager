@@ -183,13 +183,13 @@ public class StatusChangingLinksConsumer {
   }
 
   private static List<String> queryCreateProductViaLink(Link link) {
-    List<String> list = new ArrayList<>(4);
+    List<String> list = new ArrayList<>(3);
 
     link.setStatus(LinkStatus.IMPORTED);
     link.setProblem("");
     link.setHttpStatus(200);
-    list.add(queryUpdateStatus(link));
 
+    list.add(queryUpdateStatus(link));
     list.add("update import_detail set imported=true, status='IMPORTED', last_check=now() where id=" + link.getImportDetailId());
 
     // before this is resolved, user may add a product with the same code. let's be cautious!
