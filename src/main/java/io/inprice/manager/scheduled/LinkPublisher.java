@@ -46,11 +46,10 @@ class LinkPublisher implements Runnable {
   	condition.append(retry);
   	condition.append(" AND ");
   	
-  	String minorTiming = (SysProps.APP_ENV().equals(AppEnv.PROD) ? " minute" : " second");
   	String majorTiming = (SysProps.APP_ENV().equals(AppEnv.PROD) ? " hour" : " minute");
   	
     if (retry == 0) {
-    	condition.append("(l.last_check is null OR l.last_check <= now() - interval 30 " + minorTiming + ")");
+    	condition.append("(l.last_check is null OR l.last_check <= now() - interval 30 minute)");
     } else {
     	condition.append("l.last_check <= now() - interval " + retry + majorTiming);
     }
@@ -91,6 +90,8 @@ class LinkPublisher implements Runnable {
           for (Link link: links) {
             linkIds.add(link.getId());
 
+            boolean shouldBeAddedToQueue = true;
+            
             if (LinkStatus.TOBE_CLASSIFIED.equals(link.getStatus()) || LinkStatus.RESOLVED.equals(link.getStatus())) {
               LinkStatus oldStatus = link.getStatus();
               Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
@@ -104,10 +105,13 @@ class LinkPublisher implements Runnable {
                 link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
               }
               if (!link.getStatus().equals(oldStatus)) {
+              	shouldBeAddedToQueue = false;
                 RedisClient.publishStatusChange(link, oldStatus);
               }
-            } 
-            RedisClient.publishActiveLink(link);
+            }
+            if (shouldBeAddedToQueue) {
+            	RedisClient.publishActiveLink(link);
+            }
           }
           linkDao.bulkUpdateLastCheck(linkIds);
 
