@@ -5,13 +5,13 @@ import java.util.List;
 import io.inprice.common.models.Link;
 import io.inprice.manager.dao.LinkDao;
 
-public class LinkPublisherActive extends LinkPublisherAbstract {
+public class PublisherActiveLinks extends AbstractLinkPublisher {
 
 	private int retry;
 	private int interval;
 	private String timeUnit;
 
-	public LinkPublisherActive(int retry, int interval, String timeUnit) {
+	public PublisherActiveLinks(int retry, int interval, String timeUnit) {
 		super();
 		this.retry = retry;
 		this.interval = interval;

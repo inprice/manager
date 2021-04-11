@@ -17,7 +17,7 @@ public interface LinkDao {
 	@SqlQuery(
   	"select * from link " + 
 		"where status = 'TOBE_CLASSIFIED' " + 
-		"  and last_check is null " +
+		"  and checked_at is null " +
 		"limit 100"
 	)
 	@UseRowMapper(LinkMapper.class)
@@ -28,7 +28,7 @@ public interface LinkDao {
     "inner join account as a on a.id = l.account_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('AVAILABLE', 'RESOLVED') " +
-    "  and l.last_check <= now() - interval <interval> <timeUnit> " +
+    "  and l.checked_at <= now() - interval <interval> <timeUnit> " +
     "  and l.retry = <retry> " +
     "limit 100"
   )
@@ -40,7 +40,7 @@ public interface LinkDao {
     "inner join account as a on a.id = l.account_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('NOT_AVAILABLE', 'NETWORK_ERROR') " +
-    "  and l.last_check <= now() - interval <interval> <timeUnit> " +
+    "  and l.checked_at <= now() - interval <interval> <timeUnit> " +
     "  and l.retry = <retry> " +
     "limit 100"
   )
@@ -48,7 +48,7 @@ public interface LinkDao {
   List<Link> findFailedLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("timeUnit") String timeUnit);
 
   @Transaction
-  @SqlUpdate("update link set last_check=now() where id in (<linkIds>)")
-  void bulkUpdateLastCheck(@BindList("linkIds") List<Long> linkIds);
+  @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
+  void bulkUpdateCheckedAt(@BindList("linkIds") List<Long> linkIds);
 
 }

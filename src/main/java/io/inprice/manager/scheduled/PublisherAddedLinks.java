@@ -5,11 +5,11 @@ import java.util.List;
 import io.inprice.common.models.Link;
 import io.inprice.manager.dao.LinkDao;
 
-public class LinkPublisherNewlyAdded extends LinkPublisherAbstract {
+public class PublisherAddedLinks extends AbstractLinkPublisher {
 
 	@Override
 	String getTaskName() {
-		return "NEWLY-ADDED-LINK-PUBLISHER";
+		return "ADDED-LINK-PUBLISHER";
 	}
 
 	@Override

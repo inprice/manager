@@ -22,9 +22,9 @@ import io.inprice.manager.helpers.RedisClient;
  * 
  * @author mdpinar
  */
-abstract class LinkPublisherAbstract implements Runnable {
+abstract class AbstractLinkPublisher implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(LinkPublisherAbstract.class);
+  private static final Logger log = LoggerFactory.getLogger(AbstractLinkPublisher.class);
   
   abstract String getTaskName();
   abstract List<Link> findLinks(LinkDao linkDao);
@@ -61,7 +61,8 @@ abstract class LinkPublisherAbstract implements Runnable {
               LinkStatus oldStatus = link.getStatus();
               Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
               if (platform != null) {
-                link.setPlatform(platform);
+              	link.setPlatform(platform);
+                link.setPlatformId(platform.getId());
                 if (platform.getStatus() != null) {
                   link.setStatus(platform.getStatus());
                   link.setProblem(platform.getProblem());
@@ -69,6 +70,9 @@ abstract class LinkPublisherAbstract implements Runnable {
               } else {
                 link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
               }
+
+              //TODO: burada daha evvelden bu link bir sekilde sisteme eklenmis mi diye bakilacak,
+            	//varsa klonlanacak, yoksa asagidaki kisim isleyecek!
               if (!link.getStatus().equals(oldStatus)) {
               	shouldBeAddedToQueue = false;
                 RedisClient.publishStatusChange(link, oldStatus);
@@ -78,7 +82,7 @@ abstract class LinkPublisherAbstract implements Runnable {
             	RedisClient.publishActiveLink(link);
             }
           }
-          linkDao.bulkUpdateLastCheck(linkIds);
+          linkDao.bulkUpdateCheckedAt(linkIds);
 
           if (links.size() >= Props.DB_FETCH_LIMIT()) {
             try {

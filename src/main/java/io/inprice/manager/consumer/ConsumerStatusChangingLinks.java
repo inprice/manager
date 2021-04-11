@@ -28,11 +28,11 @@ import io.inprice.manager.helpers.RedisClient;
  * @author mdpinar
  * @since 2020-10-18
  */
-public class StatusChangingLinksConsumer {
+public class ConsumerStatusChangingLinks {
 
-  private static final Logger logger = LoggerFactory.getLogger(StatusChangingLinksConsumer.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConsumerStatusChangingLinks.class);
 
-  private static final RTopic topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
+  private static RTopic topic;
 
   //since parallel status change operations for the links under one group can cause fields
   //to be miscalculated such as avg and mac prices
@@ -40,12 +40,13 @@ public class StatusChangingLinksConsumer {
   private static final ExecutorService tPool = Executors.newFixedThreadPool(1);
   
   public static void start() {
+  	topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
     topic.addListener(StatusChange.class, (channel, change) -> {
 
       tPool.submit(new Runnable() {
-        @Override
-        public void run() {
 
+      	@Override
+        public void run() {
           Link link = change.getLink();
           List<String> queries = new ArrayList<>();
           
@@ -110,7 +111,7 @@ public class StatusChangingLinksConsumer {
                 Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
                 CommonRepository.refreshGroup(transaction, link.getGroupId(), priceChangingLinkId);
               }
-              return true;
+              return (queries.size() > 0);
             });
           } catch (Exception e) {
             logger.error("Failed to handle status change", e);
@@ -135,7 +136,7 @@ public class StatusChangingLinksConsumer {
       String.format(
         "update link " + 
         "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', status_group='%s', " +
-        "platform_id=%d, retry=0, http_status=%d, problem=null, last_update=now() " +
+        "platform_id=%d, retry=0, http_status=%d, problem=null, updated_at=now() " +
         "where id=%d ",
         link.getSku(),
         link.getName(),
@@ -155,7 +156,7 @@ public class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set retry=retry+1, problem='%s', http_status=%d, last_update=now() " +
+        "set retry=retry+1, problem='%s', http_status=%d, updated_at=now() " +
         "where id=%d ",
         link.getProblem(),
         link.getHttpStatus(),
@@ -167,8 +168,9 @@ public class StatusChangingLinksConsumer {
   	return
 			String.format(
 				"update link " + 
-					"set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', status_group='%s', last_update=now() " +
-					"where id=%d ",
+					"set retry=0, http_status=%d, problem='%s', pre_status=status, status='%s', status_group='%s', updated_at=now(), " + 
+					" platform_id= " + (link.getPlatformId() != null ? link.getPlatformId() : "null") +
+					" where id=%d ",
 					link.getHttpStatus(),
 					link.getProblem(),
 					link.getStatus(),
