@@ -1,5 +1,7 @@
 package io.inprice.manager.consumer;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -19,7 +21,7 @@ import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.LinkStatusGroup;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.LinkSpec;
-import io.inprice.common.repository.CommonRepository;
+import io.inprice.common.repository.CommonDao;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
@@ -108,8 +110,17 @@ public class ConsumerStatusChangingLinks {
               }
 
               if (isPriceRefresh[0]) {
-                Long priceChangingLinkId = (isNowAvailable ? link.getId() : null); // in order to add a link_price history row
-                CommonRepository.refreshGroup(transaction, link.getGroupId(), priceChangingLinkId);
+              	CommonDao commonDao = transaction.attach(CommonDao.class);
+                commonDao.refreshGroup(link.getGroupId());
+                if (isNowAvailable) {
+                	BigDecimal diffAmount = BigDecimal.ZERO;
+                	BigDecimal diffRate = BigDecimal.ZERO;
+                	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
+                  	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
+                  	diffRate = link.getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+                	}
+                	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
+                }
               }
               return (queries.size() > 0);
             });
