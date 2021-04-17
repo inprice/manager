@@ -32,7 +32,7 @@ public class RedisClient {
 
   public static void publishActiveLink(Link link) {
     if (baseClient.isHealthy()) {
-      activeLinksTopic.publishAsync(link);
+      activeLinksTopic.publish(link);
     } else {
       log.warn("Redis connection is not healthy. Publishing active link avoided! Status: {}, Url: {}", link.getStatus(), link.getUrl());
     }

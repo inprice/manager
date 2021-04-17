@@ -34,8 +34,8 @@ public class MemberRemover implements Runnable {
 
       log.info(clazz + " is triggered.");
       try (Handle handle = Database.getHandle()) {
-        handle.inTransaction(transactional -> {
-          MemberDao memberDao = transactional.attach(MemberDao.class);
+        handle.inTransaction(transaction -> {
+          MemberDao memberDao = transaction.attach(MemberDao.class);
           int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
           if (affected > 0) {
             log.info("{} member(s) in total set to be DELETED!", affected);
