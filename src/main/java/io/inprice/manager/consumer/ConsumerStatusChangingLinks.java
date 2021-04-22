@@ -15,7 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.config.SysProps;
+import io.inprice.common.converters.GroupRefreshResultConverter;
 import io.inprice.common.helpers.Database;
+import io.inprice.common.info.GroupRefreshResult;
 import io.inprice.common.info.StatusChange;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.LinkStatusGroup;
@@ -35,19 +37,17 @@ public class ConsumerStatusChangingLinks {
   private static final Logger logger = LoggerFactory.getLogger(ConsumerStatusChangingLinks.class);
 
   private static RTopic topic;
+  private static ExecutorService tPool;
 
-  //since parallel status change operations for the links under one group can cause fields
-  //to be miscalculated such as avg and mac prices
-  //this thread pool must be the capacity of 1
-  private static final ExecutorService tPool = Executors.newFixedThreadPool(1);
-  
   public static void start() {
+  	tPool = Executors.newFixedThreadPool(SysProps.TPOOL_LINK_CONSUMER_CAPACITY());
+
   	topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
     topic.addListener(StatusChange.class, (channel, change) -> {
 
       tPool.submit(new Runnable() {
 
-      	@Override
+        @Override
         public void run() {
           Link link = change.getLink();
           List<String> queries = new ArrayList<>();
@@ -71,10 +71,11 @@ public class ConsumerStatusChangingLinks {
       				isPriceRefresh[0] = true;
           	}
           }
-          
+
           //if it fails 
           if (LinkStatusGroup.TRYING.equals(newStatus.getGroup())) {
-          	if (link.getRetry() < 3) {
+
+          	if (oldStatus.equals(newStatus) && link.getRetry() < 3) {
               queries.add(queryIncreaseRetry(link));
             } else {
               if (! oldStatus.equals(newStatus)) {
@@ -111,7 +112,9 @@ public class ConsumerStatusChangingLinks {
 
               if (isPriceRefresh[0]) {
               	CommonDao commonDao = transaction.attach(CommonDao.class);
-                commonDao.refreshGroup(link.getGroupId());
+          			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
+          			System.out.println(" -- GRR for Status Changing LINK ID: " + link.getId() + " -- " + grr);
+
                 if (isNowAvailable) {
                 	BigDecimal diffAmount = BigDecimal.ZERO;
                 	BigDecimal diffRate = BigDecimal.ZERO;
@@ -191,14 +194,12 @@ public class ConsumerStatusChangingLinks {
   }
 
   private static String queryInsertLinkHistory(Link link) {
-    String problemStatement = (link.getProblem() != null ? "'"+link.getProblem().toUpperCase()+"'" : null);
     return
       String.format(
-        "insert into link_history (link_id, status, http_status, problem, group_id, account_id) values (%d, '%s', %d, %s, %d, %d) ",
+        "insert into link_history (link_id, status, http_status, group_id, account_id) values (%d, '%s', %d, %d, %d) ",
         link.getId(),
         link.getStatus(),
         link.getHttpStatus(),
-        problemStatement,
         link.getGroupId(),
         link.getAccountId()
       );
