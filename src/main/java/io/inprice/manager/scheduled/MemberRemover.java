@@ -31,19 +31,24 @@ public class MemberRemover implements Runnable {
 
     try {
       Global.startTask(clazz);
-
       log.info(clazz + " is triggered.");
+
       try (Handle handle = Database.getHandle()) {
-        handle.inTransaction(transaction -> {
-          MemberDao memberDao = transaction.attach(MemberDao.class);
-          int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
-          if (affected > 0) {
-            log.info("{} member(s) in total set to be DELETED!", affected);
-          } else {
-            log.info("No deleted member found!");
-          }
-          return (affected > 0);
-        });
+      	handle.begin();
+
+        MemberDao memberDao = handle.attach(MemberDao.class);
+        int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
+        if (affected > 0) {
+          log.info("{} member(s) in total set to be DELETED!", affected);
+        } else {
+          log.info("No deleted member found!");
+        }
+
+        if (affected > 0)
+        	handle.commit();
+        else
+        	handle.rollback();
+
       } catch (Exception e) {
         log.error("Failed to trigger " + clazz , e);
       }

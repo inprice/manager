@@ -101,32 +101,37 @@ public class ConsumerStatusChangingLinks {
           }
 
           try (Handle handle = Database.getHandle()) {
-            handle.inTransaction(transaction -> {
-              if (queries.size() > 0) {
-                Batch batch = transaction.createBatch();
-                for (String query: queries) {
-                  batch.add(query);
-                }
-                batch.execute();
-              }
+          	handle.begin();
 
-              if (isPriceRefresh[0]) {
-              	CommonDao commonDao = transaction.attach(CommonDao.class);
-          			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
-          			System.out.println(" -- GRR for Status Changing LINK ID: " + link.getId() + " -- " + grr);
-
-                if (isNowAvailable) {
-                	BigDecimal diffAmount = BigDecimal.ZERO;
-                	BigDecimal diffRate = BigDecimal.ZERO;
-                	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
-                  	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
-                  	diffRate = link.getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
-                	}
-                	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
-                }
+            if (queries.size() > 0) {
+              Batch batch = handle.createBatch();
+              for (String query: queries) {
+                batch.add(query);
               }
-              return (queries.size() > 0);
-            });
+              batch.execute();
+            }
+
+            if (isPriceRefresh[0]) {
+            	CommonDao commonDao = handle.attach(CommonDao.class);
+        			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
+        			System.out.println(" -- GRR for Status Changing LINK ID: " + link.getId() + " -- " + grr);
+
+              if (isNowAvailable) {
+              	BigDecimal diffAmount = BigDecimal.ZERO;
+              	BigDecimal diffRate = BigDecimal.ZERO;
+              	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
+                	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
+                	diffRate = link.getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+              	}
+              	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
+              }
+            }
+
+            if (queries.size() > 0)
+            	handle.commit();
+            else
+            	handle.rollback();
+
           } catch (Exception e) {
             logger.error("Failed to handle status change", e);
           }
