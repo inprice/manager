@@ -84,9 +84,9 @@ abstract class AbstractLinkPublisher implements Runnable {
           }
           linkDao.bulkUpdateCheckedAt(linkIds);
 
-          if (links.size() >= Props.DB_FETCH_LIMIT()) {
+          if (links.size() >= Props.DB_FETCH_LIMIT) {
             try {
-              Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS());
+              Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS);
             } catch (InterruptedException e) { }
             links = findLinks(linkDao);
           } else {

@@ -30,7 +30,7 @@ public class TaskManager {
     scheduler.scheduleAtFixedRate(new MemberRemover(), 0, 3, TimeUnit.HOURS);
     scheduler.scheduleAtFixedRate(new PublisherAddedLinks(), 0, 1, TimeUnit.MINUTES); //eager one
     
-    TimeUnit timeUnit = (SysProps.APP_ENV().equals(AppEnv.PROD) ? TimeUnit.HOURS : TimeUnit.MINUTES);
+    TimeUnit timeUnit = (SysProps.APP_ENV.equals(AppEnv.PROD) ? TimeUnit.HOURS : TimeUnit.MINUTES);
     String tuName = timeUnit.name().toLowerCase().substring(0, timeUnit.name().length()-1);
     
     //ACTIVE links which have faced a problem during scraping should be handled in incremental periods

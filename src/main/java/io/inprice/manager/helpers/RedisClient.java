@@ -21,8 +21,8 @@ public class RedisClient {
   static {
     baseClient = new BaseRedisClient();
     baseClient.open(() -> {
-      activeLinksTopic = createTopic(SysProps.REDIS_ACTIVE_LINKS_TOPIC());
-      statusChangeTopic = createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
+      activeLinksTopic = createTopic(SysProps.REDIS_ACTIVE_LINKS_TOPIC);
+      statusChangeTopic = createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC);
     });
   }
 

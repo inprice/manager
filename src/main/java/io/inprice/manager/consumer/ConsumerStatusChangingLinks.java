@@ -40,9 +40,9 @@ public class ConsumerStatusChangingLinks {
   private static ExecutorService tPool;
 
   public static void start() {
-  	tPool = Executors.newFixedThreadPool(SysProps.TPOOL_LINK_CONSUMER_CAPACITY());
+  	tPool = Executors.newFixedThreadPool(SysProps.TPOOL_LINK_CONSUMER_CAPACITY);
 
-  	topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC());
+  	topic = RedisClient.createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC);
     topic.addListener(StatusChange.class, (channel, change) -> {
 
       tPool.submit(new Runnable() {
@@ -146,7 +146,7 @@ public class ConsumerStatusChangingLinks {
     try {
       topic.removeAllListeners();
       tPool.shutdown();
-      tPool.awaitTermination(SysProps.WAITING_TIME_FOR_TERMINATION(), TimeUnit.SECONDS);
+      tPool.awaitTermination(SysProps.WAITING_TIME_FOR_TERMINATION, TimeUnit.SECONDS);
     } catch (InterruptedException e) { }
   }
 
