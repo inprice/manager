@@ -1,11 +1,14 @@
 package io.inprice.manager.scheduled;
 
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.common.meta.UserStatus;
+import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.MemberDao;
 import io.inprice.manager.helpers.Global;
 
@@ -34,20 +37,30 @@ public class MemberRemover implements Runnable {
       log.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
-      	handle.begin();
+      	MemberDao memberDao = handle.attach(MemberDao.class);
 
-        MemberDao memberDao = handle.attach(MemberDao.class);
-        int affected = memberDao.permenantlyDelete(UserStatus.DELETED.name());
-        if (affected > 0) {
-          log.info("{} member(s) in total set to be DELETED!", affected);
-        } else {
-          log.info("No deleted member found!");
-        }
+      	Map<Long, Integer> accountInfoMap = memberDao.findAccountInfoOfDeletedMembers();
+      	if (accountInfoMap != null && accountInfoMap.size() > 0) {
 
-        if (affected > 0)
-        	handle.commit();
-        else
-        	handle.rollback();
+        	handle.begin();
+
+        	AccountDao accountDao = handle.attach(AccountDao.class);
+        	
+        	int userCount = 0;
+        	for (Entry<Long, Integer> entry: accountInfoMap.entrySet()) {
+        		userCount += entry.getValue();
+        		accountDao.decreaseUserCount(entry.getKey(), entry.getValue());
+        	}
+      		
+          boolean isOK = memberDao.deletePermenantly();
+          if (isOK) {
+          	handle.commit();
+            log.info("{} member(s) in total are permanently DELETED!", userCount);
+          } else {
+          	handle.rollback();
+            log.info("No deleted member found!");
+          }
+      	}
 
       } catch (Exception e) {
         log.error("Failed to trigger " + clazz , e);
