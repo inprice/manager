@@ -5,7 +5,7 @@ import java.util.List;
 import io.inprice.common.models.Link;
 import io.inprice.manager.dao.LinkDao;
 
-public class PublisherAddedLinks extends AbstractLinkPublisher {
+public class NewlyAddedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	String getTaskName() {
