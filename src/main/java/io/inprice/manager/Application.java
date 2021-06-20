@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
+import io.inprice.manager.consumer.EmailConsumer;
 import io.inprice.manager.consumer.StatusChangingLinksConsumer;
 import io.inprice.manager.helpers.Global;
 import io.inprice.manager.helpers.RedisClient;
@@ -26,6 +27,7 @@ public class Application {
 
 			TaskManager.start();
 			StatusChangingLinksConsumer.start();
+			EmailConsumer.start();
 
 		}, "app-starter").start();
 
@@ -35,9 +37,12 @@ public class Application {
 
 			log.info(" - TaskManager is shutting down...");
 			TaskManager.stop();
-
-			log.info(" - ParsedLinksConsumer is shutting down...");
+			
+			log.info(" - StatusChangingLinksConsumer is shutting down...");
 			StatusChangingLinksConsumer.stop();
+
+			log.info(" - EmailConsumer is shutting down...");
+			EmailConsumer.stop();
 
 			log.info(" - Redis connection is closing...");
 			RedisClient.shutdown();

@@ -1,4 +1,4 @@
-package io.inprice.manager.scheduled;
+package io.inprice.manager.scheduled.modifier;
 
 import java.util.Map;
 import java.util.Map.Entry;

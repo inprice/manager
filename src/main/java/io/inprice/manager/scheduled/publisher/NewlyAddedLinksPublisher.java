@@ -1,4 +1,4 @@
-package io.inprice.manager.scheduled;
+package io.inprice.manager.scheduled.publisher;
 
 import java.util.List;
 

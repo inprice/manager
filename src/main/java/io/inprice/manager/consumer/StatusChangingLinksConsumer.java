@@ -30,7 +30,7 @@ import io.inprice.common.repository.CommonDao;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Handles status change and price change
+ * Handles status and price changings
  * 
  * @author mdpinar
  * @since 2020-10-18
@@ -261,17 +261,12 @@ public class StatusChangingLinksConsumer {
 
     return list;
   }
-  
+
   private static String checkAndGenerateUpdateQueryForGroupAlarm(LinkGroup group, GroupRefreshResult grr) {
   	boolean willBeUpdated = false;
 
-  	//if level changes
   	if (! group.getLevel().equals(grr.getLevel()) && AlarmSubject.STATUS.equals(group.getAlarm().getSubject())) {
   		switch (group.getAlarm().getSubjectWhen()) {
-  			case CHANGED: {
-  				willBeUpdated = true;
-  				break;
-  			}
   			case EQUAL: {
   				willBeUpdated = group.getLevel().name().equals(group.getAlarm().getCertainStatus());
   				break;
@@ -280,11 +275,13 @@ public class StatusChangingLinksConsumer {
   				willBeUpdated = !group.getLevel().name().equals(group.getAlarm().getCertainStatus());
   				break;
   			}
-  			default: break;
+  			default: {
+  				willBeUpdated = true;
+  				break;
+  			}
 			}
   	}
 
-  	//if amount changes
   	BigDecimal controlAmount = null;
   	if (! AlarmSubject.STATUS.equals(group.getAlarm().getSubject())) {
   		int diffSigma = 0;
@@ -315,10 +312,6 @@ public class StatusChangingLinksConsumer {
 
   		if (diffSigma != 0) {
     		switch (group.getAlarm().getSubjectWhen()) {
-    			case CHANGED: {
-    				willBeUpdated = true;
-    				break;
-    			}
     			case INCREASED: {
     				willBeUpdated = diffSigma > 0;
     				break;
@@ -333,7 +326,10 @@ public class StatusChangingLinksConsumer {
     				}
     				break;
     			}
-    			default: break;
+    			default: {
+    				willBeUpdated = true;
+    				break;
+    			}
     		}
   		}
   	}
@@ -341,7 +337,7 @@ public class StatusChangingLinksConsumer {
   	if (willBeUpdated) {
       return
         String.format(
-          "update alarm set last_status='%s', last_price=%f, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_price=%f, tobe_notified=true, updated_at=now() where id=%d ",
           group.getLevel(),
           controlAmount,
           group.getAlarmId()
@@ -353,15 +349,11 @@ public class StatusChangingLinksConsumer {
 
   private static String checkAndGenerateUpdateQueryForLinkAlarm(LinkStatusChange change, boolean isStatusChanged, boolean isPriceChanged) {
   	boolean willBeUpdated = false;
-  	
+
   	Link link = change.getLink();
 
   	if (isStatusChanged && AlarmSubject.STATUS.equals(link.getAlarm().getSubject())) {
   		switch (link.getAlarm().getSubjectWhen()) {
-  			case CHANGED: {
-  				willBeUpdated = true;
-  				break;
-  			}
   			case EQUAL: {
   				willBeUpdated = link.getStatus().name().equals(link.getAlarm().getCertainStatus());
   				break;
@@ -370,16 +362,15 @@ public class StatusChangingLinksConsumer {
   				willBeUpdated = !link.getStatus().name().equals(link.getAlarm().getCertainStatus());
   				break;
   			}
-  			default: break;
+  			default: {
+  				willBeUpdated = true;
+  				break;
+  			}
 			}
   	}
   	
   	if (isPriceChanged && AlarmSubject.PRICE.equals(link.getAlarm().getSubject())) {
   		switch (link.getAlarm().getSubjectWhen()) {
-  			case CHANGED: {
-  				willBeUpdated = true;
-  				break;
-  			}
   			case INCREASED: {
   				willBeUpdated = link.getPrice().compareTo(change.getOldPrice()) > 0;
   				break;
@@ -392,14 +383,17 @@ public class StatusChangingLinksConsumer {
   				willBeUpdated = checkIfPriceIsOutOfLimits(link.getPrice(), link.getAlarm().getPriceLowerLimit(), link.getAlarm().getPriceUpperLimit());
   				break;
   			}
-  			default: break;
+  			default: {
+  				willBeUpdated = true;
+  				break;
+  			}
   		}
   	}
   	
   	if (willBeUpdated) {
       return
         String.format(
-          "update alarm set last_status='%s', last_price=%f, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_price=%f, tobe_notified=true, updated_at=now() where id=%d ",
           link.getStatus(),
           link.getPrice(),
           link.getAlarmId()

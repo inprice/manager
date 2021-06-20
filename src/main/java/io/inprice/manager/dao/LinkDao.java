@@ -16,7 +16,7 @@ import io.inprice.common.repository.AlarmDao;
 public interface LinkDao {
 
 	@SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link " + 
+  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
     "left join alarm as al on al.id = l.alarm_id " + 
 		"where l.status = 'TOBE_CLASSIFIED' " + 
 		"  and l.checked_at is null " +
@@ -26,7 +26,7 @@ public interface LinkDao {
 	List<Link> findNewlyAddedLinks();
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link " + 
+  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
@@ -39,7 +39,7 @@ public interface LinkDao {
   List<Link> findActiveLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("timeUnit") String timeUnit);
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link " + 
+  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
