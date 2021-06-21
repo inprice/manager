@@ -22,6 +22,7 @@ import io.inprice.common.info.LinkStatusChange;
 import io.inprice.common.meta.AlarmSubject;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.LinkStatusGroup;
+import io.inprice.common.models.Alarm;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.LinkGroup;
 import io.inprice.common.models.LinkSpec;
@@ -30,14 +31,14 @@ import io.inprice.common.repository.CommonDao;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Handles status and price changings
+ * This is a the most important class to mange links' states, prices and alarms.
  * 
  * @author mdpinar
  * @since 2020-10-18
  */
-public class StatusChangingLinksConsumer {
+public class ChangingLinksConsumer {
 
-  private static final Logger logger = LoggerFactory.getLogger(StatusChangingLinksConsumer.class);
+  private static final Logger logger = LoggerFactory.getLogger(ChangingLinksConsumer.class);
 
   private static RTopic topic;
   private static ExecutorService tPool;
@@ -133,7 +134,7 @@ public class StatusChangingLinksConsumer {
         				AlarmDao alarmDao = handle.attach(AlarmDao.class);
         				LinkGroup group = alarmDao.findGroupAndAlarmById(link.getGroupId());
         				if (group != null) {
-                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group, grr);
+                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group);
                 	if (alarmUpdatingQuery != null) {
                 		handle.execute(alarmUpdatingQuery);
                 	}
@@ -262,17 +263,19 @@ public class StatusChangingLinksConsumer {
     return list;
   }
 
-  private static String checkAndGenerateUpdateQueryForGroupAlarm(LinkGroup group, GroupRefreshResult grr) {
+  private static String checkAndGenerateUpdateQueryForGroupAlarm(LinkGroup group) {
   	boolean willBeUpdated = false;
+  	
+  	Alarm alarm = group.getAlarm();
 
-  	if (! group.getLevel().equals(grr.getLevel()) && AlarmSubject.STATUS.equals(group.getAlarm().getSubject())) {
-  		switch (group.getAlarm().getSubjectWhen()) {
+  	if (AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
-  				willBeUpdated = group.getLevel().name().equals(group.getAlarm().getCertainStatus());
+  				willBeUpdated = group.getLevel().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			case NOT_EQUAL: {
-  				willBeUpdated = !group.getLevel().name().equals(group.getAlarm().getCertainStatus());
+  				willBeUpdated = !group.getLevel().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			default: {
@@ -282,48 +285,41 @@ public class StatusChangingLinksConsumer {
 			}
   	}
 
-  	BigDecimal controlAmount = null;
-  	if (! AlarmSubject.STATUS.equals(group.getAlarm().getSubject())) {
-  		int diffSigma = 0;
+  	BigDecimal newAmount = null;
 
-  		switch (group.getAlarm().getSubject()) {
+  	if (! AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  		switch (alarm.getSubject()) {
   			case MINIMUM: {
-  				controlAmount = group.getMinPrice();
-  				diffSigma = group.getMinPrice().compareTo(grr.getMinPrice());
+  				newAmount = group.getMinPrice();
   				break;
   			}
   			case AVERAGE: {
-  				controlAmount = group.getAvgPrice();
-  				diffSigma = group.getAvgPrice().compareTo(grr.getAvgPrice());
+  				newAmount = group.getAvgPrice();
   				break;
   			}
   			case MAXIMUM: {
-  				controlAmount = group.getMaxPrice();
-  				diffSigma = group.getMaxPrice().compareTo(grr.getMaxPrice());
+  				newAmount = group.getMaxPrice();
   				break;
   			}
   			case TOTAL: {
-  				controlAmount = group.getTotal();
-  				diffSigma = group.getTotal().compareTo(grr.getTotal());
+  				newAmount = group.getTotal();
   				break;
   			}
 				default: break;
 			}
 
-  		if (diffSigma != 0) {
-    		switch (group.getAlarm().getSubjectWhen()) {
+  		if (newAmount != null) {
+    		switch (alarm.getSubjectWhen()) {
     			case INCREASED: {
-    				willBeUpdated = diffSigma > 0;
+    				willBeUpdated = newAmount.compareTo(alarm.getLastAmount()) > 0;
     				break;
     			}
     			case DECREASED: {
-    				willBeUpdated = diffSigma < 0;
+    				willBeUpdated = newAmount.compareTo(alarm.getLastAmount()) < 0;
     				break;
     			}
     			case OUT_OF_LIMITS: {
-    				if (controlAmount != null) {
-    					willBeUpdated = checkIfPriceIsOutOfLimits(controlAmount, group.getAlarm().getPriceLowerLimit(), group.getAlarm().getPriceUpperLimit());
-    				}
+  					willBeUpdated = checkIfPriceIsOutOfLimits(newAmount, alarm.getAmountLowerLimit(), alarm.getAmountUpperLimit());
     				break;
     			}
     			default: {
@@ -337,9 +333,9 @@ public class StatusChangingLinksConsumer {
   	if (willBeUpdated) {
       return
         String.format(
-          "update alarm set last_status='%s', last_price=%f, tobe_notified=true, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_amount=%f, tobe_notified=true, updated_at=now() where id=%d ",
           group.getLevel(),
-          controlAmount,
+          newAmount,
           group.getAlarmId()
         );
   	}
@@ -351,15 +347,16 @@ public class StatusChangingLinksConsumer {
   	boolean willBeUpdated = false;
 
   	Link link = change.getLink();
+  	Alarm alarm = link.getAlarm();
 
-  	if (isStatusChanged && AlarmSubject.STATUS.equals(link.getAlarm().getSubject())) {
-  		switch (link.getAlarm().getSubjectWhen()) {
+  	if (isStatusChanged && AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
-  				willBeUpdated = link.getStatus().name().equals(link.getAlarm().getCertainStatus());
+  				willBeUpdated = link.getStatus().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			case NOT_EQUAL: {
-  				willBeUpdated = !link.getStatus().name().equals(link.getAlarm().getCertainStatus());
+  				willBeUpdated = !link.getStatus().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			default: {
@@ -369,18 +366,18 @@ public class StatusChangingLinksConsumer {
 			}
   	}
   	
-  	if (isPriceChanged && AlarmSubject.PRICE.equals(link.getAlarm().getSubject())) {
-  		switch (link.getAlarm().getSubjectWhen()) {
+  	if (isPriceChanged && AlarmSubject.PRICE.equals(alarm.getSubject())) {
+  		switch (alarm.getSubjectWhen()) {
   			case INCREASED: {
-  				willBeUpdated = link.getPrice().compareTo(change.getOldPrice()) > 0;
+  				willBeUpdated = link.getPrice().compareTo(alarm.getLastAmount()) > 0;
   				break;
   			}
   			case DECREASED: {
-  				willBeUpdated = link.getPrice().compareTo(change.getOldPrice()) < 0;
+  				willBeUpdated = link.getPrice().compareTo(alarm.getLastAmount()) < 0;
   				break;
   			}
   			case OUT_OF_LIMITS: {
-  				willBeUpdated = checkIfPriceIsOutOfLimits(link.getPrice(), link.getAlarm().getPriceLowerLimit(), link.getAlarm().getPriceUpperLimit());
+  				willBeUpdated = checkIfPriceIsOutOfLimits(link.getPrice(), alarm.getAmountLowerLimit(), alarm.getAmountUpperLimit());
   				break;
   			}
   			default: {
@@ -393,7 +390,7 @@ public class StatusChangingLinksConsumer {
   	if (willBeUpdated) {
       return
         String.format(
-          "update alarm set last_status='%s', last_price=%f, tobe_notified=true, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_amount=%f, tobe_notified=true, updated_at=now() where id=%d ",
           link.getStatus(),
           link.getPrice(),
           link.getAlarmId()
@@ -402,7 +399,7 @@ public class StatusChangingLinksConsumer {
 
   	return null;
   }
-  
+
   private static boolean checkIfPriceIsOutOfLimits(BigDecimal price, BigDecimal lowerLimit, BigDecimal upperLimit) {
   	if (price.compareTo(BigDecimal.ZERO) > 0) {
   		if (lowerLimit.compareTo(BigDecimal.ZERO) > 0) {
