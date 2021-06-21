@@ -3,6 +3,7 @@ package io.inprice.manager.consumer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +29,7 @@ import io.inprice.common.models.LinkGroup;
 import io.inprice.common.models.LinkSpec;
 import io.inprice.common.repository.AlarmDao;
 import io.inprice.common.repository.CommonDao;
+import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.helpers.RedisClient;
 
 /**
@@ -329,13 +331,24 @@ public class ChangingLinksConsumer {
     		}
   		}
   	}
-  	
+
   	if (willBeUpdated) {
-      return
+  		String tobeNotifiedPart = "tobe_notified=true, ";
+
+    	//checks if it is already notified within 5 mins. if so, no need to disturb the customer!
+    	if (willBeUpdated && alarm.getNotifiedAt() != null) {
+        long diff = DateUtils.findMinuteDiff(alarm.getNotifiedAt(), new Date());
+        if (diff <= 5) {
+        	tobeNotifiedPart = "";
+        }
+    	}
+
+  		return
         String.format(
-          "update alarm set last_status='%s', last_amount=%f, tobe_notified=true, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_amount=%f, %s updated_at=now() where id=%d ",
           group.getLevel(),
           newAmount,
+          tobeNotifiedPart,
           group.getAlarmId()
         );
   	}
@@ -386,13 +399,24 @@ public class ChangingLinksConsumer {
   			}
   		}
   	}
-  	
+
   	if (willBeUpdated) {
+  		String tobeNotifiedPart = "tobe_notified=true, ";
+
+    	//checks if it is already notified within 5 mins. if so, no need to disturb the customer!
+    	if (willBeUpdated && alarm.getNotifiedAt() != null) {
+        long diff = DateUtils.findMinuteDiff(alarm.getNotifiedAt(), new Date());
+        if (diff <= 5) {
+        	tobeNotifiedPart = "";
+        }
+    	}
+
       return
         String.format(
-          "update alarm set last_status='%s', last_amount=%f, tobe_notified=true, updated_at=now() where id=%d ",
+          "update alarm set last_status='%s', last_amount=%f, %s updated_at=now() where id=%d ",
           link.getStatus(),
           link.getPrice(),
+          tobeNotifiedPart,
           link.getAlarmId()
         );
   	}
