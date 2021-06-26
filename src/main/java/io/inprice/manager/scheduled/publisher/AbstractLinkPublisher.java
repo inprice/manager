@@ -1,4 +1,4 @@
-package io.inprice.manager.scheduled;
+package io.inprice.manager.scheduled.publisher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,8 +71,23 @@ abstract class AbstractLinkPublisher implements Runnable {
                 link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
               }
 
-              //TODO: burada daha evvelden bu link bir sekilde sisteme eklenmis mi diye bakilacak,
-            	//varsa klonlanacak, yoksa asagidaki kisim isleyecek!
+              //checks if the same url added previously. if so, then clones it!
+              if (LinkStatus.TOBE_CLASSIFIED.equals(link.getStatus())) {
+                Link sample = linkDao.findTheSameAndActiveLinkByUrl(link.getUrl());
+                if (sample != null) {
+                	link.setSku(sample.getSku());
+                	link.setName(sample.getName());
+                	link.setBrand(sample.getBrand());
+                	link.setSeller(sample.getSeller());
+                	link.setShipment(sample.getShipment());
+                	link.setPrice(sample.getPrice());
+                	link.setLevel(sample.getLevel());
+                  link.setPreStatus(sample.getPreStatus());
+                  link.setStatus(sample.getStatus());
+                  link.setPlatformId(sample.getPlatformId());
+                }
+              }
+
               if (!link.getStatus().equals(oldStatus)) {
               	shouldBeAddedToQueue = false;
                 RedisClient.publishStatusChange(link, oldStatus);

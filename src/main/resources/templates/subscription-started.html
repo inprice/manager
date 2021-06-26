@@ -1,0 +1,25 @@
+Dear <strong>${user}</strong>,
+
+<p>
+  We would like to inform you that the subscription for your account
+  <strong>${account}</strong> has been approved. You can use the platform from now on.
+</p>
+
+<p>
+  Your subscription details:          
+</p>
+
+<table style="width: 70%; border-collapse: collapse; text-align: left; overflow-x:auto; ${table-border}" cellpadding="5">
+  <tr>
+    <td style="${table-border} width: 7%; text-align: right">Plan</td>
+    <th style="${table-border}">${plan}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 7%; text-align: right">Renewal</td>
+    <th style="${table-border}">${subsRenewalAt}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 7%; text-align: right">Invoice</td>
+    <th style="${table-border}">${invoiceUrl}</th>
+  </tr>
+</table>
