@@ -1,4 +1,4 @@
-package io.inprice.manager.scheduled.modifier;
+package io.inprice.manager.scheduled.notifier;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -20,19 +20,19 @@ import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.UserDao;
+import io.inprice.manager.email.EmailSender;
 import io.inprice.manager.helpers.Global;
-import io.inprice.manager.helpers.RedisClient;
 
 /**
- * Sends emails to the accounts whose statuses are either FREE or COUPONED and there is less 
- * than or equal to three days to renewal date.
+ * Sends emails to the accounts whose statuses are either FREE or COUPONED 
+ * and there is less than four days to renewal date.
  * 
  * @since 2020-12-06
  * @author mdpinar
  */
-public class ReminderForFreeAccounts implements Runnable {
+public class FreeAccountsExpirationReminder implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(ReminderForFreeAccounts.class);
+  private static final Logger log = LoggerFactory.getLogger(FreeAccountsExpirationReminder.class);
 
   private final String clazz = getClass().getSimpleName();
 
@@ -72,7 +72,7 @@ public class ReminderForFreeAccounts implements Runnable {
             mailMap.put("days", DateUtils.findDayDiff(account.getSubsRenewalAt(), new Date()));
             mailMap.put("subsRenewalAt", DateUtils.formatReverseDate(account.getSubsRenewalAt()));
 
-          	RedisClient.sendEmail(
+            EmailSender.send(
         			EmailData.builder()
           			.template(EmailTemplate.FREE_ACCOUNT_REMINDER)
           			.from(Props.APP_EMAIL_SENDER)

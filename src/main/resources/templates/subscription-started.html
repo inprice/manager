@@ -1,29 +1,25 @@
-<h1>Dear ${user},</h1>
+Dear <strong>${user}</strong>,
 
 <p>
   We would like to inform you that the subscription for your account
-  ${account} has been approved. You can use the platform from now on.
+  <strong>${account}</strong> has been approved. You can use the platform from now on.
 </p>
 
-<div class="f-fallback align-center"><strong>Your subscription details</strong></div>
+<p>
+  Your subscription details:          
+</p>
 
-<table class="attributes" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+<table style="width: 70%; border-collapse: collapse; text-align: left; overflow-x:auto; ${table-border}" cellpadding="5">
   <tr>
-    <td class="attributes_content">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-        <tr>
-          <th class="f-fallback col_key">Plan</th>
-          <td class="f-fallback col_value">${plan}</td>
-        </tr>
-        <tr>
-          <th class="f-fallback col_key">Renewal</th>
-          <td class="f-fallback col_value">${subsRenewalAt}</td>
-        </tr>
-        <tr>
-          <th class="f-fallback col_key">Invoice</th>
-          <td class="f-fallback col_value">${invoiceUrl}</td>
-        </tr>
-      </table>
-    </td>
+    <td style="${table-border} width: 7%; text-align: right">Plan</td>
+    <th style="${table-border}">${plan}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 7%; text-align: right">Renewal</td>
+    <th style="${table-border}">${subsRenewalAt}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 7%; text-align: right">Invoice</td>
+    <th style="${table-border}">${invoiceUrl}</th>
   </tr>
 </table>

@@ -22,8 +22,8 @@ import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.SubscriptionDao;
 import io.inprice.manager.dao.UserDao;
+import io.inprice.manager.email.EmailSender;
 import io.inprice.manager.helpers.Global;
-import io.inprice.manager.helpers.RedisClient;
 
 /**
  * Stops accounts whose statuses are either FREE or COUPONED and subs renewal date expired.
@@ -95,7 +95,7 @@ public class FreeAccountStopper implements Runnable {
               mailMap.put("user", user.getEmail());
               mailMap.put("account", accountName);
               
-            	RedisClient.sendEmail(
+              EmailSender.send(
           			EmailData.builder()
             			.template(EmailTemplate.FREE_ACCOUNT_STOPPED)
             			.from(Props.APP_EMAIL_SENDER)

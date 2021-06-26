@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.common.config.SysProps;
 import io.inprice.common.helpers.BaseRedisClient;
-import io.inprice.common.info.EmailData;
 import io.inprice.common.info.LinkStatusChange;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.AccessLog;
@@ -21,7 +20,6 @@ public class RedisClient {
 
   private static RTopic activeLinksTopic;
   private static RTopic statusChangeTopic;
-  private static RTopic sendingEmailsTopic;
 
   public static RQueue<AccessLog> accessLogQueue;
   
@@ -30,7 +28,6 @@ public class RedisClient {
     baseClient.open(() -> {
       activeLinksTopic = createTopic(SysProps.REDIS_ACTIVE_LINKS_TOPIC);
       statusChangeTopic = createTopic(SysProps.REDIS_STATUS_CHANGE_TOPIC);
-    	sendingEmailsTopic = baseClient.getClient().getTopic(SysProps.REDIS_SENDING_EMAILS_TOPIC);
 
       accessLogQueue = baseClient.getClient().getQueue(SysProps.REDIS_ACCESS_LOG_QUEUE);
     });
@@ -56,12 +53,7 @@ public class RedisClient {
     }
   }
 
-  public static void sendEmail(EmailData emailData) {
-    sendingEmailsTopic.publish(emailData);
-  }
-
   public static void shutdown() {
-  	sendingEmailsTopic.removeAllListeners();
     activeLinksTopic.removeAllListeners();
     statusChangeTopic.removeAllListeners();
     baseClient.shutdown();

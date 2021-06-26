@@ -1,4 +1,4 @@
-<h1>Dear ${user},</h1>
+Dear <strong>${user}</strong>,
 
 <p>
   You have been invited to join to ${account} on Inprice by ${admin}.
@@ -6,17 +6,4 @@
   confirmation link. Or you can safely ignore this email.
 </p>
 
-<!-- Action -->
-<table class="body-action" align="center" width="100%" cellpadding="0" cellspacing="0" role="presentation">
-  <tr>
-    <td align="center">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
-        <tr>
-          <td align="center">
-            <a href="${url}?token=${token}" class="f-fallback button button--green" target="_blank">Accept Invitation</a>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
+<a href="${url}?token=${token}" style="${normal-button-style}" target="_blank">Accept Invitation</a>

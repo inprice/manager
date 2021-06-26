@@ -2,6 +2,7 @@ package io.inprice.manager.dao;
 
 import java.util.List;
 
+import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindList;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
@@ -54,5 +55,9 @@ public interface LinkDao {
   @Transaction
   @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
   void bulkUpdateCheckedAt(@BindList("linkIds") List<Long> linkIds);
+
+  @SqlQuery("select * from link where url=:url and status_group='ACTIVE' order by updated_at desc limit 1")
+  @UseRowMapper(LinkMapper.class)
+  Link findTheSameAndActiveLinkByUrl(@Bind("url") String url);
 
 }

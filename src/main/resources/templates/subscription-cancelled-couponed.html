@@ -1,4 +1,4 @@
-<h1>Dear ${user},</h1>
+Dear <strong>${user}</strong>,
 
 <p>
   We are sorry to see you cancelling your subscription. We would like to know the reason
@@ -12,30 +12,24 @@
   to subscribe again.
 </p>
 
-<div class="f-fallback">
+<p>
   We have issued a coupon for your remaining days. Here are the details; You
   are free to use it whenever you want. You can use it in another account or
   even give away it to one of your friends
-</div>
+</p>
 
-<table class="attributes" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+<table style="width: 350px; border-collapse: collapse; text-align: left; overflow-x:auto; ${table-border}" cellpadding="5">
   <tr>
-    <td class="attributes_content">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-        <tr>
-          <th class="f-fallback col_key">Coupon</th>
-          <td class="f-fallback col_value">${couponCode}</td>
-        </tr>
-        <tr>
-          <th class="f-fallback col_key">Plan</th>
-          <td class="f-fallback col_value">${planName}</td>
-        </tr>
-        <tr>
-          <th class="f-fallback col_key">Days</th>
-          <td class="f-fallback col_value">${days}</td>
-        </tr>
-      </table>
-    </td>
+    <td style="${table-border} width: 50px; text-align: right">Coupon</td>
+    <th style="${table-border}">${couponCode}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 50px; text-align: right">Plan</td>
+    <th style="${table-border}">${planName}</th>
+  </tr>
+  <tr>
+    <td style="${table-border} width: 50px; text-align: right">Days</td>
+    <th style="${table-border}">${days}</th>
   </tr>
 </table>
 
