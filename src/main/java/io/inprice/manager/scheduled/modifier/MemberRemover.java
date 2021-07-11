@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
 import io.inprice.manager.dao.AccountDao;
-import io.inprice.manager.dao.MemberDao;
+import io.inprice.manager.dao.MembershipDao;
 import io.inprice.manager.helpers.Global;
 
 /**
@@ -37,9 +37,9 @@ public class MemberRemover implements Runnable {
       log.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
-      	MemberDao memberDao = handle.attach(MemberDao.class);
+      	MembershipDao membershipDao = handle.attach(MembershipDao.class);
 
-      	Map<Long, Integer> accountInfoMap = memberDao.findAccountInfoOfDeletedMembers();
+      	Map<Long, Integer> accountInfoMap = membershipDao.findAccountInfoOfDeletedMembers();
       	if (accountInfoMap != null && accountInfoMap.size() > 0) {
 
         	handle.begin();
@@ -52,7 +52,7 @@ public class MemberRemover implements Runnable {
         		accountDao.decreaseUserCount(entry.getKey(), entry.getValue());
         	}
       		
-          boolean isOK = memberDao.deletePermenantly();
+          boolean isOK = membershipDao.deletePermenantly();
           if (isOK) {
           	handle.commit();
             log.info("{} member(s) in total are permanently DELETED!", userCount);

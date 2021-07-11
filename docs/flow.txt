@@ -100,12 +100,6 @@ PAUSED
     - Akış
         manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
-RESUMED
-    - Kendi tetikleyicisi var: CommonLinkPublisher(Status.RESUMED)
-    - Manager deki tetikleyici tarafından periodik olarak veritabanından bu durumdaki linkler toplanıp
-    - Manager tarafından bir önceki durumlarına getirilirler
-    - Akış
-        manager to manager --> RABBITMQ_STATUS_CHANGE_QUEUE
 
 Notlar
     1) Bir durumdan diğerine geçişlerde mutlaka

@@ -7,7 +7,7 @@ import org.jdbi.v3.sqlobject.config.ValueColumn;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
-public interface MemberDao {
+public interface MembershipDao {
 	
 	@SqlQuery(
 		"select account_id, count(1) as counter from member " +
