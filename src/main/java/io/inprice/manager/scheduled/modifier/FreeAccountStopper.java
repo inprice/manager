@@ -18,7 +18,6 @@ import io.inprice.common.meta.SubsEvent;
 import io.inprice.common.models.Account;
 import io.inprice.common.models.AccountTrans;
 import io.inprice.common.models.User;
-import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.SubscriptionDao;
 import io.inprice.manager.dao.UserDao;
@@ -98,7 +97,6 @@ public class FreeAccountStopper implements Runnable {
               EmailSender.send(
           			EmailData.builder()
             			.template(EmailTemplate.FREE_ACCOUNT_STOPPED)
-            			.from(Props.APP_EMAIL_SENDER)
             			.to(user.getEmail())
             			.subject("Your inprice subscription is stopped.")
             			.data(mailMap)

@@ -5,10 +5,8 @@ import io.inprice.common.utils.NumberUtils;
 public class Props {
 
 	public static final String APP_EMAIL_SENDER;
-
-	//pass --> ?R2>2~At~Btun,A^
 	public static final String API_KEYS_SENDGRID;
-	
+
   public static final int DB_FETCH_LIMIT;
   public static final int WAITING_TIME_FOR_FETCHING_LINKS;
 
@@ -19,10 +17,9 @@ public class Props {
   public static final String INTERVAL_FLUSHING_ACCESS_LOG_QUEUE;
 
   static {
-  	APP_EMAIL_SENDER = System.getenv().getOrDefault("APP_EMAIL_SENDER", "account@inprice.io");
+		APP_EMAIL_SENDER = System.getenv().getOrDefault("APP_EMAIL_SENDER", "account@inprice.io");
+  	API_KEYS_SENDGRID = System.getenv().getOrDefault("API_KEYS_SENDGRID", "?R2>2~At~Btun,A^");
 
-  	API_KEYS_SENDGRID = System.getenv().get("API_KEYS_SENDGRID");
-  	
   	DB_FETCH_LIMIT = NumberUtils.toInteger(System.getenv().getOrDefault("DB_FETCH_LIMIT", "100"));
   	WAITING_TIME_FOR_FETCHING_LINKS = NumberUtils.toInteger(System.getenv().getOrDefault("WAITING_TIME_FOR_FETCHING_LINKS", "3"));
 

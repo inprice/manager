@@ -19,7 +19,6 @@ import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.EmailTemplate;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.utils.DateUtils;
-import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AlarmDao;
 import io.inprice.manager.email.EmailSender;
 import io.inprice.manager.helpers.Global;
@@ -125,7 +124,6 @@ public class AlarmNotifier implements Runnable {
   	EmailSender.send(
 			EmailData.builder()
   			.template(EmailTemplate.ALARM_NOTIFICATION)
-  			.from(Props.APP_EMAIL_SENDER)
   			.to(alarms.get(0).getEmail())
   			.subject("The entities you want to be notified when they change. ")
   			.data(mailMap)

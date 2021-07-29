@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +86,8 @@ public class EmailSender {
 		Content emailContent = new Content("text/html", content);
 
 		Mail mail = new Mail(emailFrom, emailData.getSubject(), emailTo, emailContent);
+		
+		String from = StringUtils.defaultIfEmpty(emailData.getFrom(), Props.APP_EMAIL_SENDER);
 
 		SendGrid sg = new SendGrid(Props.API_KEYS_SENDGRID);
 		Request request = new Request();
@@ -94,12 +97,12 @@ public class EmailSender {
 			request.setBody(mail.build());
       Response response = sg.api(request);
       if (response.getStatusCode() >= 400) {
-      	logger.warn("Problem sending email, to: {}, status: {}, body: {}", emailData.getFrom(), response.getStatusCode(), response.getBody());
+      	logger.warn("Problem sending email, to: {}, status: {}, body: {}", from, response.getStatusCode(), response.getBody());
       } else {
       	logger.info("Email sent to: {}", emailTo.getEmail());
       }
 		} catch (IOException e) {
-			logger.error("Failed to send email, to: {}, body: {}", emailData.getFrom(), content, e);
+			logger.error("Failed to send email, to: {}, body: {}", from, content, e);
 		}
 	}
 	

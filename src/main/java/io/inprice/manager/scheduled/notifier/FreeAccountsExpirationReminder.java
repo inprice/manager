@@ -17,7 +17,6 @@ import io.inprice.common.meta.EmailTemplate;
 import io.inprice.common.models.Account;
 import io.inprice.common.models.User;
 import io.inprice.common.utils.DateUtils;
-import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.UserDao;
 import io.inprice.manager.email.EmailSender;
@@ -75,7 +74,6 @@ public class FreeAccountsExpirationReminder implements Runnable {
             EmailSender.send(
         			EmailData.builder()
           			.template(EmailTemplate.FREE_ACCOUNT_REMINDER)
-          			.from(Props.APP_EMAIL_SENDER)
           			.to(user.getEmail())
           			.subject("Your subscription is about to end.")
           			.data(mailMap)

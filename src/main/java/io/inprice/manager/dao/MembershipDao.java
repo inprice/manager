@@ -10,7 +10,7 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 public interface MembershipDao {
 	
 	@SqlQuery(
-		"select account_id, count(1) as counter from member " +
+		"select account_id, count(1) as counter from membership " +
 		"where status='DELETED' " +
 		"  and updated_at <= now() - interval 3 hour " +
 		"group by account_id"
@@ -19,7 +19,7 @@ public interface MembershipDao {
   @ValueColumn("counter")
   Map<Long, Integer> findAccountInfoOfDeletedMembers();
 
-  @SqlUpdate("delete from member where status='DELETED' and updated_at <= now() - interval 3 hour")
+  @SqlUpdate("delete from membership where status='DELETED' and updated_at <= now() - interval 3 hour")
   boolean deletePermenantly();
 
 }
