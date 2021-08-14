@@ -65,7 +65,6 @@ abstract class AbstractLinkPublisher implements Runnable {
                 link.setPlatformId(platform.getId());
                 if (platform.getStatus() != null) {
                   link.setStatus(platform.getStatus());
-                  link.setProblem(platform.getProblem());
                 }
               } else {
                 link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
@@ -115,7 +114,9 @@ abstract class AbstractLinkPublisher implements Runnable {
     } catch (Exception e) {
       log.error(String.format("%s failed to complete!", taskName), e);
     } finally {
-      log.info("{} completed successfully. Count: {}, Time: {}", taskName, counter, (System.currentTimeMillis() - startTime));
+    	if (counter > 0) {
+    		log.info("{} completed successfully. Count: {}, Time: {}", taskName, counter, (System.currentTimeMillis() - startTime));
+    	}
       Global.stopTask(taskName);
     }
 

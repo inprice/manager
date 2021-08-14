@@ -37,6 +37,7 @@ public class RedisClient {
     return baseClient.getClient().getTopic(topic);
   }
 
+  TODO: platformun ait oldugu queue kullanilacak!!!
   public static void publishActiveLink(Link link) {
     if (baseClient.isHealthy()) {
       activeLinksTopic.publish(link);

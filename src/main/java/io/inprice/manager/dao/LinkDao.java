@@ -31,7 +31,7 @@ public interface LinkDao {
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
-    "  and l.status in ('AVAILABLE', 'RESOLVED') " +
+    "  and l.status in ('AVAILABLE', 'RESOLVED', 'REFRESHED') " +
     "  and l.checked_at <= now() - interval <interval> <timeUnit> " +
     "  and l.retry = <retry> " +
     "limit 100"
