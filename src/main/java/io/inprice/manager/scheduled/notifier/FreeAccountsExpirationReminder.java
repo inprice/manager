@@ -31,21 +31,21 @@ import io.inprice.manager.helpers.Global;
  */
 public class FreeAccountsExpirationReminder implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(FreeAccountsExpirationReminder.class);
+  private static final Logger logger = LoggerFactory.getLogger(FreeAccountsExpirationReminder.class);
 
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
 
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
       try (Handle handle = Database.getHandle()) {
         AccountDao accountDao = handle.attach(AccountDao.class);
 
@@ -85,12 +85,12 @@ public class FreeAccountsExpirationReminder implements Runnable {
         }
 
         if (affected > 0) {
-          log.info("Reminder emails sent to {} accounts which are using free or a coupon!", affected);
+          logger.info("Reminder emails sent to {} accounts which are using free or a coupon!", affected);
         } else {
-          log.info("No remainder sent to free or couponed accounts!");
+          logger.info("No remainder sent to free or couponed accounts!");
         }
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       
     } finally {

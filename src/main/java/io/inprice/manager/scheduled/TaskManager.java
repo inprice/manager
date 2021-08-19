@@ -9,12 +9,12 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.common.config.SysProps;
+import com.rabbitmq.client.Connection;
+
+import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.common.info.TimePeriod;
-import io.inprice.common.meta.AppEnv;
 import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.config.Props;
-import io.inprice.manager.scheduled.modifier.AccessLoggerFlusher;
 import io.inprice.manager.scheduled.modifier.FreeAccountStopper;
 import io.inprice.manager.scheduled.modifier.MemberRemover;
 import io.inprice.manager.scheduled.modifier.SubscribedAccountStopper;
@@ -26,13 +26,13 @@ import io.inprice.manager.scheduled.publisher.NewlyAddedLinksPublisher;
 
 public class TaskManager {
 
-  private static final Logger log = LoggerFactory.getLogger(TaskManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
 
   private static ScheduledExecutorService scheduler;
   private static List<TaskDef> taskDefs;
 
   public static void start() {
-    log.info("TaskManager is starting...");
+    logger.info("TaskManager is starting...");
 
     taskDefs = new ArrayList<>();
     loadUpdaters();
@@ -44,26 +44,18 @@ public class TaskManager {
     	scheduler.scheduleAtFixedRate(td.getTask(), td.getDelay(), td.getTimePeriod().getInterval(), td.getTimePeriod().getTimeUnit());
     }
 
-    log.info("TaskManager is started with {} workers.", taskDefs.size());
+    logger.info("TaskManager is started with {} workers.", taskDefs.size());
   }
 
   public static void stop() {
     try {
       scheduler.shutdown();
     } catch (SecurityException e) {
-      log.error("Failed to stop TaskManager's scheduler.", e);
+      logger.error("Failed to stop TaskManager's scheduler.", e);
     }
   }
 
   private static void loadUpdaters() {
-    taskDefs.add(
-  		TaskDef.builder()
-  			.task(new NewlyAddedLinksPublisher())
-  			.delay(0)
-  			.timePeriod(new TimePeriod(1, TimeUnit.MINUTES))
-			.build()
-		);
-
     taskDefs.add(
   		TaskDef.builder()
   			.task(new MemberRemover())
@@ -76,7 +68,7 @@ public class TaskManager {
   		TaskDef.builder()
   			.task(new FreeAccountStopper())
   			.delay(0)
-  			.timePeriod(DateUtils.parseTimePeriod(Props.INTERVAL_STOPPING_FREE_ACCOUNTS))
+  			.timePeriod(DateUtils.parseTimePeriod(Props.getConfig().INTERVALS.STOPPING_FREE_ACCOUNTS))
 			.build()
 		);
 
@@ -84,53 +76,54 @@ public class TaskManager {
   		TaskDef.builder()
   			.task(new SubscribedAccountStopper())
   			.delay(0)
-  			.timePeriod(DateUtils.parseTimePeriod(Props.INTERVAL_STOPPING_SUBSCRIBED_ACCOUNTS))
-			.build()
-		);
-
-    taskDefs.add(
-  		TaskDef.builder()
-  			.task(new AccessLoggerFlusher())
-  			.delay(1)
-  			.timePeriod(DateUtils.parseTimePeriod(Props.INTERVAL_FLUSHING_ACCESS_LOG_QUEUE))
+  			.timePeriod(DateUtils.parseTimePeriod(Props.getConfig().INTERVALS.STOPPING_SUBSCRIBED_ACCOUNTS))
 			.build()
 		);
   }
   
   private static void loadLinkPublishers() {
-    TimeUnit timeUnit = (SysProps.APP_ENV.equals(AppEnv.PROD) ? TimeUnit.HOURS : TimeUnit.MINUTES);
-    String tuName = timeUnit.name().toLowerCase().substring(0, timeUnit.name().length()-1);
+  	Connection conn = RabbitMQ.createConnection("manager-link-publisher");
 
     //-----------------------------
-    // ACTIVE BUT TRYING LINKS
+    // NEWLY ADDED LINKS
+    //-----------------------------
+    taskDefs.add(
+  		TaskDef.builder()
+  			.task(new NewlyAddedLinksPublisher(conn))
+  			.delay(0)
+  			.timePeriod(new TimePeriod(1, TimeUnit.MINUTES))
+			.build()
+		);
+
+    //-----------------------------
+    // ACTIVE LINKS
     //-----------------------------
     //first time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new ActiveLinksPublisher(1, 1, tuName))
+  			.task(new ActiveLinksPublisher(1, 1, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(1, timeUnit))
+  			.timePeriod(new TimePeriod(1, TimeUnit.HOURS))
 			.build()
 		);
 
     //second time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new ActiveLinksPublisher(2, 3, tuName))
+  			.task(new ActiveLinksPublisher(2, 3, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(3, timeUnit))
+  			.timePeriod(new TimePeriod(3, TimeUnit.HOURS))
 			.build()
 		);
 
     //and last time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new ActiveLinksPublisher(3, 6, tuName))
+  			.task(new ActiveLinksPublisher(3, 6, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(6, timeUnit))
+  			.timePeriod(new TimePeriod(6, TimeUnit.HOURS))
 			.build()
 		);
-
 
     //-----------------------------
     // FAILED BUT TRYING LINKS
@@ -138,27 +131,27 @@ public class TaskManager {
     //first time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new FailedLinksPublisher(1, 2, tuName))
+  			.task(new FailedLinksPublisher(1, 2, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(2, timeUnit))
+  			.timePeriod(new TimePeriod(2, TimeUnit.HOURS))
 			.build()
 		);
 
     //second time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new FailedLinksPublisher(2, 7, tuName))
+  			.task(new FailedLinksPublisher(2, 7, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(7, timeUnit))
+  			.timePeriod(new TimePeriod(7, TimeUnit.HOURS))
 			.build()
 		);
 
     //and last time links
     taskDefs.add(
   		TaskDef.builder()
-  			.task(new ActiveLinksPublisher(3, 11, tuName))
+  			.task(new ActiveLinksPublisher(3, 11, conn))
   			.delay(1)
-  			.timePeriod(new TimePeriod(11, timeUnit))
+  			.timePeriod(new TimePeriod(11, TimeUnit.HOURS))
 			.build()
 		);
   }
@@ -177,7 +170,7 @@ public class TaskManager {
   		TaskDef.builder()
   			.task(new FreeAccountsExpirationReminder())
   			.delay(1)
-  			.timePeriod(DateUtils.parseTimePeriod(Props.INTERVAL_REMINDER_FOR_FREE_ACCOUNTS))
+  			.timePeriod(DateUtils.parseTimePeriod(Props.getConfig().INTERVALS.REMINDER_FOR_FREE_ACCOUNTS))
 			.build()
 		);
   }

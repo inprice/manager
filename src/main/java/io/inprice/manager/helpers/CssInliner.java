@@ -31,7 +31,7 @@ import org.w3c.dom.css.CSSStyleSheet;
  */
 public class CssInliner {
 
-  private static final Logger log = LoggerFactory.getLogger(CssInliner.class);
+  private static final Logger logger = LoggerFactory.getLogger(CssInliner.class);
 
   private static CSSStyleSheet styleSheet;
   private static String header;
@@ -62,7 +62,7 @@ public class CssInliner {
         InputSource baseCssSource = new InputSource(new FileReader(CssInliner.class.getClassLoader().getResource("templates/fragment/base.css").getFile()));
         styleSheet = parser.parseStyleSheet(baseCssSource, null, null);
       } catch (IOException e) {
-        log.error("Failed to load base.css", e);
+        logger.error("Failed to load base.css", e);
       }
     }
 
@@ -70,7 +70,7 @@ public class CssInliner {
       try {
         header = FileUtils.readFileToString(new File(CssInliner.class.getClassLoader().getResource("templates/fragment/header.html").getFile()), StandardCharsets.UTF_8);
       } catch (IOException e) {
-        log.error("Failed to load header.html", e);
+        logger.error("Failed to load header.html", e);
       }
     }
 
@@ -78,7 +78,7 @@ public class CssInliner {
       try {
         footer = FileUtils.readFileToString(new File(CssInliner.class.getClassLoader().getResource("templates/fragment/footer.html").getFile()), StandardCharsets.UTF_8);
       } catch (IOException e) {
-        log.error("Failed to load footer.html", e);
+        logger.error("Failed to load footer.html", e);
       }
     }
 
@@ -86,7 +86,7 @@ public class CssInliner {
     try {
       content = FileUtils.readFileToString(new File(CssInliner.class.getClassLoader().getResource("templates/" + bodyFileName).getFile()), StandardCharsets.UTF_8);
     } catch (IOException e) {
-      log.error("Failed to load content", e);
+      logger.error("Failed to load content", e);
     }
 
     if (styleSheet == null || styleSheet.getCssRules() == null || styleSheet.getCssRules().getLength() == 0) {

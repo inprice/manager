@@ -33,20 +33,20 @@ import io.inprice.manager.helpers.Global;
  */
 public class FreeAccountStopper implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(FreeAccountStopper.class);
+  private static final Logger logger = LoggerFactory.getLogger(FreeAccountStopper.class);
 
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
       	handle.begin();
@@ -109,9 +109,9 @@ public class FreeAccountStopper implements Runnable {
         }
 
         if (affected > 0) {
-          log.info("{} free account in total stopped!", affected);
+          logger.info("{} free account in total stopped!", affected);
         } else {
-          log.info("No free account to be stopped was found!");
+          logger.info("No free account to be stopped was found!");
         }
         
         if (affected > 0)
@@ -120,7 +120,7 @@ public class FreeAccountStopper implements Runnable {
         	handle.rollback();
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
 
     } finally {

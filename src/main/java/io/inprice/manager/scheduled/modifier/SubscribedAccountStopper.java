@@ -15,19 +15,19 @@ import io.inprice.manager.helpers.Global;
  */
 public class SubscribedAccountStopper implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(SubscribedAccountStopper.class);
+  private static final Logger logger = LoggerFactory.getLogger(SubscribedAccountStopper.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
       
       /*
 
@@ -46,14 +46,14 @@ public class SubscribedAccountStopper implements Runnable {
               Subscription subscription = Subscription.retrieve(accinfo.getCustId());
               Subscription subsResult = subscription.cancel();
               if (subsResult != null && subsResult.getStatus().equals("canceled")) {
-                log.info("Stopping subscription: {} stopped!", accinfo.getName());
+                logger.info("Stopping subscription: {} stopped!", accinfo.getName());
               } else if (subsResult != null) {
-                log.warn("Stopping subscription: Unexpected subs status: {}", subsResult.getStatus());
+                logger.warn("Stopping subscription: Unexpected subs status: {}", subsResult.getStatus());
               } else {
-                log.error("Stopping subscription: subsResult is null!");
+                logger.error("Stopping subscription: subsResult is null!");
               }
             } catch (Exception e) {
-              log.error("Stopping subscription: failed " + accinfo.getName(), e);
+              logger.error("Stopping subscription: failed " + accinfo.getName(), e);
             }
 
             SubscriptionDao subscriptionDao = handle.attach(SubscriptionDao.class);
@@ -84,9 +84,9 @@ public class SubscribedAccountStopper implements Runnable {
         }
 
         if (affected > 0) {
-          log.info("{} subscribed account in total stopped!", affected);
+          logger.info("{} subscribed account in total stopped!", affected);
         } else {
-          log.info("No subscribed account to be stopped was found!");
+          logger.info("No subscribed account to be stopped was found!");
         }
 
         if (affected > 0)
@@ -95,7 +95,7 @@ public class SubscribedAccountStopper implements Runnable {
         	handle.rollback();
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       */
     } finally {

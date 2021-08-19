@@ -1,0 +1,24 @@
+{
+  "mail": {
+    "sender": "account@inprice.io",
+    "password": "?R2>2~At~Btun,A^"
+  },
+  "limits": {
+  	"dbFetch": 50,
+  	"waitBeforeNextFetch": 2000
+  },
+  "intervals": {
+    "reminderForFreeAccounts": "1d",
+    "stoppingFreeAccounts": "1h",
+    "stoppingSubscribedAccounts": "43m",
+    "expiringPendingCheckouts": "5m"
+  },
+  "queues": {
+  	"sendingEmails": { "name": "sending.emails.queue" },
+    "statusChangingLinks": { "name": "status.changing.links.queue" },
+    "activeLinks": [
+      { "name": "active.links.queue.cap1", "capacity": 1 },
+      { "name": "active.links.queue.cap3", "capacity": 3 }
+    ]
+  }
+}

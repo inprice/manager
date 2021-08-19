@@ -11,5 +11,5 @@ public class TaskDef {
 	private Runnable task;
 	private int delay;
 	private TimePeriod timePeriod;
-	
+
 }

@@ -31,20 +31,20 @@ import io.inprice.manager.helpers.Global;
  */
 public class AlarmNotifier implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(AlarmNotifier.class);
+  private static final Logger logger = LoggerFactory.getLogger(AlarmNotifier.class);
 
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
         AlarmDao alarmDao = handle.attach(AlarmDao.class);
@@ -74,11 +74,11 @@ public class AlarmNotifier implements Runnable {
           }
           
           alarmDao.setNotified(idList);
-          log.info("{} alarm notified!", idList.size());
+          logger.info("{} alarm notified!", idList.size());
         }
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
 
     } finally {

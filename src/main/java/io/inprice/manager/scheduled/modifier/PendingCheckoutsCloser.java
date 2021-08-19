@@ -16,31 +16,31 @@ import io.inprice.manager.helpers.Global;
  */
 public class PendingCheckoutsCloser implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(PendingCheckoutsCloser.class);
+  private static final Logger logger = LoggerFactory.getLogger(PendingCheckoutsCloser.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
 
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
       try (Handle handle = Database.getHandle()) {
         CheckoutDao checkoutDao = handle.attach(CheckoutDao.class);
 
         int affected = checkoutDao.expirePendings();
         if (affected > 0) {
-          log.info("{} PENDING checkout(s) are set to EXPIRED!", affected);
+          logger.info("{} PENDING checkout(s) are set to EXPIRED!", affected);
         } else {
-          log.info("No PENDING checkout to be EXPIRED was found!");
+          logger.info("No PENDING checkout to be EXPIRED was found!");
         }
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       
     } finally {

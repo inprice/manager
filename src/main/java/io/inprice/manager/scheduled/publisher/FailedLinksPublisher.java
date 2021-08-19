@@ -2,20 +2,20 @@ package io.inprice.manager.scheduled.publisher;
 
 import java.util.List;
 
+import com.rabbitmq.client.Connection;
+
 import io.inprice.common.models.Link;
 import io.inprice.manager.dao.LinkDao;
 
 public class FailedLinksPublisher extends AbstractLinkPublisher {
 
-	private int retry;
-	private int interval;
-	private String timeUnit;
+	private final int retry;
+	private final int interval;
 
-	public FailedLinksPublisher(int retry, int interval, String timeUnit) {
-		super();
+	public FailedLinksPublisher(int retry, int interval, Connection mqConn) {
+		super(mqConn);
 		this.retry = retry;
 		this.interval = interval;
-		this.timeUnit = timeUnit;
 	}
 
 	@Override
@@ -25,7 +25,7 @@ public class FailedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findFailedLinks(retry, interval, timeUnit);
+		return linkDao.findFailedLinks(retry, interval);
 	}
 
 }

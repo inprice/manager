@@ -21,20 +21,20 @@ import io.inprice.manager.helpers.Global;
  */
 public class MemberRemover implements Runnable {
 
-  private static final Logger log = LoggerFactory.getLogger(MemberRemover.class);
+  private static final Logger logger = LoggerFactory.getLogger(MemberRemover.class);
 
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public void run() {
     if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
       Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
       	MembershipDao membershipDao = handle.attach(MembershipDao.class);
@@ -55,15 +55,15 @@ public class MemberRemover implements Runnable {
           boolean isOK = membershipDao.deletePermenantly();
           if (isOK) {
           	handle.commit();
-            log.info("{} member(s) in total are permanently DELETED!", userCount);
+            logger.info("{} member(s) in total are permanently DELETED!", userCount);
           } else {
           	handle.rollback();
-            log.info("No deleted member found!");
+            logger.info("No deleted member found!");
           }
       	}
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       
     } finally {
