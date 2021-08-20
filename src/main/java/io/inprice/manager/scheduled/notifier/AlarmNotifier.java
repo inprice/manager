@@ -3,7 +3,6 @@ package io.inprice.manager.scheduled.notifier;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -105,21 +104,23 @@ public class AlarmNotifier implements Runnable {
 		
   	StringBuilder sb = new StringBuilder(tableHeader);
   	for (Alarm alarm: alarms) {
-  		Map<String, String> dataMap = new HashMap<>();
-  		dataMap.put("topic", alarm.getTopic().name().substring(0, 1));
-  		dataMap.put("name", alarm.getName());
-  		dataMap.put("status", alarm.getLastStatus());
-  		dataMap.put("amount", df.format(alarm.getLastAmount()));
-  		dataMap.put("time", DateUtils.formatTimeStandart(alarm.getUpdatedAt()));
+  		Map<String, String> dataMap = Map.of(
+  			"topic", alarm.getTopic().name().substring(0, 1),
+  			"name", alarm.getName(),
+  			"status", alarm.getLastStatus(),
+  			"amount", df.format(alarm.getLastAmount()),
+  			"time", DateUtils.formatTimeStandart(alarm.getUpdatedAt())
+			);
 
   		StringSubstitutor st = new StringSubstitutor(dataMap);
   		sb.append(st.replace(tableRow));
   	}
   	sb.append("</table>");
   	
-    Map<String, Object> mailMap = new HashMap<>(3);
-    mailMap.put("user", alarms.get(0).getUsername());
-    mailMap.put("table", sb.toString());
+    Map<String, Object> mailMap = Map.of(
+    	"user", alarms.get(0).getUsername(),
+    	"table", sb.toString()
+		);
     
   	EmailSender.send(
 			EmailData.builder()

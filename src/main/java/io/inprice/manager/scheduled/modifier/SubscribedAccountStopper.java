@@ -38,7 +38,7 @@ public class SubscribedAccountStopper implements Runnable {
         List<AccountInfo> expiredAccountList = accountDao.findExpiredSubscriberAccountList();
         int affected = 0;
 
-        if (expiredAccountList != null && expiredAccountList.size() > 0) {
+        if (CollectionUtils.isNotEmpty(expiredAccountList)) {
           for (AccountInfo accinfo: expiredAccountList) {
 
             //we need to cancel stripe first
@@ -73,9 +73,7 @@ public class SubscribedAccountStopper implements Runnable {
             }
 
             if (isOK) {
-              Map<String, Object> dataMap = new HashMap<>(1);
-              dataMap.put("user", accinfo.getEmail());
-              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, dataMap);
+              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, Map.of("user", accinfo.getEmail()));
               emailSender.send(Props.APP_EMAIL_SENDER, "The last notification for your subscription to inprice.", accinfo.getEmail(), message);
 
               affected++;

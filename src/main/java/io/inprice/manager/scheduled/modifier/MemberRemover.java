@@ -3,6 +3,7 @@ package io.inprice.manager.scheduled.modifier;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.collections4.MapUtils;
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +41,7 @@ public class MemberRemover implements Runnable {
       	MembershipDao membershipDao = handle.attach(MembershipDao.class);
 
       	Map<Long, Integer> accountInfoMap = membershipDao.findAccountInfoOfDeletedMembers();
-      	if (accountInfoMap != null && accountInfoMap.size() > 0) {
-
+      	if (MapUtils.isNotEmpty(accountInfoMap)) {
         	handle.begin();
 
         	AccountDao accountDao = handle.attach(AccountDao.class);

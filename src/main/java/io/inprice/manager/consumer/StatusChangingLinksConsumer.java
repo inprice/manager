@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Batch;
 import org.slf4j.Logger;
@@ -246,7 +247,7 @@ class StatusChangingLinksConsumer {
 
     // inserting new ones
     List<LinkSpec> specList = link.getSpecList();
-    if (specList != null && specList.size() > 0) {
+    if (CollectionUtils.isNotEmpty(link.getSpecList())) {
       for (LinkSpec spec: specList) {
         list.add(
           String.format(

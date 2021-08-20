@@ -2,10 +2,10 @@ package io.inprice.manager.scheduled.notifier;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,17 +59,18 @@ public class FreeAccountsExpirationReminder implements Runnable {
 
         int affected = 0;
 
-        if (aboutToExpiredAccountList != null && aboutToExpiredAccountList.size() > 0) {
+        if (CollectionUtils.isNotEmpty(aboutToExpiredAccountList)) {
           UserDao userDao = handle.attach(UserDao.class);
 
           for (Account account: aboutToExpiredAccountList) {
             User user = userDao.findById(account.getAdminId());
 
-            Map<String, Object> mailMap = new HashMap<>(4);
-            mailMap.put("user", user.getName());
-            mailMap.put("model", account.getStatus());
-            mailMap.put("days", DateUtils.findDayDiff(account.getSubsRenewalAt(), new Date()));
-            mailMap.put("subsRenewalAt", DateUtils.formatReverseDate(account.getSubsRenewalAt()));
+            Map<String, Object> mailMap = Map.of(
+            	"user", user.getName(),
+            	"model", account.getStatus(),
+            	"days", DateUtils.findDayDiff(account.getSubsRenewalAt(), new Date()),
+            	"subsRenewalAt", DateUtils.formatReverseDate(account.getSubsRenewalAt())
+          	);
 
             EmailSender.send(
         			EmailData.builder()

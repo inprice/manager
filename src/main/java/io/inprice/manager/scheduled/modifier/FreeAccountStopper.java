@@ -1,10 +1,10 @@
 package io.inprice.manager.scheduled.modifier;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
@@ -62,7 +62,7 @@ public class FreeAccountStopper implements Runnable {
 
         int affected = 0;
 
-        if (expiredAccountList != null && expiredAccountList.size() > 0) {
+        if (CollectionUtils.isNotEmpty(expiredAccountList)) {
           UserDao userDao = handle.attach(UserDao.class);
           SubscriptionDao subscriptionDao = handle.attach(SubscriptionDao.class);
 
@@ -90,10 +90,11 @@ public class FreeAccountStopper implements Runnable {
               User user = userDao.findById(account.getId());
               String accountName = StringUtils.isNotBlank(account.getTitle()) ? account.getTitle() : account.getName();
 
-              Map<String, Object> mailMap = new HashMap<>(2);
-              mailMap.put("user", user.getEmail());
-              mailMap.put("account", accountName);
-              
+              Map<String, Object> mailMap = Map.of(
+              	"user", user.getEmail(),
+              	"account", accountName
+          		);
+
               EmailSender.send(
           			EmailData.builder()
             			.template(EmailTemplate.FREE_ACCOUNT_STOPPED)
