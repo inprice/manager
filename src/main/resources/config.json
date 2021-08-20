@@ -1,4 +1,23 @@
 {
+  "app": {
+		"env": "dev"
+	},
+  "mysql": {
+		"driver": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "inprice",
+    "username": "root",
+    "password": "1234",
+    "additions": "?useSSL=false",
+    "showQueries": false
+  },
+  "rabbit": {
+    "host": "127.0.0.1",
+    "port": 5672,
+    "username": "guest",
+    "password": "guest"
+  },
   "mail": {
     "sender": "account@inprice.io",
     "password": "?R2>2~At~Btun,A^"
