@@ -2,30 +2,33 @@ package io.inprice.manager.scheduled.publisher;
 
 import java.util.List;
 
+import com.rabbitmq.client.Connection;
+
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.models.Link;
 import io.inprice.manager.dao.LinkDao;
 
 public class ActiveLinksPublisher extends AbstractLinkPublisher {
 
-	private int retry;
-	private int interval;
-	private String timeUnit;
+	private final int retry;
+	private final int interval;
+	private final String period;
 
-	public ActiveLinksPublisher(int retry, int interval, String timeUnit) {
-		super();
-		this.retry = retry;
-		this.interval = interval;
-		this.timeUnit = timeUnit;
+	public ActiveLinksPublisher(ScheduleDef scheduler, Connection mqConn) {
+		super(scheduler, mqConn);
+		this.retry = Integer.valueOf(scheduler.DATA.get("retry"));
+		this.interval = scheduler.EVERY;
+		this.period = scheduler.PERIOD.substring(0, scheduler.PERIOD.length()-1);
 	}
 
 	@Override
 	String getTaskName() {
-		return "ACTIVE-LINK-PUBLISHER ["+retry+"]";
+		return "ActiveLinksPublisher:R"+retry;
 	}
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findActiveLinks(retry, interval, timeUnit);
+		return linkDao.findActiveLinks(retry, interval, period);
 	}
 
 }

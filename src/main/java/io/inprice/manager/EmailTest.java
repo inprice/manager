@@ -1,6 +1,5 @@
 package io.inprice.manager;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import io.inprice.common.info.EmailData;
@@ -14,12 +13,13 @@ public class EmailTest {
   	final String APP_WEB_URL = "https://inprice.io";
   	final String APP_EMAIL_SENDER = System.getenv().getOrDefault("APP_EMAIL_SENDER", "support@inprice.io");
 
-  	Map<String, Object> mailMap = new HashMap<>(5);
-  	mailMap.put("account", "Deneme firması");
-  	mailMap.put("user", "Mahmut Bey");
-  	mailMap.put("plan", "Professional Plan");
-  	mailMap.put("subsRenewalAt", "2021-04-12 18:10:21");
-    mailMap.put("invoiceUrl", APP_WEB_URL + "/sdlkjadda/sadfkjsadfasf/sfmsadkfklsad/sdlkalksdfs/sadflklmasdlfas-ssdf/ssdfsdf/gdfdfgew/wrewerwer.pdf");
+  	Map<String, Object> mailMap = Map.of(
+	  	"account", "Deneme firması",
+	  	"user", "Mahmut Bey",
+	  	"plan", "Professional Plan",
+	  	"subsRenewalAt", "2021-04-12 18:10:21",
+	    "invoiceUrl", APP_WEB_URL + "/sdlkjadda/sadfkjsadfasf/sfmsadkfklsad/sdlkalksdfs/sadflklmasdlfas-ssdf/ssdfsdf/gdfdfgew/wrewerwer.pdf"
+    );
 
   	EmailSender.send(
 			EmailData.builder()

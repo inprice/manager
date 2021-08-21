@@ -87,9 +87,9 @@ public class EmailSender {
 
 		Mail mail = new Mail(emailFrom, emailData.getSubject(), emailTo, emailContent);
 		
-		String from = StringUtils.defaultIfEmpty(emailData.getFrom(), Props.APP_EMAIL_SENDER);
+		String from = StringUtils.defaultIfEmpty(emailData.getFrom(), Props.getConfig().MAIL.SENDER);
 
-		SendGrid sg = new SendGrid(Props.API_KEYS_SENDGRID);
+		SendGrid sg = new SendGrid(Props.getConfig().MAIL.PASSWORD);
 		Request request = new Request();
 		try {
 			request.setMethod(Method.POST);

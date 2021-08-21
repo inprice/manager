@@ -32,12 +32,12 @@ public interface LinkDao {
     "left join alarm as al on al.id = l.alarm_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('AVAILABLE', 'RESOLVED', 'REFRESHED') " +
-    "  and l.checked_at <= now() - interval <interval> <timeUnit> " +
+    "  and l.checked_at <= (now() - interval <interval> <period>) " +
     "  and l.retry = <retry> " +
     "limit 100"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findActiveLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("timeUnit") String timeUnit);
+  List<Link> findActiveLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("period") String period);
 
   @SqlQuery(
   	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
@@ -45,12 +45,12 @@ public interface LinkDao {
     "left join alarm as al on al.id = l.alarm_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('NOT_AVAILABLE', 'NETWORK_ERROR') " +
-    "  and l.checked_at <= now() - interval <interval> <timeUnit> " +
+    "  and l.checked_at <= (now() - interval <interval> <period>) " +
     "  and l.retry = <retry> " +
     "limit 100"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findFailedLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("timeUnit") String timeUnit);
+  List<Link> findFailedLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("period") String period);
 
   @Transaction
   @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")

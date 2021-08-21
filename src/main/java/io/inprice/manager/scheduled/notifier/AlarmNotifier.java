@@ -3,7 +3,6 @@ package io.inprice.manager.scheduled.notifier;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +13,17 @@ import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.EmailTemplate;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.utils.DateUtils;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AlarmDao;
 import io.inprice.manager.email.EmailSender;
-import io.inprice.manager.helpers.Global;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Checks alarm table to find alarmed groups and links then send mails
@@ -29,22 +31,26 @@ import io.inprice.manager.helpers.Global;
  * @since 2021-06-21
  * @author mdpinar
  */
-public class AlarmNotifier implements Runnable {
+public class AlarmNotifier implements Task {
 
-  private static final Logger log = LoggerFactory.getLogger(AlarmNotifier.class);
-
+  private static final Logger logger = LoggerFactory.getLogger(AlarmNotifier.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.ALARM_NOTIFIER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+    if (TaskManager.isTaskRunning(clazz)) {
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      TaskManager.startTask(clazz);
+      logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
         AlarmDao alarmDao = handle.attach(AlarmDao.class);
@@ -74,15 +80,15 @@ public class AlarmNotifier implements Runnable {
           }
           
           alarmDao.setNotified(idList);
-          log.info("{} alarm notified!", idList.size());
+          logger.info("{} alarm notified!", idList.size());
         }
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
 
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
   
@@ -105,21 +111,23 @@ public class AlarmNotifier implements Runnable {
 		
   	StringBuilder sb = new StringBuilder(tableHeader);
   	for (Alarm alarm: alarms) {
-  		Map<String, String> dataMap = new HashMap<>();
-  		dataMap.put("topic", alarm.getTopic().name().substring(0, 1));
-  		dataMap.put("name", alarm.getName());
-  		dataMap.put("status", alarm.getLastStatus());
-  		dataMap.put("amount", df.format(alarm.getLastAmount()));
-  		dataMap.put("time", DateUtils.formatTimeStandart(alarm.getUpdatedAt()));
+  		Map<String, String> dataMap = Map.of(
+  			"topic", alarm.getTopic().name().substring(0, 1),
+  			"name", alarm.getName(),
+  			"status", alarm.getLastStatus(),
+  			"amount", df.format(alarm.getLastAmount()),
+  			"time", DateUtils.formatTimeStandart(alarm.getUpdatedAt())
+			);
 
   		StringSubstitutor st = new StringSubstitutor(dataMap);
   		sb.append(st.replace(tableRow));
   	}
   	sb.append("</table>");
   	
-    Map<String, Object> mailMap = new HashMap<>(3);
-    mailMap.put("user", alarms.get(0).getUsername());
-    mailMap.put("table", sb.toString());
+    Map<String, Object> mailMap = Map.of(
+    	"user", alarms.get(0).getUsername(),
+    	"table", sb.toString()
+		);
     
   	EmailSender.send(
 			EmailData.builder()

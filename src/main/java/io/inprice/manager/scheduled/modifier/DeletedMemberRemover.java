@@ -3,14 +3,18 @@ package io.inprice.manager.scheduled.modifier;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.collections4.MapUtils;
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.MembershipDao;
-import io.inprice.manager.helpers.Global;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Permanently deletes the members marked as deleted.
@@ -19,29 +23,32 @@ import io.inprice.manager.helpers.Global;
  * @since 202-10-07
  * @author mdpinar
  */
-public class MemberRemover implements Runnable {
+public class DeletedMemberRemover implements Task {
 
-  private static final Logger log = LoggerFactory.getLogger(MemberRemover.class);
-
+  private static final Logger logger = LoggerFactory.getLogger(DeletedMemberRemover.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.DELETED_MEMBER_REMOVER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+    if (TaskManager.isTaskRunning(clazz)) {
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      TaskManager.startTask(clazz);
+      logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
       	MembershipDao membershipDao = handle.attach(MembershipDao.class);
 
       	Map<Long, Integer> accountInfoMap = membershipDao.findAccountInfoOfDeletedMembers();
-      	if (accountInfoMap != null && accountInfoMap.size() > 0) {
-
+      	if (MapUtils.isNotEmpty(accountInfoMap)) {
         	handle.begin();
 
         	AccountDao accountDao = handle.attach(AccountDao.class);
@@ -55,19 +62,19 @@ public class MemberRemover implements Runnable {
           boolean isOK = membershipDao.deletePermenantly();
           if (isOK) {
           	handle.commit();
-            log.info("{} member(s) in total are permanently DELETED!", userCount);
+            logger.info("{} member(s) in total are permanently DELETED!", userCount);
           } else {
           	handle.rollback();
-            log.info("No deleted member found!");
+            logger.info("No deleted member found!");
           }
       	}
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
 

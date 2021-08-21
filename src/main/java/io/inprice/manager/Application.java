@@ -4,10 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.inprice.common.helpers.Database;
-import io.inprice.manager.consumer.EmailConsumer;
-import io.inprice.manager.consumer.ChangingLinksConsumer;
-import io.inprice.manager.helpers.Global;
-import io.inprice.manager.helpers.RedisClient;
+import io.inprice.common.helpers.RabbitMQ;
+import io.inprice.manager.config.Props;
+import io.inprice.manager.consumer.ConsumerManager;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
@@ -19,38 +18,36 @@ import io.inprice.manager.scheduled.TaskManager;
  */
 public class Application {
 
-	private static final Logger log = LoggerFactory.getLogger(Application.class);
+	private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
 	public static void main(String[] args) {
 		new Thread(() -> {
-			Global.isApplicationRunning = true;
+
+      Database.start(Props.getConfig().MYSQL_CONF);
+      logger.info(" - Connected to Mysql server.");
+
+      RabbitMQ.start(Props.getConfig().RABBIT_CONF);
+      logger.info(" - Connected to RabbitMQ server.");
 
 			TaskManager.start();
-			ChangingLinksConsumer.start();
-			EmailConsumer.start();
+
+			ConsumerManager.start();
 
 		}, "app-starter").start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			log.info("APPLICATION IS TERMINATING...");
-			Global.isApplicationRunning = false;
+			logger.info("APPLICATION IS TERMINATING...");
 
-			log.info(" - TaskManager is shutting down...");
+			logger.info(" - TaskManager is shutting down...");
 			TaskManager.stop();
-			
-			log.info(" - StatusChangingLinksConsumer is shutting down...");
-			ChangingLinksConsumer.stop();
 
-			log.info(" - EmailConsumer is shutting down...");
-			EmailConsumer.stop();
+      logger.info(" - RabbitMQ connection is closing...");
+      RabbitMQ.stop();
 
-			log.info(" - Redis connection is closing...");
-			RedisClient.shutdown();
+      logger.info(" - Mysql connection is closing...");
+      Database.stop();
 
-      log.info(" - DB connection is closing...");
-      Database.shutdown();
-
-			log.info("ALL SERVICES IS DONE.");
+			logger.info("ALL SERVICES IS DONE.");
 
     }, "shutdown-hook"));
 	}

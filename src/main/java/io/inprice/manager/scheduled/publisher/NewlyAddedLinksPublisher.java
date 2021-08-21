@@ -2,14 +2,21 @@ package io.inprice.manager.scheduled.publisher;
 
 import java.util.List;
 
+import com.rabbitmq.client.Connection;
+
 import io.inprice.common.models.Link;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 
 public class NewlyAddedLinksPublisher extends AbstractLinkPublisher {
 
+	public NewlyAddedLinksPublisher(Connection mqConn) {
+		super(Props.getConfig().SCHEDULES.NEWLY_ADDED_LINK_PUBLISHER, mqConn);
+	}
+
 	@Override
 	String getTaskName() {
-		return "ADDED-LINK-PUBLISHER";
+		return "NewlyAddedLinksPublisher";
 	}
 
 	@Override

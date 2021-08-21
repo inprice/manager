@@ -1,40 +1,61 @@
 package io.inprice.manager.scheduled.publisher;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
+import io.inprice.common.helpers.JsonConverter;
+import io.inprice.common.info.LinkStatusChange;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.Platform;
 import io.inprice.common.repository.PlatformRepository;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
-import io.inprice.manager.helpers.Global;
-import io.inprice.manager.helpers.RedisClient;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Publishes active links.
+ * Publishes links to RabbitMQ
  * 
  * @author mdpinar
  */
-abstract class AbstractLinkPublisher implements Runnable {
+abstract class AbstractLinkPublisher implements Task {
 
-  private static final Logger log = LoggerFactory.getLogger(AbstractLinkPublisher.class);
-  
+  private static final Logger logger = LoggerFactory.getLogger(AbstractLinkPublisher.class);
+
+  private ScheduleDef schedule;
+
+  //rabbitmq connection
+  private Connection mqConn;
+
   abstract String getTaskName();
   abstract List<Link> findLinks(LinkDao linkDao);
 
+  public AbstractLinkPublisher(ScheduleDef schedule, Connection conn) {
+  	this.schedule = schedule;
+		this.mqConn = conn;
+	}
+
+  @Override
+  public ScheduleDef getSchedule() {
+  	return schedule;
+  }
+
   @Override
   public void run() {
-  	final String taskName = getTaskName();
-
-    if (Global.isTaskRunning(taskName)) {
-      log.warn("{} is already triggered!", taskName);
+    if (TaskManager.isTaskRunning(getTaskName())) {
+      logger.warn("{} is already triggered!", getTaskName());
       return;
     }
 
@@ -42,7 +63,8 @@ abstract class AbstractLinkPublisher implements Runnable {
     long startTime = System.currentTimeMillis();
 
     try {
-      Global.startTask(taskName);
+      TaskManager.startTask(getTaskName());
+      logger.info(getTaskName() + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
         LinkDao linkDao = handle.attach(LinkDao.class);
@@ -87,20 +109,32 @@ abstract class AbstractLinkPublisher implements Runnable {
                 }
               }
 
-              if (!link.getStatus().equals(oldStatus)) {
+              if (link.getStatus().equals(oldStatus) == false) {
               	shouldBeAddedToQueue = false;
-                RedisClient.publishStatusChange(link, oldStatus);
+              	//publish status change
+              	try (Channel channel = mqConn.createChannel()) {
+            	  	String outMessage = JsonConverter.toJson(new LinkStatusChange(link, oldStatus, link.getPrice()));
+            	  	channel.basicPublish("", Props.getConfig().QUEUES.STATUS_CHANGING_LINKS.NAME, null, outMessage.getBytes());
+              	} catch (IOException | TimeoutException e) {
+                  logger.error("Failed to publish status changing link", e);
+            		}
               }
             }
             if (shouldBeAddedToQueue) {
-            	RedisClient.publishActiveLink(link);
+            	//publish link
+            	try (Channel channel = mqConn.createChannel()) {
+          	  	String outMessage = JsonConverter.toJson(link);
+          	  	channel.basicPublish("", link.getPlatform().getQueue(), null, outMessage.getBytes());
+            	} catch (IOException | TimeoutException e) {
+                logger.error("Failed to publish link", e);
+          		}
             }
           }
           linkDao.bulkUpdateCheckedAt(linkIds);
 
-          if (links.size() >= Props.DB_FETCH_LIMIT) {
+          if (links.size() >= Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB) {
             try {
-              Thread.sleep(Props.WAITING_TIME_FOR_FETCHING_LINKS);
+              Thread.sleep(Props.getConfig().LIMITS.WAIT_LIMIT_BEFORE_NEXT_FETCH);
             } catch (InterruptedException e) { }
             links = findLinks(linkDao);
           } else {
@@ -108,16 +142,16 @@ abstract class AbstractLinkPublisher implements Runnable {
           }
         }
       } catch (Exception e) {
-        log.error(taskName + " failed to trigger!" , e);
+        logger.error(getTaskName() + " failed to trigger!" , e);
       }
 
     } catch (Exception e) {
-      log.error(String.format("%s failed to complete!", taskName), e);
+      logger.error(String.format("%s failed to complete!", getTaskName()), e);
     } finally {
     	if (counter > 0) {
-    		log.info("{} completed successfully. Count: {}, Time: {}", taskName, counter, (System.currentTimeMillis() - startTime));
+    		logger.info("{} completed successfully. Count: {}, Time: {}", getTaskName(), counter, (System.currentTimeMillis() - startTime));
     	}
-      Global.stopTask(taskName);
+      TaskManager.stopTask(getTaskName());
     }
 
   }

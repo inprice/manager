@@ -3,7 +3,10 @@ package io.inprice.manager.scheduled.modifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.manager.helpers.Global;
+import io.inprice.common.config.ScheduleDef;
+import io.inprice.manager.config.Props;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Stops SUBSCRIBED accounts after four days later from their subs renewal date expired.
@@ -13,21 +16,26 @@ import io.inprice.manager.helpers.Global;
  * @since 2020-12-06
  * @author mdpinar
  */
-public class SubscribedAccountStopper implements Runnable {
+public class ExpiredSubscriptionStopper implements Task {
 
-  private static final Logger log = LoggerFactory.getLogger(SubscribedAccountStopper.class);
+  private static final Logger logger = LoggerFactory.getLogger(ExpiredSubscriptionStopper.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.EXPIRED_SUBSCRIPTION_STOPPER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
-      log.warn(clazz + " is already triggered!");
+    if (TaskManager.isTaskRunning(clazz)) {
+      logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
-      log.info(clazz + " is triggered.");
+      TaskManager.startTask(clazz);
+      logger.info(clazz + " is triggered.");
       
       /*
 
@@ -38,7 +46,7 @@ public class SubscribedAccountStopper implements Runnable {
         List<AccountInfo> expiredAccountList = accountDao.findExpiredSubscriberAccountList();
         int affected = 0;
 
-        if (expiredAccountList != null && expiredAccountList.size() > 0) {
+        if (CollectionUtils.isNotEmpty(expiredAccountList)) {
           for (AccountInfo accinfo: expiredAccountList) {
 
             //we need to cancel stripe first
@@ -46,14 +54,14 @@ public class SubscribedAccountStopper implements Runnable {
               Subscription subscription = Subscription.retrieve(accinfo.getCustId());
               Subscription subsResult = subscription.cancel();
               if (subsResult != null && subsResult.getStatus().equals("canceled")) {
-                log.info("Stopping subscription: {} stopped!", accinfo.getName());
+                logger.info("Stopping subscription: {} stopped!", accinfo.getName());
               } else if (subsResult != null) {
-                log.warn("Stopping subscription: Unexpected subs status: {}", subsResult.getStatus());
+                logger.warn("Stopping subscription: Unexpected subs status: {}", subsResult.getStatus());
               } else {
-                log.error("Stopping subscription: subsResult is null!");
+                logger.error("Stopping subscription: subsResult is null!");
               }
             } catch (Exception e) {
-              log.error("Stopping subscription: failed " + accinfo.getName(), e);
+              logger.error("Stopping subscription: failed " + accinfo.getName(), e);
             }
 
             SubscriptionDao subscriptionDao = handle.attach(SubscriptionDao.class);
@@ -73,9 +81,7 @@ public class SubscribedAccountStopper implements Runnable {
             }
 
             if (isOK) {
-              Map<String, Object> dataMap = new HashMap<>(1);
-              dataMap.put("user", accinfo.getEmail());
-              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, dataMap);
+              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, Map.of("user", accinfo.getEmail()));
               emailSender.send(Props.APP_EMAIL_SENDER, "The last notification for your subscription to inprice.", accinfo.getEmail(), message);
 
               affected++;
@@ -84,9 +90,9 @@ public class SubscribedAccountStopper implements Runnable {
         }
 
         if (affected > 0) {
-          log.info("{} subscribed account in total stopped!", affected);
+          logger.info("{} subscribed account in total stopped!", affected);
         } else {
-          log.info("No subscribed account to be stopped was found!");
+          logger.info("No subscribed account to be stopped was found!");
         }
 
         if (affected > 0)
@@ -95,11 +101,11 @@ public class SubscribedAccountStopper implements Runnable {
         	handle.rollback();
 
       } catch (Exception e) {
-        log.error("Failed to trigger " + clazz , e);
+        logger.error("Failed to trigger " + clazz , e);
       }
       */
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
 
