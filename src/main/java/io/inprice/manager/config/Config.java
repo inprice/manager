@@ -12,10 +12,10 @@ public class Config extends BaseConfig {
 	@SerializedName("limits")
 	public Limits LIMITS;
 
-	@SerializedName("intervals")
-	public Intervals INTERVALS;
-
 	@SerializedName("queues")
 	public Queues QUEUES;
+
+	@SerializedName("schedules")
+	public Schedules SCHEDULES;
 	
 }

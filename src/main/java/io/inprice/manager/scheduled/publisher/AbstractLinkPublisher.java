@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.info.LinkStatusChange;
@@ -21,33 +22,40 @@ import io.inprice.common.models.Platform;
 import io.inprice.common.repository.PlatformRepository;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
-import io.inprice.manager.helpers.Global;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Publishes active links.
+ * Publishes links to RabbitMQ
  * 
  * @author mdpinar
  */
-abstract class AbstractLinkPublisher implements Runnable {
+abstract class AbstractLinkPublisher implements Task {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractLinkPublisher.class);
 
+  private ScheduleDef schedule;
+
   //rabbitmq connection
   private Connection mqConn;
-  
+
   abstract String getTaskName();
   abstract List<Link> findLinks(LinkDao linkDao);
 
-  public AbstractLinkPublisher(Connection conn) {
+  public AbstractLinkPublisher(ScheduleDef schedule, Connection conn) {
+  	this.schedule = schedule;
 		this.mqConn = conn;
 	}
-  
+
+  @Override
+  public ScheduleDef getSchedule() {
+  	return schedule;
+  }
+
   @Override
   public void run() {
-  	final String taskName = getTaskName();
-
-    if (Global.isTaskRunning(taskName)) {
-      logger.warn("{} is already triggered!", taskName);
+    if (TaskManager.isTaskRunning(getTaskName())) {
+      logger.warn("{} is already triggered!", getTaskName());
       return;
     }
 
@@ -55,7 +63,8 @@ abstract class AbstractLinkPublisher implements Runnable {
     long startTime = System.currentTimeMillis();
 
     try {
-      Global.startTask(taskName);
+      TaskManager.startTask(getTaskName());
+      logger.info(getTaskName() + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
         LinkDao linkDao = handle.attach(LinkDao.class);
@@ -133,16 +142,16 @@ abstract class AbstractLinkPublisher implements Runnable {
           }
         }
       } catch (Exception e) {
-        logger.error(taskName + " failed to trigger!" , e);
+        logger.error(getTaskName() + " failed to trigger!" , e);
       }
 
     } catch (Exception e) {
-      logger.error(String.format("%s failed to complete!", taskName), e);
+      logger.error(String.format("%s failed to complete!", getTaskName()), e);
     } finally {
     	if (counter > 0) {
-    		logger.info("{} completed successfully. Count: {}, Time: {}", taskName, counter, (System.currentTimeMillis() - startTime));
+    		logger.info("{} completed successfully. Count: {}, Time: {}", getTaskName(), counter, (System.currentTimeMillis() - startTime));
     	}
-      Global.stopTask(taskName);
+      TaskManager.stopTask(getTaskName());
     }
 
   }

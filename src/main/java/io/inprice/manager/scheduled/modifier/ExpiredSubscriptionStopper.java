@@ -3,7 +3,10 @@ package io.inprice.manager.scheduled.modifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.manager.helpers.Global;
+import io.inprice.common.config.ScheduleDef;
+import io.inprice.manager.config.Props;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Stops SUBSCRIBED accounts after four days later from their subs renewal date expired.
@@ -13,20 +16,25 @@ import io.inprice.manager.helpers.Global;
  * @since 2020-12-06
  * @author mdpinar
  */
-public class SubscribedAccountStopper implements Runnable {
+public class ExpiredSubscriptionStopper implements Task {
 
-  private static final Logger logger = LoggerFactory.getLogger(SubscribedAccountStopper.class);
+  private static final Logger logger = LoggerFactory.getLogger(ExpiredSubscriptionStopper.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.EXPIRED_SUBSCRIPTION_STOPPER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
+    if (TaskManager.isTaskRunning(clazz)) {
       logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
+      TaskManager.startTask(clazz);
       logger.info(clazz + " is triggered.");
       
       /*
@@ -97,7 +105,7 @@ public class SubscribedAccountStopper implements Runnable {
       }
       */
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
 

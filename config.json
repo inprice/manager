@@ -1,0 +1,59 @@
+{
+  "app": {
+		"env": "dev"
+	},
+  "mysql": {
+		"driver": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "inprice",
+    "username": "root",
+    "password": "1234",
+    "additions": "?useSSL=false",
+    "showQueries": false
+  },
+  "rabbit": {
+    "host": "127.0.0.1",
+    "port": 5672,
+    "username": "guest",
+    "password": "guest"
+  },
+  "mail": {
+    "sender": "account@inprice.io",
+    "password": "?R2>2~At~Btun,A^"
+  },
+  "limits": {
+  	"dbFetch": 50,
+  	"waitBeforeNextFetch": 2000
+  },
+  "queues": {
+  	"sendingEmails": { "name": "sending.emails.queue" },
+    "statusChangingLinks": { "name": "status.changing.links.queue" },
+    "activeLinks": [
+      { "name": "active.links.queue.cap1", "capacity": 1 },
+      { "name": "active.links.queue.cap3", "capacity": 3 }
+    ]
+  },
+  "schedules": {
+  	"deletedMemberRemover": { "every": 3, "period": "MINUTES" },
+  	"expiredFreeAccountStopper": { "every": 1, "period": "MINUTES" },
+  	"expiredSubscriptionStopper": { "every": 43, "period": "SECONDS" },
+
+  	"pendingCheckoutCloser": { "active": false, "every": 31, "period": "SECONDS" },
+
+  	"alarmNotifier": { "every": 5, "period": "SECONDS", "delay": 1 },
+  	"freeAccountExpirationReminder": { "every": 13, "period": "SECONDS", "delay": 1 },
+
+  	"newlyAddedLinkPublisher": { "every": 5, "period": "SECONDS" },
+  	"activeLinkPublishers": [
+  		{ "every": 2, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every": 4, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
+  		{ "every": 6, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
+  	],
+  	"failedLinkPublishers": [
+  		{ "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
+  		{ "every":11, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
+  	]
+  }
+}

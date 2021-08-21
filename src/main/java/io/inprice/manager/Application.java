@@ -7,7 +7,6 @@ import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.consumer.ConsumerManager;
-import io.inprice.manager.helpers.Global;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
@@ -23,7 +22,6 @@ public class Application {
 
 	public static void main(String[] args) {
 		new Thread(() -> {
-			Global.isApplicationRunning = true;
 
       Database.start(Props.getConfig().MYSQL_CONF);
       logger.info(" - Connected to Mysql server.");
@@ -39,7 +37,6 @@ public class Application {
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			logger.info("APPLICATION IS TERMINATING...");
-			Global.isApplicationRunning = false;
 
 			logger.info(" - TaskManager is shutting down...");
 			TaskManager.stop();

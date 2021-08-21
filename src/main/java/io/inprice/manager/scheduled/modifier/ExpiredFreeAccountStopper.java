@@ -10,6 +10,7 @@ import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.AccountStatus;
@@ -18,11 +19,13 @@ import io.inprice.common.meta.SubsEvent;
 import io.inprice.common.models.Account;
 import io.inprice.common.models.AccountTrans;
 import io.inprice.common.models.User;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.SubscriptionDao;
 import io.inprice.manager.dao.UserDao;
 import io.inprice.manager.email.EmailSender;
-import io.inprice.manager.helpers.Global;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Stops accounts whose statuses are either FREE or COUPONED and subs renewal date expired.
@@ -31,21 +34,25 @@ import io.inprice.manager.helpers.Global;
  * @since 2020-10-25
  * @author mdpinar
  */
-public class FreeAccountStopper implements Runnable {
+public class ExpiredFreeAccountStopper implements Task {
 
-  private static final Logger logger = LoggerFactory.getLogger(FreeAccountStopper.class);
-
+  private static final Logger logger = LoggerFactory.getLogger(ExpiredFreeAccountStopper.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.EXPIRED_FREE_ACCOUNT_STOPPER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
+    if (TaskManager.isTaskRunning(clazz)) {
       logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
+      TaskManager.startTask(clazz);
       logger.info(clazz + " is triggered.");
 
       try (Handle handle = Database.getHandle()) {
@@ -125,7 +132,7 @@ public class FreeAccountStopper implements Runnable {
       }
 
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
 

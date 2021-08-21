@@ -4,9 +4,12 @@ import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.CheckoutDao;
-import io.inprice.manager.helpers.Global;
+import io.inprice.manager.scheduled.Task;
+import io.inprice.manager.scheduled.TaskManager;
 
 /**
  * Sets the checkouts EXPIRED that have been in the PENDING state for more than two hours.
@@ -14,20 +17,25 @@ import io.inprice.manager.helpers.Global;
  * @since 2020-12-11
  * @author mdpinar
  */
-public class PendingCheckoutsCloser implements Runnable {
+public class PendingCheckoutCloser implements Task {
 
-  private static final Logger logger = LoggerFactory.getLogger(PendingCheckoutsCloser.class);
+  private static final Logger logger = LoggerFactory.getLogger(PendingCheckoutCloser.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
+  public ScheduleDef getSchedule() {
+  	return Props.getConfig().SCHEDULES.PENDING_CHECKOUT_CLOSER;
+  }
+
+  @Override
   public void run() {
-    if (Global.isTaskRunning(clazz)) {
+    if (TaskManager.isTaskRunning(clazz)) {
       logger.warn(clazz + " is already triggered!");
       return;
     }
 
     try {
-      Global.startTask(clazz);
+      TaskManager.startTask(clazz);
 
       logger.info(clazz + " is triggered.");
       try (Handle handle = Database.getHandle()) {
@@ -44,7 +52,7 @@ public class PendingCheckoutsCloser implements Runnable {
       }
       
     } finally {
-      Global.stopTask(clazz);
+      TaskManager.stopTask(clazz);
     }
   }
 
