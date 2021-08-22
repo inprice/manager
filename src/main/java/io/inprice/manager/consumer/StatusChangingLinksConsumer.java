@@ -39,7 +39,7 @@ import io.inprice.common.repository.CommonDao;
 import io.inprice.common.utils.DateUtils;
 
 /**
- * This is a the most important class to mange links' states, prices and alarms.
+ * This is the most important class to mange links' states, prices and alarms.
  * 
  * @author mdpinar
  * @since 2020-10-18
@@ -49,130 +49,127 @@ class StatusChangingLinksConsumer {
   private static final Logger logger = LoggerFactory.getLogger(StatusChangingLinksConsumer.class);
 
   StatusChangingLinksConsumer(QueueDef queueDef) throws IOException {
-  	String forWhichConsumer = "Manager-CON: " + queueDef.NAME;
+  	String forWhichConsumer = "MAN-CON: " + queueDef.NAME;
 
-  	try (Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
-  			Channel channel = conn.createChannel()) {
+  	Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
+		Channel channel = conn.createChannel();
 
-  		Consumer consumer = new DefaultConsumer(channel) {
-  			@Override
-				public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-		      try {
-		      	LinkStatusChange change = JsonConverter.fromJson(new String(body, "UTF-8"), LinkStatusChange.class);
+		Consumer consumer = new DefaultConsumer(channel) {
+			@Override
+			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+	      try {
+	      	LinkStatusChange change = JsonConverter.fromJson(new String(body, "UTF-8"), LinkStatusChange.class);
 
-	          Link link = change.getLink();
-	          List<String> queries = new ArrayList<>();
-	          
-	          final LinkStatus newStatus = link.getStatus();
-	          final LinkStatus oldStatus = change.getOldStatus();
-	
-	          boolean isStatusChanged = false;
-	          boolean[] willPriceBeRefreshed = { false };
-	
-	          //if the link is now available
-	          if (newStatus.equals(LinkStatus.AVAILABLE)) {
-	          	if (oldStatus.equals(newStatus)) { //if it is previously available then check its price if there is a change
-	          		willPriceBeRefreshed[0] = (link.getPrice().doubleValue() != change.getOldPrice().doubleValue());
-	          	} else {
-	              queries.add(queryMakeAvailable(link));
-	            	queries.addAll(queryRefreshSpecList(link));
-	      				isStatusChanged = true;
-	      				willPriceBeRefreshed[0] = true;
-	          	}
-	          }
-	          
-	          boolean willBeNonActive = false;
-	
-	          //if it fails 
-	          if (LinkStatusGroup.TRYING.equals(newStatus.getGroup())) {
-	
-	          	if (oldStatus.equals(newStatus) && link.getRetry() < 3) {
-	              queries.add(queryIncreaseRetry(link));
-	            } else {
-	              if (! oldStatus.equals(newStatus)) {
-	              	willBeNonActive = true;
-	        			} else {
-	        				logger.warn("Link with id {} is in wrong state! New Status: {}, Old Status: {}, Retry: {} ", 
-	        						link.getId(), change.getOldStatus(), link.getStatus(), link.getRetry());
-	            	}
-	      			}
-	          }
-	
-	          //if it is now passive then lets terminate it, no need to retry
-	          if (LinkStatusGroup.PROBLEM.equals(newStatus.getGroup())) {
-	          	willBeNonActive = true;
-	          }
-	
-	        	if (willBeNonActive) {
-	          	isStatusChanged = true;
-	      			queries.add(queryMakeLinkNonActive(link));
-	      			willPriceBeRefreshed[0] = oldStatus.equals(LinkStatus.AVAILABLE);
-	          }
-	
-	          if (isStatusChanged) {
-	            queries.add(queryInsertLinkHistory(link));
-	          }
-	
-	          //check if link is alarmed and conditions are suitable to fire an alarm.
-	          if (link.getAlarm() != null && (isStatusChanged || willPriceBeRefreshed[0])) {
-	          	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(change, isStatusChanged, willPriceBeRefreshed[0]);
-	          	if (alarmUpdatingQuery != null) {
-	          		queries.add(alarmUpdatingQuery);
-	          	}
-	          }
-	
-	          try (Handle handle = Database.getHandle()) {
-	          	handle.begin();
-	
-	            if (queries.size() > 0) {
-	              Batch batch = handle.createBatch();
-	              for (String query: queries) {
-	                batch.add(query);
-	              }
-	              batch.execute();
-	            }
-	
-	            if (willPriceBeRefreshed[0]) {
-	            	CommonDao commonDao = handle.attach(CommonDao.class);
-	        			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
-	
-	        			//check if group is alarmed and conditions are suitable for firing an alarm.
-	        			if (grr.getAlarmId() != null) {
-	        				AlarmDao alarmDao = handle.attach(AlarmDao.class);
-	        				LinkGroup group = alarmDao.findGroupAndAlarmById(link.getGroupId());
-	        				if (group != null) {
-	                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group);
-	                	if (alarmUpdatingQuery != null) {
-	                		handle.execute(alarmUpdatingQuery);
-	                	}
-	        				}
-	        			}
-	
-	            	BigDecimal diffAmount = BigDecimal.ZERO;
-	            	BigDecimal diffRate = BigDecimal.ZERO;
-	            	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
-	              	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
-	              	diffRate = link.getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
-	            	}
-	            	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
-	            }
-	
-	            if (queries.size() > 0)
-	            	handle.commit();
-	            else
-	            	handle.rollback();
-	          }	
-          } catch (Exception e) {
-            logger.error("Failed to handle status change", e);
+          Link link = change.getLink();
+          List<String> queries = new ArrayList<>();
+          
+          LinkStatus newStatus = link.getStatus();
+          LinkStatus oldStatus = change.getOldStatus();
+
+          boolean isStatusChanged = false;
+          boolean willPriceBeRefreshed = false;
+
+          //if the link is now available
+          if (newStatus.equals(LinkStatus.AVAILABLE)) {
+          	if (oldStatus.equals(newStatus)) { //if it is previously available then check its price if there is a change
+          		willPriceBeRefreshed = (link.getPrice().doubleValue() != change.getOldPrice().doubleValue());
+          	} else {
+              queries.add(queryMakeAvailable(link));
+            	queries.addAll(queryRefreshSpecList(link));
+      				isStatusChanged = true;
+      				willPriceBeRefreshed = true;
+          	}
           }
-        }
-			};
+          
+          boolean willBeNonActive = false;
 
-			logger.info(forWhichConsumer + " is up and running.");
-			channel.basicConsume(queueDef.NAME, true, consumer);
-  	} catch (Exception e) {
-			logger.error("Failed to connect rabbitmq server", e);
-  	}
+          //if it fails 
+          if (LinkStatusGroup.TRYING.equals(newStatus.getGroup())) {
+
+          	if (oldStatus.equals(newStatus) && link.getRetry() < 3) {
+              queries.add(queryIncreaseRetry(link));
+            } else {
+              if (! oldStatus.equals(newStatus)) {
+              	willBeNonActive = true;
+        			} else {
+        				logger.warn("Link with id {} is in wrong state! New Status: {}, Old Status: {}, Retry: {} ", 
+        						link.getId(), change.getOldStatus(), link.getStatus(), link.getRetry());
+            	}
+      			}
+          }
+
+          //if it is now passive then lets terminate it, no need to retry
+          if (LinkStatusGroup.PROBLEM.equals(newStatus.getGroup())) {
+          	willBeNonActive = true;
+          }
+
+        	if (willBeNonActive) {
+          	isStatusChanged = true;
+      			queries.add(queryMakeLinkNonActive(link));
+      			willPriceBeRefreshed = oldStatus.equals(LinkStatus.AVAILABLE);
+          }
+
+          if (isStatusChanged) {
+            queries.add(queryInsertLinkHistory(link));
+          }
+
+          //check if link is alarmed and conditions are suitable to fire an alarm.
+          if (link.getAlarm() != null && (isStatusChanged || willPriceBeRefreshed)) {
+          	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(change, isStatusChanged, willPriceBeRefreshed);
+          	if (alarmUpdatingQuery != null) {
+          		queries.add(alarmUpdatingQuery);
+          	}
+          }
+
+          try (Handle handle = Database.getHandle()) {
+          	handle.begin();
+
+            if (queries.size() > 0) {
+              Batch batch = handle.createBatch();
+              for (String query: queries) {
+                batch.add(query);
+              }
+              batch.execute();
+            }
+
+            if (willPriceBeRefreshed) {
+            	CommonDao commonDao = handle.attach(CommonDao.class);
+        			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
+
+        			//check if group is alarmed and conditions are suitable for firing an alarm.
+        			if (grr.getAlarmId() != null) {
+        				AlarmDao alarmDao = handle.attach(AlarmDao.class);
+        				LinkGroup group = alarmDao.findGroupAndAlarmById(link.getGroupId());
+        				if (group != null) {
+                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group);
+                	if (alarmUpdatingQuery != null) {
+                		handle.execute(alarmUpdatingQuery);
+                	}
+        				}
+        			}
+
+            	BigDecimal diffAmount = BigDecimal.ZERO;
+            	BigDecimal diffRate = BigDecimal.ZERO;
+            	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
+              	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
+              	diffRate = link.getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+            	}
+            	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
+            }
+
+            if (queries.size() > 0)
+            	handle.commit();
+            else
+            	handle.rollback();
+          }	
+        } catch (Exception e) {
+          logger.error("Failed to handle status change", e);
+        }
+      }
+		};
+
+		logger.info(forWhichConsumer + " is up and running.");
+		channel.basicConsume(queueDef.NAME, true, consumer);
   }
 
   private static String queryMakeAvailable(Link link) {

@@ -2,7 +2,7 @@ package io.inprice.manager.scheduled.publisher;
 
 import java.util.List;
 
-import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.Channel;
 
 import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.models.Link;
@@ -10,12 +10,13 @@ import io.inprice.manager.dao.LinkDao;
 
 public class FailedLinksPublisher extends AbstractLinkPublisher {
 
-	private final int retry;
-	private final int interval;
-	private final String period;
+	private int retry;
+	private int interval;
+	private String period;
 
-	public FailedLinksPublisher(ScheduleDef scheduler, Connection mqConn) {
-		super(scheduler, mqConn);
+	public FailedLinksPublisher(ScheduleDef scheduler, Channel chForScrapping, 
+  		Channel chForStatusChanging, Channel chForPlatformChanging) {
+		super(scheduler, chForScrapping, chForStatusChanging, chForPlatformChanging);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
 		this.interval = scheduler.EVERY;
 		this.period = scheduler.PERIOD.substring(0, scheduler.PERIOD.length()-1);

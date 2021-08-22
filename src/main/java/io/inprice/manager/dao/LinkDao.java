@@ -11,8 +11,10 @@ import org.jdbi.v3.sqlobject.statement.UseRowMapper;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
+import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.repository.AlarmDao;
+import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
@@ -27,9 +29,10 @@ public interface LinkDao {
 	List<Link> findNewlyAddedLinks();
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
+  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
+    "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('AVAILABLE', 'RESOLVED', 'REFRESHED') " +
     "  and l.checked_at <= (now() - interval <interval> <period>) " +
@@ -40,9 +43,10 @@ public interface LinkDao {
   List<Link> findActiveLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("period") String period);
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
+  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
+    "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status in ('NOT_AVAILABLE', 'NETWORK_ERROR') " +
     "  and l.checked_at <= (now() - interval <interval> <period>) " +
@@ -56,8 +60,18 @@ public interface LinkDao {
   @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
   void bulkUpdateCheckedAt(@BindList("linkIds") List<Long> linkIds);
 
-  @SqlQuery("select * from link where url=:url and status_group='ACTIVE' order by updated_at desc limit 1")
+  @SqlUpdate("update link set platform_id=:platformId, status=:status where id=:linkId")
+  void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);
+
+  @SqlQuery(
+		"select l.*" + PlatformDao.FIELDS + " from link as l " +
+    "left join platform as p on p.id = l.platform_id " + 
+		"where l.url=:url " +
+    "  and l.platform_id is not null " +
+		"order by l.updated_at desc " +
+    "limit 1"
+	)
   @UseRowMapper(LinkMapper.class)
-  Link findTheSameAndActiveLinkByUrl(@Bind("url") String url);
+  Link findTheSameLinkByUrl(@Bind("url") String url);
 
 }

@@ -1,5 +1,6 @@
 package io.inprice.manager.scheduled;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
 import io.inprice.common.config.ScheduleDef;
@@ -73,20 +75,31 @@ public class TaskManager {
   }
 
   private static void loadPublishers() {
-  	Connection activeLinksConn = RabbitMQ.createConnection("Manager-PUB: active-publisher");
-  	Connection failedLinksConn = RabbitMQ.createConnection("Manager-PUB: failed-publisher");
+  	try {
+	  	//active links
+	  	Connection activeLinksConn = RabbitMQ.createConnection("MAN-PUB: active-publisher");
+	  	Channel chForActiveScrapping = activeLinksConn.createChannel();
+	  	Channel chForStatusChanging = activeLinksConn.createChannel();
+	  	Channel chForPlatformChanging = activeLinksConn.createChannel();
 
-    taskList.add(new NewlyAddedLinksPublisher(activeLinksConn));
-
-    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
-    for (ScheduleDef alp: activeLinkPublishers) {
-    	taskList.add(new ActiveLinksPublisher(alp, activeLinksConn));
-    }
-
-    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
-    for (ScheduleDef flp: failedLinkPublishers) {
-    	taskList.add(new FailedLinksPublisher(flp, failedLinksConn));
-    }
+	  	//failed links
+	  	Connection failedLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
+	  	Channel chForFailedScrapping = failedLinksConn.createChannel();
+	
+	    taskList.add(new NewlyAddedLinksPublisher(chForActiveScrapping, chForStatusChanging, chForPlatformChanging));
+	
+	    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
+	    for (ScheduleDef alp: activeLinkPublishers) {
+	    	taskList.add(new ActiveLinksPublisher(alp, chForActiveScrapping, chForStatusChanging, chForPlatformChanging));
+	    }
+	
+	    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
+	    for (ScheduleDef flp: failedLinkPublishers) {
+	    	taskList.add(new FailedLinksPublisher(flp, chForFailedScrapping, null, null));
+	    }
+  	} catch (IOException e) {
+  		
+  	}
   }
 
   public static void startTask(String name) {

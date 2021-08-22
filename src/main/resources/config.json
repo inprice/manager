@@ -29,6 +29,7 @@
   "queues": {
   	"sendingEmails": { "name": "sending.emails.queue" },
     "statusChangingLinks": { "name": "status.changing.links.queue" },
+    "platformChangingLinks": { "name": "platform.changing.links.queue" },
     "activeLinks": [
       { "name": "active.links.queue.cap1", "capacity": 1 },
       { "name": "active.links.queue.cap3", "capacity": 3 }

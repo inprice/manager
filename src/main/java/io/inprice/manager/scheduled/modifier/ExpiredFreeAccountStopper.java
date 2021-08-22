@@ -23,7 +23,7 @@ import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
 import io.inprice.manager.dao.SubscriptionDao;
 import io.inprice.manager.dao.UserDao;
-import io.inprice.manager.email.EmailSender;
+import io.inprice.manager.helpers.EmailSender;
 import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 

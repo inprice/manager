@@ -4,7 +4,7 @@ import java.util.Map;
 
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.EmailTemplate;
-import io.inprice.manager.email.EmailSender;
+import io.inprice.manager.helpers.EmailSender;
 
 public class EmailTest {
 	
