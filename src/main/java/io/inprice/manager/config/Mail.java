@@ -1,13 +1,13 @@
 package io.inprice.manager.config;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Mail {
 
-	@SerializedName("sender")
+	@JsonProperty("sender")
 	public String SENDER;
 
-	@SerializedName("password")
+	@JsonProperty("password")
 	public String PASSWORD;
 
 }

@@ -1,21 +1,21 @@
 package io.inprice.manager.config;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.inprice.common.config.BaseConfig;
 
 public class Config extends BaseConfig {
 
-	@SerializedName("mail")
+	@JsonProperty("mail")
 	public Mail MAIL;
 
-	@SerializedName("limits")
+	@JsonProperty("limits")
 	public Limits LIMITS;
 
-	@SerializedName("queues")
+	@JsonProperty("queues")
 	public Queues QUEUES;
 
-	@SerializedName("schedules")
+	@JsonProperty("schedules")
 	public Schedules SCHEDULES;
 	
 }

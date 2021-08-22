@@ -43,7 +43,13 @@ public class TaskManager {
     loadNotifiers();
     loadPublishers();
 
-    scheduler = Executors.newScheduledThreadPool(taskList.size());
+    int taskCount = 0;
+    for (Task task: taskList) {
+    	if (task.getSchedule().ACTIVE) taskCount++;
+    }
+
+    scheduler = Executors.newScheduledThreadPool(taskCount);
+
     for (Task task: taskList) {
     	ScheduleDef schedule = task.getSchedule();
     	if (schedule.ACTIVE) {
@@ -67,8 +73,8 @@ public class TaskManager {
   }
 
   private static void loadPublishers() {
-  	Connection activeLinksConn = RabbitMQ.createConnection("manager:active-publisher");
-  	Connection failedLinksConn = RabbitMQ.createConnection("manager:failed-publisher");
+  	Connection activeLinksConn = RabbitMQ.createConnection("Manager-PUB: active-publisher");
+  	Connection failedLinksConn = RabbitMQ.createConnection("Manager-PUB: failed-publisher");
 
     taskList.add(new NewlyAddedLinksPublisher(activeLinksConn));
 

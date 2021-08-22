@@ -35,25 +35,26 @@
     ]
   },
   "schedules": {
-  	"deletedMemberRemover": { "every": 3, "period": "MINUTES" },
-  	"expiredFreeAccountStopper": { "every": 1, "period": "MINUTES" },
-  	"expiredSubscriptionStopper": { "every": 43, "period": "SECONDS" },
+  	"deletedMemberRemover": { "active": false, "every": 3, "period": "MINUTES" },
+  	"expiredFreeAccountStopper": { "active": false, "every": 1, "period": "MINUTES" },
+  	"expiredSubscriptionStopper": { "active": false, "every": 43, "period": "SECONDS" },
 
   	"pendingCheckoutCloser": { "active": false, "every": 31, "period": "SECONDS" },
 
-  	"alarmNotifier": { "every": 5, "period": "SECONDS", "delay": 1 },
-  	"freeAccountExpirationReminder": { "every": 13, "period": "SECONDS", "delay": 1 },
+  	"alarmNotifier": { "active": false, "every": 5, "period": "SECONDS", "delay": 1 },
+  	"freeAccountExpirationReminder": { "active": false, "every": 13, "period": "SECONDS", "delay": 1 },
 
   	"newlyAddedLinkPublisher": { "every": 5, "period": "SECONDS" },
+
   	"activeLinkPublishers": [
-  		{ "every": 2, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every": 4, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
-  		{ "every": 6, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
+  		{ "active": false, "every": 2, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "active": false, "every": 4, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
+  		{ "active": false, "every": 6, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
   	],
   	"failedLinkPublishers": [
-  		{ "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
-  		{ "every":11, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
+  		{ "active": false, "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "active": false, "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } },
+  		{ "active": false, "every":11, "period": "MINUTES", "delay": 1, "data": { "retry": "3" } }
   	]
   }
 }

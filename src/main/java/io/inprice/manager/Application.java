@@ -21,19 +21,15 @@ public class Application {
 	private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
 	public static void main(String[] args) {
-		new Thread(() -> {
+    Database.start(Props.getConfig().MYSQL_CONF);
+    logger.info(" - Connected to Mysql server.");
 
-      Database.start(Props.getConfig().MYSQL_CONF);
-      logger.info(" - Connected to Mysql server.");
+    RabbitMQ.start(Props.getConfig().RABBIT_CONF);
+    logger.info(" - Connected to RabbitMQ server.");
 
-      RabbitMQ.start(Props.getConfig().RABBIT_CONF);
-      logger.info(" - Connected to RabbitMQ server.");
+		TaskManager.start();
 
-			TaskManager.start();
-
-			ConsumerManager.start();
-
-		}, "app-starter").start();
+		ConsumerManager.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			logger.info("APPLICATION IS TERMINATING...");

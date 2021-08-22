@@ -29,7 +29,7 @@ class SendingEmailsConsumer {
   private static final Logger logger = LoggerFactory.getLogger(SendingEmailsConsumer.class);
   
   SendingEmailsConsumer(QueueDef queueDef) throws IOException {
-  	String forWhichConsumer = "manager-consumer: " + queueDef.NAME;
+  	String forWhichConsumer = "Manager-CON: " + queueDef.NAME;
 
   	try (Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
   			Channel channel = conn.createChannel()) {

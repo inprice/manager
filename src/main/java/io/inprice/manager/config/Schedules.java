@@ -2,37 +2,37 @@ package io.inprice.manager.config;
 
 import java.util.List;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.inprice.common.config.ScheduleDef;
 
 public class Schedules {
 
-	@SerializedName("deletedMemberRemover")
+	@JsonProperty("deletedMemberRemover")
 	public ScheduleDef DELETED_MEMBER_REMOVER;
 
-	@SerializedName("expiredFreeAccountStopper")
+	@JsonProperty("expiredFreeAccountStopper")
 	public ScheduleDef EXPIRED_FREE_ACCOUNT_STOPPER;
 
-	@SerializedName("expiredSubscriptionStopper")
+	@JsonProperty("expiredSubscriptionStopper")
 	public ScheduleDef EXPIRED_SUBSCRIPTION_STOPPER;
 
-	@SerializedName("pendingCheckoutCloser")
+	@JsonProperty("pendingCheckoutCloser")
 	public ScheduleDef PENDING_CHECKOUT_CLOSER;
 
-	@SerializedName("alarmNotifier")
+	@JsonProperty("alarmNotifier")
 	public ScheduleDef ALARM_NOTIFIER;
 	
-	@SerializedName("freeAccountExpirationReminder")
+	@JsonProperty("freeAccountExpirationReminder")
 	public ScheduleDef FREE_ACCOUNT_EXPIRATION_REMINDER;
 
-	@SerializedName("newlyAddedLinkPublisher")
+	@JsonProperty("newlyAddedLinkPublisher")
 	public ScheduleDef NEWLY_ADDED_LINK_PUBLISHER;
 
-	@SerializedName("activeLinkPublishers")
+	@JsonProperty("activeLinkPublishers")
 	public List<ScheduleDef> ACTIVE_LINK_PUBLISHERS;
 
-	@SerializedName("failedLinkPublishers")
+	@JsonProperty("failedLinkPublishers")
 	public List<ScheduleDef> FAILED_LINK_PUBLISHERS;
 	
 }
