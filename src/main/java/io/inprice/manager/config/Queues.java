@@ -14,9 +14,6 @@ public class Queues {
 	@JsonProperty("statusChangingLinks")
 	public QueueDef STATUS_CHANGING_LINKS;
 
-	@JsonProperty("platformChangingLinks")
-	public QueueDef PLATFORM_CHANGING_LINKS;
-
 	@JsonProperty("activeLinks")
 	public List<QueueDef> ACTIVE_LINKS;
 	

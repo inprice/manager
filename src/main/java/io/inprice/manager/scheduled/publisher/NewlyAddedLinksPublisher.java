@@ -10,8 +10,8 @@ import io.inprice.manager.dao.LinkDao;
 
 public class NewlyAddedLinksPublisher extends AbstractLinkPublisher {
 
-	public NewlyAddedLinksPublisher(Channel chForScrapping, Channel chForStatusChanging, Channel chForPlatformChanging) {
-		super(Props.getConfig().SCHEDULES.NEWLY_ADDED_LINK_PUBLISHER, chForScrapping, chForStatusChanging, chForPlatformChanging);
+	public NewlyAddedLinksPublisher(Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+		super(Props.getConfig().SCHEDULES.NEWLY_ADDED_LINK_PUBLISHER, scrappingLinksChannel, statusChangingLinksChannel);
 	}
 
 	@Override

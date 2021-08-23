@@ -39,7 +39,7 @@ class SendingEmailsConsumer {
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
 	      try {
 					EmailSender.send(
-						JsonConverter.fromJson(new String(body, "UTF-8"), EmailData.class)
+						JsonConverter.fromJson(new String(body), EmailData.class)
 					);				
 	      } catch (Exception e) {
 		      logger.error("Failed to send email. " + body, e);

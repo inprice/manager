@@ -78,24 +78,23 @@ public class TaskManager {
   	try {
 	  	//active links
 	  	Connection activeLinksConn = RabbitMQ.createConnection("MAN-PUB: active-publisher");
-	  	Channel chForActiveScrapping = activeLinksConn.createChannel();
-	  	Channel chForStatusChanging = activeLinksConn.createChannel();
-	  	Channel chForPlatformChanging = activeLinksConn.createChannel();
+	  	Channel scrappingActiveLinksChannel = activeLinksConn.createChannel();
+	  	Channel statusChangingActiveLinksChannel = activeLinksConn.createChannel();
 
 	  	//failed links
 	  	Connection failedLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
-	  	Channel chForFailedScrapping = failedLinksConn.createChannel();
-	
-	    taskList.add(new NewlyAddedLinksPublisher(chForActiveScrapping, chForStatusChanging, chForPlatformChanging));
+	  	Channel scrappingFailedLinksChannel = failedLinksConn.createChannel();
+
+	    taskList.add(new NewlyAddedLinksPublisher(scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
 	
 	    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
 	    for (ScheduleDef alp: activeLinkPublishers) {
-	    	taskList.add(new ActiveLinksPublisher(alp, chForActiveScrapping, chForStatusChanging, chForPlatformChanging));
+	    	taskList.add(new ActiveLinksPublisher(alp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
 	    }
 	
 	    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
 	    for (ScheduleDef flp: failedLinkPublishers) {
-	    	taskList.add(new FailedLinksPublisher(flp, chForFailedScrapping, null, null));
+	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, null));
 	    }
   	} catch (IOException e) {
   		

@@ -2,6 +2,7 @@ package io.inprice.manager.scheduled.publisher;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.jdbi.v3.core.Handle;
@@ -13,8 +14,8 @@ import com.rabbitmq.client.Channel;
 import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
-import io.inprice.common.info.LinkPlatformChange;
 import io.inprice.common.info.LinkStatusChange;
+import io.inprice.common.info.ParseStatus;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.Platform;
@@ -35,19 +36,16 @@ abstract class AbstractLinkPublisher implements Task {
 
   private ScheduleDef schedule;
 
-  private Channel channelForScrapping;
-  private Channel channelForStatusChanging;
-  private Channel channelForPlatformChanging;
+  private Channel scrappingLinksChannel;
+  private Channel statusChangingLinksChannel;
 
   abstract String getTaskName();
   abstract List<Link> findLinks(LinkDao linkDao);
 
-  public AbstractLinkPublisher(ScheduleDef schedule, Channel chForScrapping, 
-  		Channel chForStatusChanging, Channel chForPlatformChanging) {
+  public AbstractLinkPublisher(ScheduleDef schedule, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
   	this.schedule = schedule;
-  	this.channelForScrapping = chForScrapping;
-  	this.channelForStatusChanging = chForStatusChanging;
-  	this.channelForPlatformChanging = chForPlatformChanging;
+  	this.scrappingLinksChannel = scrappingLinksChannel;
+  	this.statusChangingLinksChannel = statusChangingLinksChannel;
 	}
 
   @Override
@@ -73,6 +71,8 @@ abstract class AbstractLinkPublisher implements Task {
         LinkDao linkDao = handle.attach(LinkDao.class);
   
         List<Link> links = findLinks(linkDao);
+        if (links.size() > 0) Collections.shuffle(links);
+
         while (links.size() > 0) {
           counter += links.size();
 
@@ -85,9 +85,9 @@ abstract class AbstractLinkPublisher implements Task {
             LinkStatus oldStatus = link.getStatus();
             Long oldPlatformId = link.getPlatformId();
 
-            //no platform has been specified yet then try to find the same url to clone
+            //no platform has been specified yet then try to look up the same url to clone it
             if (link.getPlatformId() == null) {
-              Link sample = linkDao.findTheSameLinkByUrl(link.getUrl()); //returns with non-null platform!
+              Link sample = linkDao.findTheSameLinkByUrl(link.getUrl());
               if (sample != null) {
               	link.setSku(sample.getSku());
               	link.setName(sample.getName());
@@ -96,39 +96,43 @@ abstract class AbstractLinkPublisher implements Task {
               	link.setShipment(sample.getShipment());
               	link.setPrice(sample.getPrice());
               	link.setLevel(sample.getLevel());
-                link.setPreStatus(sample.getPreStatus());
+                link.setPreStatus(link.getStatus());
                 link.setStatus(sample.getStatus());
                 link.setPlatformId(sample.getPlatformId());
                 link.setPlatform(sample.getPlatform());
-                if (sample.getPlatform().getStatus() != null) link.setStatus(sample.getPlatform().getStatus());
               }
             }
 
-            //still not found, try to find the platform by url
+            //not found, try to find the platform by url
             if (link.getPlatformId() == null) {
               Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
               if (platform != null) {
               	link.setPlatformId(platform.getId());
               	link.setPlatform(platform);
-                if (platform.getStatus() != null) link.setStatus(platform.getStatus());
               }
             }
 
-            //still not found, it must be implemented
-            if (link.getPlatformId() == null) {
-            	link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
-            }
-
-            //it has a platform but parked!
-            if (link.getPlatform() != null && Boolean.TRUE.equals(link.getPlatform().getParked())) {
-          		if (link.getPlatformId().equals(oldPlatformId) == false) publishForPlatformChanging(link);
+            if (link.getPlatformId() != null && Boolean.TRUE.equals(link.getPlatform().getParked())) {
+          		if (link.getPlatformId().equals(oldPlatformId) == false) {
+          			setNewPlatform(link);
+          		}
           		continue;
+          	}
+            
+            ParseStatus newParseStatus = null;
+
+            if (link.getPlatformId() == null) {
+            	newParseStatus = new ParseStatus(ParseStatus.CODE_NOT_IMPLEMENTED, "Not implemented yet");
+            } else {
+            	if (Boolean.TRUE.equals(link.getPlatform().getBlocked())) {
+            		newParseStatus = new ParseStatus(ParseStatus.HTTP_CODE_NOT_ALLOWED, "Not allowed");
+            	}
             }
 
-            if (link.getStatus().equals(oldStatus)) {
+            if (link.getStatus().equals(oldStatus) || newParseStatus == null) {
             	publishForScrapping(link);
             } else {
-            	publishForStatusChanging(link, oldStatus);
+            	publishForStatusChanging(link, newParseStatus);
             }
           }
           linkDao.bulkUpdateCheckedAt(linkIds);
@@ -138,6 +142,7 @@ abstract class AbstractLinkPublisher implements Task {
               Thread.sleep(Props.getConfig().LIMITS.WAIT_LIMIT_BEFORE_NEXT_FETCH);
             } catch (InterruptedException e) { }
             links = findLinks(linkDao);
+            if (links.size() > 0) Collections.shuffle(links);
           } else {
             links.clear();
           }
@@ -159,28 +164,28 @@ abstract class AbstractLinkPublisher implements Task {
   private void publishForScrapping(Link link) {
   	try {
 	  	String outMessage = JsonConverter.toJson(link);
-	  	channelForScrapping.basicPublish("", link.getPlatform().getQueue(), null, outMessage.getBytes());
+	  	scrappingLinksChannel.basicPublish("", link.getPlatform().getQueue(), null, outMessage.getBytes());
   	} catch (IOException e) {
       logger.error("Failed to publish link", e);
 		}
   }
 
-  private void publishForStatusChanging(Link link, LinkStatus oldStatus) {
+  private void publishForStatusChanging(Link link, ParseStatus newParseStatus) {
   	try {
-	  	String outMessage = JsonConverter.toJson(new LinkStatusChange(link, oldStatus, link.getPrice()));
-	  	channelForStatusChanging.basicPublish("", Props.getConfig().QUEUES.STATUS_CHANGING_LINKS.NAME, null, outMessage.getBytes());
+	  	String outMessage = JsonConverter.toJson(new LinkStatusChange(link, newParseStatus, link.getPrice()));
+	  	statusChangingLinksChannel.basicPublish("", Props.getConfig().QUEUES.STATUS_CHANGING_LINKS.NAME, null, outMessage.getBytes());
   	} catch (IOException e) {
       logger.error("Failed to publish status changing link", e);
 		}
   }
 
-  private void publishForPlatformChanging(Link link) {
-  	try {
-	  	String outMessage = JsonConverter.toJson(new LinkPlatformChange(link.getId(), link.getPlatformId(), link.getStatus()));
-	  	channelForPlatformChanging.basicPublish("", Props.getConfig().QUEUES.PLATFORM_CHANGING_LINKS.NAME, null, outMessage.getBytes());
-  	} catch (IOException e) {
-      logger.error("Failed to publish platform changing link", e);
-		}
+  private void setNewPlatform(Link link) {
+    try (Handle handle = Database.getHandle()) {
+    	LinkDao dao = handle.attach(LinkDao.class);
+    	dao.setPlatform(link.getId(), link.getPlatformId(), link.getStatus());
+    } catch (Exception e) {
+      logger.error("Failed to set platform id", e);
+    }
   }
 
 }

@@ -14,9 +14,8 @@ public class ActiveLinksPublisher extends AbstractLinkPublisher {
 	private int interval;
 	private String period;
 
-	public ActiveLinksPublisher(ScheduleDef scheduler, Channel chForScrapping, 
-  		Channel chForStatusChanging, Channel chForPlatformChanging) {
-		super(scheduler, chForScrapping, chForStatusChanging, chForPlatformChanging);
+	public ActiveLinksPublisher(ScheduleDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+		super(scheduler, scrappingLinksChannel, statusChangingLinksChannel);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
 		this.interval = scheduler.EVERY;
 		this.period = scheduler.PERIOD.substring(0, scheduler.PERIOD.length()-1);

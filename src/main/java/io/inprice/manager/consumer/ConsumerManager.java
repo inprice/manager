@@ -18,11 +18,9 @@ public class ConsumerManager {
     try {
 	  	QueueDef sendingEmailsQueue = Props.getConfig().QUEUES.SENDING_EMAILS;
 	  	QueueDef statusChangingLinksQueue = Props.getConfig().QUEUES.STATUS_CHANGING_LINKS;
-	  	QueueDef platformChangingLinksQueue = Props.getConfig().QUEUES.PLATFORM_CHANGING_LINKS;
 	
 	  	if (sendingEmailsQueue.ACTIVE) new SendingEmailsConsumer(sendingEmailsQueue);
 	  	if (statusChangingLinksQueue.ACTIVE) new StatusChangingLinksConsumer(statusChangingLinksQueue);
-	  	if (platformChangingLinksQueue.ACTIVE) new PlatformChangingLinksConsumer(platformChangingLinksQueue);
 	
 			logger.info("Consumer manager is started.");
 		} catch (IOException e) {
