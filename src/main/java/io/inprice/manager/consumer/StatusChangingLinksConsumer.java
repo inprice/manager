@@ -29,6 +29,7 @@ import io.inprice.common.info.GroupRefreshResult;
 import io.inprice.common.info.LinkStatusChange;
 import io.inprice.common.meta.AlarmSubject;
 import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.meta.LinkStatusGroup;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.LinkGroup;
@@ -57,7 +58,7 @@ class StatusChangingLinksConsumer {
 			@Override
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
 	      try {
-	      	LinkStatusChange change = JsonConverter.fromJson(new String(body), LinkStatusChange.class);
+	      	LinkStatusChange change = JsonConverter.fromJsonWithoutJsonIgnore(new String(body), LinkStatusChange.class);
 
 	      	Link link = change.getLink();
 	      	LinkStatus currentStatus = link.getStatus();
@@ -84,19 +85,23 @@ class StatusChangingLinksConsumer {
 							break;
 						}
 
-          	case TRYING:
-          	case WAITING: {
-            	if (link.getRetry() < 3) {
-            		hasStatusChanged = false;
-            		willPriceBeRefreshed = false;
-                queries.add(queryIncreaseRetry(link));
-        			} else {
-        				retry = 3;
-        			}
+          	case TRYING: {
+          		if (previousStatus.getGroup().equals(LinkStatusGroup.TRYING)) {
+	            	if (link.getRetry() < 3) {
+	            		hasStatusChanged = false;
+	            		willPriceBeRefreshed = false;
+	                queries.add(queryIncreaseRetry(link));
+	        			} else {
+	        				retry = 3;
+	        			}
+          		}
 							break;
 						}
 
-          	case PROBLEM: break;
+          	case WAITING:
+          	case PROBLEM: {
+          		break;
+          	}
 					}
 
         	if (hasStatusChanged) {
@@ -150,6 +155,7 @@ class StatusChangingLinksConsumer {
             	handle.rollback();
           }	
         } catch (Exception e) {
+    			channel.basicAck(envelope.getDeliveryTag(), false);
           logger.error("Failed to handle status change", e);
         }
       }

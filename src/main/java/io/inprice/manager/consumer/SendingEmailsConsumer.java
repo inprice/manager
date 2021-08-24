@@ -39,9 +39,11 @@ class SendingEmailsConsumer {
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
 	      try {
 					EmailSender.send(
-						JsonConverter.fromJson(new String(body), EmailData.class)
+						JsonConverter.fromJsonWithoutJsonIgnore(new String(body), EmailData.class)
 					);				
+	      
 	      } catch (Exception e) {
+    			channel.basicAck(envelope.getDeliveryTag(), false);
 		      logger.error("Failed to send email. " + body, e);
 		    }
 			}
