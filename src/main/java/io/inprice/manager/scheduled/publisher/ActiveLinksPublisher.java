@@ -5,7 +5,9 @@ import java.util.List;
 import com.rabbitmq.client.Channel;
 
 import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.meta.LinkStatusGroup;
 import io.inprice.common.models.Link;
+import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 
 public class ActiveLinksPublisher extends AbstractLinkPublisher {
@@ -23,12 +25,12 @@ public class ActiveLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	String getTaskName() {
-		return "ActiveLinksPublisher:R"+retry;
+		return getClass().getName() + ":R-"+retry;
 	}
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findActiveLinks(retry, interval, period);
+		return linkDao.findScrappingLinks(LinkStatusGroup.ACTIVE, retry, interval, period, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
 	}
 
 }

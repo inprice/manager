@@ -29,6 +29,9 @@ public class Schedules {
 	@JsonProperty("newlyAddedLinkPublisher")
 	public ScheduleDef NEWLY_ADDED_LINK_PUBLISHER;
 
+	@JsonProperty("tobeClassifiedLinkPublishers")
+	public List<ScheduleDef> TOBE_CLASSIFIED_LINK_PUBLISHERS;
+
 	@JsonProperty("activeLinkPublishers")
 	public List<ScheduleDef> ACTIVE_LINK_PUBLISHERS;
 

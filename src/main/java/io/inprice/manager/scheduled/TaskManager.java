@@ -26,7 +26,7 @@ import io.inprice.manager.scheduled.notifier.AlarmNotifier;
 import io.inprice.manager.scheduled.notifier.FreeAccountExpirationReminder;
 import io.inprice.manager.scheduled.publisher.ActiveLinksPublisher;
 import io.inprice.manager.scheduled.publisher.FailedLinksPublisher;
-import io.inprice.manager.scheduled.publisher.NewlyAddedLinksPublisher;
+import io.inprice.manager.scheduled.publisher.TobeClassifiedLinksPublisher;
 
 public class TaskManager {
 
@@ -76,28 +76,32 @@ public class TaskManager {
 
   private static void loadPublishers() {
   	try {
-	  	//active links
+	  	//for active and tobe classified links
 	  	Connection activeLinksConn = RabbitMQ.createConnection("MAN-PUB: active-publisher");
 	  	Channel scrappingActiveLinksChannel = activeLinksConn.createChannel();
 	  	Channel statusChangingActiveLinksChannel = activeLinksConn.createChannel();
 
-	  	//failed links
+	  	//for failed links
 	  	Connection failedLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
 	  	Channel scrappingFailedLinksChannel = failedLinksConn.createChannel();
+	  	Channel statusChangingFailedLinksChannel = failedLinksConn.createChannel();
 
-	    taskList.add(new NewlyAddedLinksPublisher(scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
-	
+	    List<ScheduleDef> tobeClassifiedLinkPublishers = Props.getConfig().SCHEDULES.TOBE_CLASSIFIED_LINK_PUBLISHERS;
+	    for (ScheduleDef tlp: tobeClassifiedLinkPublishers) {
+	    	taskList.add(new TobeClassifiedLinksPublisher(tlp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
+	    }
+
 	    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
 	    for (ScheduleDef alp: activeLinkPublishers) {
 	    	taskList.add(new ActiveLinksPublisher(alp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
 	    }
-	
+
 	    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
 	    for (ScheduleDef flp: failedLinkPublishers) {
-	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, null));
+	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, statusChangingFailedLinksChannel));
 	    }
   	} catch (IOException e) {
-  		
+  		logger.error("Failed to load publishers.", e);
   	}
   }
 

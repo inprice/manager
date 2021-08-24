@@ -27,7 +27,6 @@ import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.common.info.GroupRefreshResult;
 import io.inprice.common.info.LinkStatusChange;
-import io.inprice.common.info.ParseStatus;
 import io.inprice.common.meta.AlarmSubject;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Alarm;
@@ -37,7 +36,6 @@ import io.inprice.common.models.LinkSpec;
 import io.inprice.common.repository.AlarmDao;
 import io.inprice.common.repository.CommonDao;
 import io.inprice.common.utils.DateUtils;
-import io.inprice.common.utils.StringUtils;
 
 /**
  * This is the most important class to mange links' states, prices and alarms.
@@ -61,65 +59,53 @@ class StatusChangingLinksConsumer {
 	      try {
 	      	LinkStatusChange change = JsonConverter.fromJson(new String(body), LinkStatusChange.class);
 
-          List<String> queries = new ArrayList<>();
-          boolean hasStatusChanged = false;
+	      	Link link = change.getLink();
+	      	LinkStatus currentStatus = link.getStatus();
+          LinkStatus previousStatus = change.getOldStatus();
+
           boolean willPriceBeRefreshed = false;
-          boolean willBecomeNonActive = false;
+          boolean hasStatusChanged = (previousStatus.equals(currentStatus) == false);
 
-          LinkStatus oldStatus = change.getLink().getStatus();
-          LinkStatus newStatus = findNewStatusByParseCode(change.getLink());
+          if (hasStatusChanged) {
+          	willPriceBeRefreshed = (previousStatus.equals(LinkStatus.AVAILABLE) || currentStatus.equals(LinkStatus.AVAILABLE));
+          } else {
+          	willPriceBeRefreshed = (currentStatus.equals(LinkStatus.AVAILABLE) && link.getPrice().compareTo(change.getOldPrice()) != 0);
+          }
 
-					if (change.getLink().getParseProblem() != null) {
-						change.getLink().setParseProblem(StringUtils.clearErrorMessage(change.getLink().getParseProblem()));
-					}
-
-          switch (newStatus.getGroup()) {
+          int retry = 0;
+          List<String> queries = new ArrayList<>();
+					
+          switch (currentStatus.getGroup()) {
           	case ACTIVE: {
-	          	if (oldStatus.equals(newStatus)) {
-	          		willPriceBeRefreshed = (change.getLink().getPrice().doubleValue() != change.getOldPrice().doubleValue());
-	          	} else {
-	              queries.add(queryMakeAvailable(change.getLink()));
-	            	queries.addAll(queryRefreshSpecList(change.getLink()));
-	      				hasStatusChanged = true;
-	      				willPriceBeRefreshed = true;
+	          	if (hasStatusChanged) {
+	              queries.add(queryMakeAvailable(link));
+	            	queries.addAll(queryRefreshSpecList(link));
 	          	}
 							break;
 						}
 
-          	case TRYING: {
-            	if (change.getLink().getRetry() < 3) {
-                queries.add(queryIncreaseRetry(change.getLink()));
-              } else {
-              	willBecomeNonActive = true;
+          	case TRYING:
+          	case WAITING: {
+            	if (link.getRetry() < 3) {
+            		hasStatusChanged = false;
+            		willPriceBeRefreshed = false;
+                queries.add(queryIncreaseRetry(link));
+        			} else {
+        				retry = 3;
         			}
 							break;
 						}
 
-          	case WAITING: {
-          		hasStatusChanged = (oldStatus.equals(newStatus) == false);
-          		willPriceBeRefreshed = (oldStatus.equals(LinkStatus.AVAILABLE));
-							break;
-						}
-
-          	case PROBLEM: {
-            	willBecomeNonActive = true;
-							break;
-						}
+          	case PROBLEM: break;
 					}
 
-        	if (willBecomeNonActive) {
-          	hasStatusChanged = true;
-      			queries.add(queryMakeLinkNonActive(change.getLink()));
-      			willPriceBeRefreshed = oldStatus.equals(LinkStatus.AVAILABLE);
-          }
-
-          if (hasStatusChanged) {
-            queries.add(queryInsertLinkHistory(change.getLink()));
+        	if (hasStatusChanged) {
+      			queries.addAll(querySetLinkStatus(link, retry));
           }
 
           //check if link is alarmed and conditions are suitable for firing an alarm.
-          if (change.getLink().getAlarm() != null && (hasStatusChanged || willPriceBeRefreshed)) {
-          	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(change, hasStatusChanged, willPriceBeRefreshed);
+          if (link.getAlarm() != null && (hasStatusChanged || willPriceBeRefreshed)) {
+          	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(link, hasStatusChanged, willPriceBeRefreshed);
           	if (alarmUpdatingQuery != null) {
           		queries.add(alarmUpdatingQuery);
           	}
@@ -138,12 +124,12 @@ class StatusChangingLinksConsumer {
 
             if (willPriceBeRefreshed) {
             	CommonDao commonDao = handle.attach(CommonDao.class);
-        			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(change.getLink().getGroupId()));
+        			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(link.getGroupId()));
 
         			//check if group is alarmed and conditions are suitable for firing an alarm.
         			if (grr.getAlarmId() != null) {
         				AlarmDao alarmDao = handle.attach(AlarmDao.class);
-        				LinkGroup group = alarmDao.findGroupAndAlarmById(change.getLink().getGroupId());
+        				LinkGroup group = alarmDao.findGroupAndAlarmById(link.getGroupId());
         				if (group != null) {
                 	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group);
                 	if (alarmUpdatingQuery != null) {
@@ -152,13 +138,10 @@ class StatusChangingLinksConsumer {
         				}
         			}
 
-            	BigDecimal diffAmount = BigDecimal.ZERO;
-            	BigDecimal diffRate = BigDecimal.ZERO;
-            	if (change.getOldPrice() != null && change.getOldPrice().compareTo(BigDecimal.ZERO) > 0) {
-              	diffAmount = change.getLink().getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
-              	diffRate = change.getLink().getPrice().divide(change.getOldPrice()).subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
-            	}
-            	commonDao.insertLinkPrice(change.getLink().getId(), change.getLink().getPrice(), diffAmount, diffRate, change.getLink().getGroupId(), change.getLink().getAccountId());
+            	BigDecimal diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
+            	BigDecimal diffRate = diffAmount.subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+
+            	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
             }
 
             if (queries.size() > 0)
@@ -176,31 +159,6 @@ class StatusChangingLinksConsumer {
 		channel.basicConsume(queueDef.NAME, true, consumer);
   }
   
-  private static LinkStatus findNewStatusByParseCode(Link link) {
-    switch (link.getParseCode()) {
-    	case ParseStatus.CODE_OK: return LinkStatus.AVAILABLE;
-    	case ParseStatus.CODE_NO_DATA: return LinkStatus.NO_DATA;
-    	case ParseStatus.CODE_NOT_AVAILABLE: return LinkStatus.NOT_AVAILABLE;
-    	case ParseStatus.CODE_NOT_IMPLEMENTED: return LinkStatus.TOBE_IMPLEMENTED;
-  		/*------------------------------------------*/
-    	case ParseStatus.CODE_IO_EXCEPTION: return LinkStatus.NETWORK_ERROR;
-    	case ParseStatus.CODE_TIMEOUT_EXCEPTION: return LinkStatus.TIMED_OUT;
-    	case ParseStatus.CODE_UNEXPECTED_EXCEPTION: return LinkStatus.INTERNAL_ERROR;
-  		/*------------------------------------------*/
-			case ParseStatus.HTTP_CODE_NOT_FOUND: return LinkStatus.NOT_FOUND;
-    	case ParseStatus.HTTP_CODE_NOT_ALLOWED: return LinkStatus.NOT_ALLOWED;
-			case ParseStatus.HTTP_CODE_UNREACHABLE_SITE: return LinkStatus.SITE_DOWN;
-  		/*------------------------------------------*/
-			default: {
-				if (link.getParseCode() >= 400) { //http error
-					return LinkStatus.NETWORK_ERROR;
-				} else {
-					return link.getStatus();
-				}
-			}
-    }
-  }
-
   private static String queryMakeAvailable(Link link) {
     return
       String.format(
@@ -233,31 +191,29 @@ class StatusChangingLinksConsumer {
       );
   }
 
-  private static String queryMakeLinkNonActive(Link link) {
-  	return
+  private static List<String> querySetLinkStatus(Link link, int retry) {
+  	return List.of(
 			String.format(
 				"update link " + 
-					"set retry=0, parse_code=%d, parse_problem='%s', pre_status=status, status='%s', status_group='%s', updated_at=now(), " + 
+					"set retry=%d, parse_code=%d, parse_problem='%s', pre_status=status, status='%s', status_group='%s', updated_at=now(), " + 
 					" platform_id= " + (link.getPlatformId() != null ? link.getPlatformId() : "null") +
 					" where id=%d ",
+					retry,
 					link.getParseCode(),
 					link.getParseProblem(),
 					link.getStatus(),
 					link.getStatus().getGroup(),
 					link.getId()
-				);
-  }
-
-  private static String queryInsertLinkHistory(Link link) {
-    return
+				),
       String.format(
-        "insert into link_history (link_id, status, parse_code, group_id, account_id) values (%d, '%s', %d, %d, %d) ",
-        link.getId(),
-        link.getStatus(),
-        link.getParseCode(),
-        link.getGroupId(),
-        link.getAccountId()
-      );
+          "insert into link_history (link_id, status, parse_code, group_id, account_id) values (%d, '%s', %d, %d, %d) ",
+          link.getId(),
+          link.getStatus(),
+          link.getParseCode(),
+          link.getGroupId(),
+          link.getAccountId()
+        )
+    );
   }
 
   private static List<String> queryRefreshSpecList(Link link) {
@@ -314,7 +270,7 @@ class StatusChangingLinksConsumer {
 
   	BigDecimal newAmount = null;
 
-  	if (! AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  	if (AlarmSubject.STATUS.equals(alarm.getSubject()) == false) {
   		switch (alarm.getSubject()) {
   			case MINIMUM: {
   				newAmount = group.getMinPrice();
@@ -381,13 +337,12 @@ class StatusChangingLinksConsumer {
   	return null;
   }
 
-  private static String checkAndGenerateUpdateQueryForLinkAlarm(LinkStatusChange change, boolean isStatusChanged, boolean isPriceChanged) {
+  private static String checkAndGenerateUpdateQueryForLinkAlarm(Link link, boolean hasStatusChanged, boolean isPriceChanged) {
   	boolean willBeUpdated = false;
 
-  	Link link = change.getLink();
   	Alarm alarm = link.getAlarm();
 
-  	if (isStatusChanged && AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  	if (hasStatusChanged && AlarmSubject.STATUS.equals(alarm.getSubject())) {
   		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
   				willBeUpdated = link.getStatus().name().equals(alarm.getCertainStatus());
@@ -428,7 +383,7 @@ class StatusChangingLinksConsumer {
   	if (willBeUpdated) {
   		String tobeNotifiedPart = "tobe_notified=true, ";
 
-    	//checks if it is already notified within 5 mins. if so, no need to disturb the customer!
+    	//checks if it is already notified within 5 mins. if so, no need to disturb the user frequently!
     	if (willBeUpdated && alarm.getNotifiedAt() != null) {
         long diff = DateUtils.findMinuteDiff(alarm.getNotifiedAt(), new Date());
         if (diff <= 5) {

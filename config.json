@@ -44,17 +44,20 @@
   	"alarmNotifier": { "active": false, "every": 5, "period": "SECONDS", "delay": 1 },
   	"freeAccountExpirationReminder": { "active": false, "every": 13, "period": "SECONDS", "delay": 1 },
 
-  	"newlyAddedLinkPublisher": { "every": 5, "period": "SECONDS" },
-
+  	"tobeClassifiedLinkPublishers": [
+  		{ "every": 1, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every": 5, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  	],
   	"activeLinkPublishers": [
-  		{ "active": false, "every": 2, "period": "MINUTES", "delay": 1, "data": { "retry": 1 } },
-  		{ "active": false, "every": 4, "period": "MINUTES", "delay": 1, "data": { "retry": 2 } },
-  		{ "active": false, "every": 6, "period": "MINUTES", "delay": 1, "data": { "retry": 3 } }
+  		{ "every": 2, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every": 4, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every": 6, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"failedLinkPublishers": [
-  		{ "active": false, "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": 1 } },
-  		{ "active": false, "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": 2 } },
-  		{ "active": false, "every":11, "period": "MINUTES", "delay": 1, "data": { "retry": 3 } }
+  		{ "every": 3, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":11, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	]
   }
 }
