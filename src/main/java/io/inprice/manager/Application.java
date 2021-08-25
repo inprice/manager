@@ -21,6 +21,8 @@ public class Application {
 	private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
 	public static void main(String[] args) {
+		Thread.currentThread().setName("main");
+
     Database.start(Props.getConfig().MYSQL_CONF);
     logger.info(" - Connected to Mysql server.");
 

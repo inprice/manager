@@ -1,6 +1,8 @@
 package io.inprice.manager.consumer;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,21 +33,25 @@ class SendingEmailsConsumer {
   SendingEmailsConsumer(QueueDef queueDef) throws IOException {
   	String forWhichConsumer = "MAN-CON: " + queueDef.NAME;
 
-  	Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
+  	Connection conn = RabbitMQ.createConnection(forWhichConsumer);
 		Channel channel = conn.createChannel();
+  	ExecutorService tPool = Executors.newFixedThreadPool(queueDef.CAPACITY);
 
 		Consumer consumer = new DefaultConsumer(channel) {
   		@Override
 			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-	      try {
-					EmailSender.send(
-						JsonConverter.fromJsonWithoutJsonIgnore(new String(body), EmailData.class)
-					);				
-	      
-	      } catch (Exception e) {
-    			channel.basicAck(envelope.getDeliveryTag(), false);
-		      logger.error("Failed to send email. " + body, e);
-		    }
+  			tPool.execute(() -> {
+		      try {
+						EmailSender.send(
+							JsonConverter.fromJsonWithoutJsonIgnore(new String(body), EmailData.class)
+						);				
+		      } catch (Exception e) {
+	    			try {
+							channel.basicAck(envelope.getDeliveryTag(), false);
+						} catch (IOException e1) { e1.printStackTrace(); }
+			      logger.error("Failed to send email. " + body, e);
+			    }
+	      });
 			}
 		};
 

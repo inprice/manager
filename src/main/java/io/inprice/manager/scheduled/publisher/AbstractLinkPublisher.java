@@ -64,7 +64,7 @@ abstract class AbstractLinkPublisher implements Task {
 
     try {
       TaskManager.startTask(getTaskName());
-      logger.info(getTaskName() + " is triggered.");
+      //logger.info(getTaskName() + " triggered.");
 
       try (Handle handle = Database.getHandle()) {
         LinkDao linkDao = handle.attach(LinkDao.class);

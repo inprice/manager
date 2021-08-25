@@ -24,7 +24,7 @@ public class TobeClassifiedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	String getTaskName() {
-		return getClass().getName() + ":R-"+retry;
+		return getClass().getSimpleName() + ":R-"+retry;
 	}
 
 	@Override

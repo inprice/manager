@@ -51,7 +51,7 @@ class StatusChangingLinksConsumer {
   StatusChangingLinksConsumer(QueueDef queueDef) throws IOException {
   	String forWhichConsumer = "MAN-CON: " + queueDef.NAME;
 
-  	Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
+  	Connection conn = RabbitMQ.createConnection(forWhichConsumer);
 		Channel channel = conn.createChannel();
 
 		Consumer consumer = new DefaultConsumer(channel) {
@@ -170,7 +170,7 @@ class StatusChangingLinksConsumer {
       String.format(
         "update link " + 
         "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', status_group='%s', " +
-        "platform_id=%d, retry=0, parse_code=0, parse_problem=null, updated_at=now() " +
+        "platform_id=%d, retry=0, parse_code='OK', parse_problem=null, updated_at=now() " +
         "where id=%d ",
         link.getSku(),
         link.getName(),
@@ -189,10 +189,10 @@ class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set retry=retry+1, parse_code=%d, parse_problem='%s', updated_at=now() " +
+        "set retry=retry+1, parse_code='%s', parse_problem=%s, updated_at=now() " +
         "where id=%d ",
-        link.getParseCode(),
-        link.getParseProblem(),
+        (link.getParseCode() != null ? link.getParseCode() : "OK"),
+        (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
         link.getId()
       );
   }
@@ -201,21 +201,21 @@ class StatusChangingLinksConsumer {
   	return List.of(
 			String.format(
 				"update link " + 
-					"set retry=%d, parse_code=%d, parse_problem='%s', pre_status=status, status='%s', status_group='%s', updated_at=now(), " + 
+					"set retry=%d, parse_code='%s', parse_problem=%s, pre_status=status, status='%s', status_group='%s', updated_at=now(), " + 
 					" platform_id= " + (link.getPlatformId() != null ? link.getPlatformId() : "null") +
 					" where id=%d ",
 					retry,
-					link.getParseCode(),
-					link.getParseProblem(),
+	        (link.getParseCode() != null ? link.getParseCode() : "OK"),
+	        (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
 					link.getStatus(),
 					link.getStatus().getGroup(),
 					link.getId()
 				),
       String.format(
-          "insert into link_history (link_id, status, parse_code, group_id, account_id) values (%d, '%s', %d, %d, %d) ",
+          "insert into link_history (link_id, status, parse_code, group_id, account_id) values (%d, '%s', '%s', %d, %d) ",
           link.getId(),
           link.getStatus(),
-          link.getParseCode(),
+          (link.getParseCode() != null ? link.getParseCode() : "OK"),
           link.getGroupId(),
           link.getAccountId()
         )
