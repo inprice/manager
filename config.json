@@ -28,7 +28,7 @@
   },
   "queues": {
   	"sendingEmails": { "name": "sending.emails.queue", "capacity": 3 },
-    "statusChangingLinks": { "name": "status.changing.links.queue", "capacity": 0 },
+    "statusChangingLinks": { "name": "status.changing.links.queue" },
     "activeLinks": [
       { "name": "active.links.queue.cap1", "capacity": 1 },
       { "name": "active.links.queue.cap3", "capacity": 3 }
@@ -50,14 +50,14 @@
   		{ "every": 5, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"activeLinkPublishers": [
-  		{ "every": 1, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every":10, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every":30, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  		{ "every":15, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every":37, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":77, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"failedLinkPublishers": [
-  		{ "every": 3, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every": 7, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every":12, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  		{ "every":23, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every":37, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":72, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	]
   }
 }

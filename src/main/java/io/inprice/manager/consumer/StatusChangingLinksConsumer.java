@@ -212,10 +212,10 @@ class StatusChangingLinksConsumer {
 					link.getId()
 				),
       String.format(
-          "insert into link_history (link_id, status, parse_code, group_id, account_id) values (%d, '%s', '%s', %d, %d) ",
+          "insert into link_history (link_id, status, parse_problem, group_id, account_id) values (%d, '%s', %s, %d, %d) ",
           link.getId(),
           link.getStatus(),
-          (link.getParseCode() != null ? link.getParseCode() : "OK"),
+          (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
           link.getGroupId(),
           link.getAccountId()
         )

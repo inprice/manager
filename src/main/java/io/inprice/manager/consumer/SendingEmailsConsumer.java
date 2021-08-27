@@ -35,7 +35,7 @@ class SendingEmailsConsumer {
 
   	Connection conn = RabbitMQ.createConnection(forWhichConsumer);
 		Channel channel = conn.createChannel();
-  	ExecutorService tPool = Executors.newFixedThreadPool(queueDef.CAPACITY);
+  	ExecutorService tPool = Executors.newFixedThreadPool(queueDef.CAPACITY >= 1 && queueDef.CAPACITY <= 20 ? queueDef.CAPACITY : 5);
 
 		Consumer consumer = new DefaultConsumer(channel) {
   		@Override
@@ -46,9 +46,6 @@ class SendingEmailsConsumer {
 							JsonConverter.fromJsonWithoutJsonIgnore(new String(body), EmailData.class)
 						);				
 		      } catch (Exception e) {
-	    			try {
-							channel.basicAck(envelope.getDeliveryTag(), false);
-						} catch (IOException e1) { e1.printStackTrace(); }
 			      logger.error("Failed to send email. " + body, e);
 			    }
 	      });
