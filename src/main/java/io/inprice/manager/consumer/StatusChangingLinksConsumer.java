@@ -81,6 +81,8 @@ class StatusChangingLinksConsumer {
 	          	if (hasStatusChanged) {
 	              queries.add(queryMakeAvailable(link));
 	            	queries.addAll(queryRefreshSpecList(link));
+	          	} else if (willPriceBeRefreshed) {
+	          		queries.add(queryUpdatePrice(link));
 	          	}
 							break;
 						}
@@ -143,8 +145,13 @@ class StatusChangingLinksConsumer {
         				}
         			}
 
-            	BigDecimal diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
-            	BigDecimal diffRate = diffAmount.subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+            	BigDecimal diffAmount = BigDecimal.ZERO;
+            	BigDecimal diffRate = BigDecimal.ZERO;
+        			
+            	if (change.getOldPrice().compareTo(BigDecimal.ZERO) != 0) {
+	            	diffAmount = link.getPrice().subtract(change.getOldPrice()).setScale(2, RoundingMode.HALF_UP);
+	            	diffRate = diffAmount.subtract(BigDecimal.ONE).multiply(new BigDecimal(100)).setScale(2, RoundingMode.HALF_UP);
+            	}
 
             	commonDao.insertLinkPrice(link.getId(), link.getPrice(), diffAmount, diffRate, link.getGroupId(), link.getAccountId());
             }
@@ -164,7 +171,7 @@ class StatusChangingLinksConsumer {
 		logger.info(forWhichConsumer + " is up and running.");
 		channel.basicConsume(queueDef.NAME, true, consumer);
   }
-  
+
   private static String queryMakeAvailable(Link link) {
     return
       String.format(
@@ -197,6 +204,17 @@ class StatusChangingLinksConsumer {
       );
   }
 
+  private static String queryUpdatePrice(Link link) {
+    return
+      String.format(
+        "update link " + 
+        "set price=%f, retry=0, parse_code='OK', parse_problem=null, updated_at=now() " +
+        "where id=%d ",
+        link.getPrice(),
+        link.getId()
+      );
+  }
+
   private static List<String> querySetLinkStatus(Link link, int retry) {
   	return List.of(
 			String.format(
@@ -208,7 +226,7 @@ class StatusChangingLinksConsumer {
 	        (link.getParseCode() != null ? link.getParseCode() : "OK"),
 	        (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
 					link.getStatus(),
-					link.getStatus().getGroup(),
+					(retry < 3 ? link.getStatus().getGroup() : LinkStatusGroup.PROBLEM),
 					link.getId()
 				),
       String.format(

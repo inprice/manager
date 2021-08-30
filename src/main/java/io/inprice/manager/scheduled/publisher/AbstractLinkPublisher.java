@@ -158,7 +158,7 @@ abstract class AbstractLinkPublisher implements Task {
 
   private void publishForScrapping(Link link) {
   	try {
-	  	String message = JsonConverter.toJsonWithoutJsonIgnore(link);
+	  	String message = JsonConverter.toJsonWithoutIgnoring(link);
 	  	scrappingLinksChannel.basicPublish("", link.getPlatform().getQueue(), null, message.getBytes());
   	} catch (IOException e) {
       logger.error("Failed to publish link", e);
@@ -167,7 +167,7 @@ abstract class AbstractLinkPublisher implements Task {
 
   private void publishForStatusChanging(Link link, LinkStatus oldLinkStatus) {
   	try {
-	  	String message = JsonConverter.toJsonWithoutJsonIgnore(new LinkStatusChange(link, oldLinkStatus, link.getPrice()));
+	  	String message = JsonConverter.toJsonWithoutIgnoring(new LinkStatusChange(link, oldLinkStatus, link.getPrice()));
 	  	statusChangingLinksChannel.basicPublish("", Props.getConfig().QUEUES.STATUS_CHANGING_LINKS.NAME, null, message.getBytes());
   	} catch (IOException e) {
       logger.error("Failed to publish status changing link", e);
