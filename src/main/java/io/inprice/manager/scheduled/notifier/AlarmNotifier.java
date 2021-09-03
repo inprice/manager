@@ -21,7 +21,7 @@ import io.inprice.common.models.Alarm;
 import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AlarmDao;
-import io.inprice.manager.email.EmailSender;
+import io.inprice.manager.helpers.EmailSender;
 import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 

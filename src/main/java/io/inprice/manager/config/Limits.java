@@ -1,13 +1,13 @@
 package io.inprice.manager.config;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Limits {
 
-	@SerializedName("dbFetch")
+	@JsonProperty("dbFetch")
 	public int LINK_LIMIT_FETCHING_FROM_DB;
 
-	@SerializedName("waitBeforeNextFetch")
+	@JsonProperty("waitBeforeNextFetch")
 	public int WAIT_LIMIT_BEFORE_NEXT_FETCH;
 	
 }

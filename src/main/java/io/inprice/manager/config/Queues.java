@@ -2,19 +2,19 @@ package io.inprice.manager.config;
 
 import java.util.List;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.inprice.common.config.QueueDef;
 
 public class Queues {
 
-	@SerializedName("sendingEmails")
+	@JsonProperty("sendingEmails")
 	public QueueDef SENDING_EMAILS;
 
-	@SerializedName("statusChangingLinks")
+	@JsonProperty("statusChangingLinks")
 	public QueueDef STATUS_CHANGING_LINKS;
 
-	@SerializedName("activeLinks")
+	@JsonProperty("activeLinks")
 	public List<QueueDef> ACTIVE_LINKS;
 	
 }

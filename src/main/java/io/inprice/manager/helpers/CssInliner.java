@@ -48,7 +48,7 @@ public class CssInliner {
     String content = checkFragments(template.getFileName());
     if (content == null) return null;
 
-    final Document document = Jsoup.parse(content, "UTF-8");
+    final Document document = Jsoup.parse(content);
     inlinedTemplate = inlineCss(styleSheet, document);
     inlinedTemplatesMap.put(template, inlinedTemplate);
 

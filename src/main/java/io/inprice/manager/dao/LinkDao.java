@@ -1,6 +1,7 @@
 package io.inprice.manager.dao;
 
 import java.util.List;
+import java.util.Set;
 
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindList;
@@ -11,53 +12,68 @@ import org.jdbi.v3.sqlobject.statement.UseRowMapper;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
+import io.inprice.common.meta.LinkStatus;
+import io.inprice.common.meta.LinkStatusGroup;
 import io.inprice.common.models.Link;
 import io.inprice.common.repository.AlarmDao;
+import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
-	@SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
-    "left join alarm as al on al.id = l.alarm_id " + 
-		"where l.status = 'TOBE_CLASSIFIED' " + 
-		"  and l.checked_at is null " +
-		"limit 100"
-	)
-	@UseRowMapper(LinkMapper.class)
-	List<Link> findNewlyAddedLinks();
-
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
+  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
+    "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
-    "  and l.status in ('AVAILABLE', 'RESOLVED', 'REFRESHED') " +
-    "  and l.checked_at <= (now() - interval <interval> <period>) " +
+    "  and l.status = 'TOBE_CLASSIFIED' " +
+    "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
     "  and l.retry = <retry> " +
-    "limit 100"
+    "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findActiveLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("period") String period);
+  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + " from link as l " + 
+  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join account as a on a.id = l.account_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
+    "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
-    "  and l.status in ('NOT_AVAILABLE', 'NETWORK_ERROR') " +
-    "  and l.checked_at <= (now() - interval <interval> <period>) " +
+    "  and l.status_group = :statusGroup " +
+    "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
-    "limit 100"
+    "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findFailedLinks(@Define("retry") int retry, @Define("interval") int interval, @Define("period") String period);
+  List<Link> findScrappingLinks(@Bind("statusGroup") LinkStatusGroup statusGroup, @Define("retry") int retry, @Define("limit") int limit);
 
   @Transaction
-  @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
-  void bulkUpdateCheckedAt(@BindList("linkIds") List<Long> linkIds);
+  @SqlUpdate(
+		"update link set checked_at=now() " +
+		"where id in (" +
+			"select lid from (" +
+				"select l.id as lid from link as l " +
+				"inner join account as a on a.id = l.account_id " + 
+				"where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+				"  and l.url_hash in (<linkHashes>)" +
+			") AS x " +
+		")"
+	)
+  void bulkUpdateCheckedAt(@BindList("linkHashes") Set<String> linkHashes);
 
-  @SqlQuery("select * from link where url=:url and status_group='ACTIVE' order by updated_at desc limit 1")
+  @SqlUpdate("update link set platform_id=:platformId, status=:status where id=:linkId")
+  void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);
+
+  @SqlQuery(
+		"select l.*" + PlatformDao.FIELDS + " from link as l " +
+    "left join platform as p on p.id = l.platform_id " + 
+		"where l.url=:url " +
+    "  and l.platform_id is not null " +
+		"order by l.updated_at desc " +
+    "limit 1"
+	)
   @UseRowMapper(LinkMapper.class)
-  Link findTheSameAndActiveLinkByUrl(@Bind("url") String url);
+  Link findTheSameLinkByUrl(@Bind("url") String url);
 
 }

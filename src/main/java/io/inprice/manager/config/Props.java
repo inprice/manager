@@ -12,7 +12,7 @@ import io.inprice.common.helpers.JsonConverter;
 
 /**
  * If finds, opens config.json on root first
- * else will search for it in classpath!
+ * else will look for it in classpath!
  * 
  * since 2021-08-18
  * @author mdpinar
@@ -35,7 +35,7 @@ public class Props {
   				text = new String(Files.readAllBytes(Paths.get("./config.json")));
   			}
 
-  			//if not, then search for it in classpath!
+  			//if not, then look for it in classpath!
   			if (text == null) {
 	    		ClassLoader classloader = Thread.currentThread().getContextClassLoader();
 	    		try (InputStream is = classloader.getResourceAsStream("config.json")) {

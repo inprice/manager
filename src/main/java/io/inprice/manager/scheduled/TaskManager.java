@@ -1,5 +1,6 @@
 package io.inprice.manager.scheduled;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
 import io.inprice.common.config.ScheduleDef;
@@ -24,7 +26,7 @@ import io.inprice.manager.scheduled.notifier.AlarmNotifier;
 import io.inprice.manager.scheduled.notifier.FreeAccountExpirationReminder;
 import io.inprice.manager.scheduled.publisher.ActiveLinksPublisher;
 import io.inprice.manager.scheduled.publisher.FailedLinksPublisher;
-import io.inprice.manager.scheduled.publisher.NewlyAddedLinksPublisher;
+import io.inprice.manager.scheduled.publisher.TobeClassifiedLinksPublisher;
 
 public class TaskManager {
 
@@ -43,7 +45,13 @@ public class TaskManager {
     loadNotifiers();
     loadPublishers();
 
-    scheduler = Executors.newScheduledThreadPool(taskList.size());
+    int taskCount = 0;
+    for (Task task: taskList) {
+    	if (task.getSchedule().ACTIVE) taskCount++;
+    }
+
+    scheduler = Executors.newScheduledThreadPool(taskCount);
+
     for (Task task: taskList) {
     	ScheduleDef schedule = task.getSchedule();
     	if (schedule.ACTIVE) {
@@ -67,20 +75,34 @@ public class TaskManager {
   }
 
   private static void loadPublishers() {
-  	Connection activeLinksConn = RabbitMQ.createConnection("manager:active-publisher");
-  	Connection failedLinksConn = RabbitMQ.createConnection("manager:failed-publisher");
+  	try {
+	  	//for active and tobe classified links
+	  	Connection activeLinksConn = RabbitMQ.createConnection("MAN-PUB: active-publisher");
+	  	Channel scrappingActiveLinksChannel = activeLinksConn.createChannel();
+	  	Channel statusChangingActiveLinksChannel = activeLinksConn.createChannel();
 
-    taskList.add(new NewlyAddedLinksPublisher(activeLinksConn));
+	  	//for failed links
+	  	Connection failedLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
+	  	Channel scrappingFailedLinksChannel = failedLinksConn.createChannel();
+	  	Channel statusChangingFailedLinksChannel = failedLinksConn.createChannel();
 
-    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
-    for (ScheduleDef alp: activeLinkPublishers) {
-    	taskList.add(new ActiveLinksPublisher(alp, activeLinksConn));
-    }
+	    List<ScheduleDef> tobeClassifiedLinkPublishers = Props.getConfig().SCHEDULES.TOBE_CLASSIFIED_LINK_PUBLISHERS;
+	    for (ScheduleDef tlp: tobeClassifiedLinkPublishers) {
+	    	taskList.add(new TobeClassifiedLinksPublisher(tlp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
+	    }
 
-    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
-    for (ScheduleDef flp: failedLinkPublishers) {
-    	taskList.add(new FailedLinksPublisher(flp, failedLinksConn));
-    }
+	    List<ScheduleDef> activeLinkPublishers = Props.getConfig().SCHEDULES.ACTIVE_LINK_PUBLISHERS;
+	    for (ScheduleDef alp: activeLinkPublishers) {
+	    	taskList.add(new ActiveLinksPublisher(alp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
+	    }
+
+	    List<ScheduleDef> failedLinkPublishers = Props.getConfig().SCHEDULES.FAILED_LINK_PUBLISHERS;
+	    for (ScheduleDef flp: failedLinkPublishers) {
+	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, statusChangingFailedLinksChannel));
+	    }
+  	} catch (IOException e) {
+  		logger.error("Failed to load publishers.", e);
+  	}
   }
 
   public static void startTask(String name) {

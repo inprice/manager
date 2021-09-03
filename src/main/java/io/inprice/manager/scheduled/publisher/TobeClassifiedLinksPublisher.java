@@ -5,16 +5,15 @@ import java.util.List;
 import com.rabbitmq.client.Channel;
 
 import io.inprice.common.config.ScheduleDef;
-import io.inprice.common.meta.LinkStatusGroup;
 import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 
-public class FailedLinksPublisher extends AbstractLinkPublisher {
+public class TobeClassifiedLinksPublisher extends AbstractLinkPublisher {
 
 	private int retry;
 
-	public FailedLinksPublisher(ScheduleDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+	public TobeClassifiedLinksPublisher(ScheduleDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
 		super(scheduler, scrappingLinksChannel, statusChangingLinksChannel);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
 	}
@@ -26,7 +25,7 @@ public class FailedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findScrappingLinks(LinkStatusGroup.TRYING, retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
+		return linkDao.findTobeClassifiedLinks(retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
 	}
 
 }

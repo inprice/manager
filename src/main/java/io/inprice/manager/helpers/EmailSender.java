@@ -1,4 +1,4 @@
-package io.inprice.manager.email;
+package io.inprice.manager.helpers;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

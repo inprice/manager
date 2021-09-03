@@ -1,6 +1,8 @@
 package io.inprice.manager.consumer;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,7 @@ import io.inprice.common.config.QueueDef;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.common.info.EmailData;
-import io.inprice.manager.email.EmailSender;
+import io.inprice.manager.helpers.EmailSender;
 
 /**
  * Designed to manage all the sending emails around the platform
@@ -29,29 +31,29 @@ class SendingEmailsConsumer {
   private static final Logger logger = LoggerFactory.getLogger(SendingEmailsConsumer.class);
   
   SendingEmailsConsumer(QueueDef queueDef) throws IOException {
-  	String forWhichConsumer = "manager-consumer: " + queueDef.NAME;
+  	String forWhichConsumer = "MAN-CON: " + queueDef.NAME;
 
-  	try (Connection conn = RabbitMQ.createConnection(forWhichConsumer, queueDef.CAPACITY);
-  			Channel channel = conn.createChannel()) {
+  	Connection conn = RabbitMQ.createConnection(forWhichConsumer);
+		Channel channel = conn.createChannel();
+  	ExecutorService tPool = Executors.newFixedThreadPool(queueDef.CAPACITY >= 1 && queueDef.CAPACITY <= 20 ? queueDef.CAPACITY : 5);
 
-  		Consumer consumer = new DefaultConsumer(channel) {
-	  		@Override
-				public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+		Consumer consumer = new DefaultConsumer(channel) {
+  		@Override
+			public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+  			tPool.execute(() -> {
 		      try {
 						EmailSender.send(
-							JsonConverter.fromJson(new String(body, "UTF-8"), EmailData.class)
+							JsonConverter.fromJsonWithoutJsonIgnore(new String(body), EmailData.class)
 						);				
 		      } catch (Exception e) {
 			      logger.error("Failed to send email. " + body, e);
 			    }
-				}
-			};
+	      });
+			}
+		};
 
-			logger.info(forWhichConsumer + " is up and running.");
-			channel.basicConsume(queueDef.NAME, true, consumer);
-  	} catch (Exception e) {
-			logger.error("Failed to connect rabbitmq server", e);
-		}
+		logger.info(forWhichConsumer + " is up and running.");
+		channel.basicConsume(queueDef.NAME, true, consumer);
   }
 
 }
