@@ -46,18 +46,18 @@
 
   	"tobeClassifiedLinkPublishers": [
   		{ "every": 1, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every": 3, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every": 5, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  		{ "every": 5, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":10, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"activeLinkPublishers": [
-  		{ "every":15, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every":37, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every":77, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  		{ "every": 5, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every":15, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":30, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"failedLinkPublishers": [
-  		{ "every":23, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every":37, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
-  		{ "every":72, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
+  		{ "every": 7, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
+  		{ "every":17, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":37, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	]
   }
 }

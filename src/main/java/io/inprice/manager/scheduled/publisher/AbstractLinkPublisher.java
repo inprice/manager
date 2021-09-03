@@ -1,9 +1,10 @@
 package io.inprice.manager.scheduled.publisher;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
@@ -14,7 +15,6 @@ import com.rabbitmq.client.Channel;
 import io.inprice.common.config.ScheduleDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
-import io.inprice.common.info.LinkStatusChange;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.Platform;
@@ -64,7 +64,6 @@ abstract class AbstractLinkPublisher implements Task {
 
     try {
       TaskManager.startTask(getTaskName());
-      //logger.info(getTaskName() + " triggered.");
 
       try (Handle handle = Database.getHandle()) {
         LinkDao linkDao = handle.attach(LinkDao.class);
@@ -75,10 +74,18 @@ abstract class AbstractLinkPublisher implements Task {
         while (links.size() > 0) {
           counter += links.size();
 
-          List<Long> linkIds = new ArrayList<>(links.size());
+          Set<String> linkHashes = new HashSet<>(links.size());
           for (Link link: links) {
-          	linkIds.add(link.getId());
-          	
+
+          	//if a link is published within 30 min then no need to send it again!
+          	if (PublishedLinkChecker.hasAlreadyPublished(link.getUrlHash())) {
+          		logger.info("{} already published in 30 mins!", link.getUrl());
+          		continue;
+          	}
+          	PublishedLinkChecker.published(link.getUrlHash()); //for the check just above
+
+          	linkHashes.add(link.getUrlHash());
+
           	/*
           	 * Please note:
           	 * this class is responsible for publishing all active and tobe classified links.
@@ -127,10 +134,10 @@ abstract class AbstractLinkPublisher implements Task {
             if (link.getStatus().equals(oldStatus)) {
             	publishForScrapping(link);
             } else {
-            	publishForStatusChanging(link, oldStatus);
+            	publishForStatusChanging(link);
             }
           }
-          linkDao.bulkUpdateCheckedAt(linkIds);
+          if (linkHashes.size() > 0) linkDao.bulkUpdateCheckedAt(linkHashes);
 
           if (links.size() >= Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB) {
             try {
@@ -165,9 +172,9 @@ abstract class AbstractLinkPublisher implements Task {
 		}
   }
 
-  private void publishForStatusChanging(Link link, LinkStatus oldLinkStatus) {
+  private void publishForStatusChanging(Link link) {
   	try {
-	  	String message = JsonConverter.toJsonWithoutIgnoring(new LinkStatusChange(link, oldLinkStatus, link.getPrice()));
+	  	String message = JsonConverter.toJsonWithoutIgnoring(link);
 	  	statusChangingLinksChannel.basicPublish("", Props.getConfig().QUEUES.STATUS_CHANGING_LINKS.NAME, null, message.getBytes());
   	} catch (IOException e) {
       logger.error("Failed to publish status changing link", e);

@@ -13,14 +13,10 @@ import io.inprice.manager.dao.LinkDao;
 public class ActiveLinksPublisher extends AbstractLinkPublisher {
 
 	private int retry;
-	private int interval;
-	private String period;
 
 	public ActiveLinksPublisher(ScheduleDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
 		super(scheduler, scrappingLinksChannel, statusChangingLinksChannel);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
-		this.interval = scheduler.EVERY;
-		this.period = scheduler.PERIOD.substring(0, scheduler.PERIOD.length()-1);
 	}
 
 	@Override
@@ -30,7 +26,7 @@ public class ActiveLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findScrappingLinks(LinkStatusGroup.ACTIVE, retry, interval, period, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
+		return linkDao.findScrappingLinks(LinkStatusGroup.ACTIVE, retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
 	}
 
 }

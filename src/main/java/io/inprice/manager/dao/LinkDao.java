@@ -1,6 +1,7 @@
 package io.inprice.manager.dao;
 
 import java.util.List;
+import java.util.Set;
 
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindList;
@@ -26,13 +27,12 @@ public interface LinkDao {
     "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
-    "  and (l.checked_at is null OR l.checked_at <= (now() - interval <interval> <period>)) " +
+    "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("interval") int interval, 
-  		@Define("period") String period, @Define("limit") int limit);
+  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
 
   @SqlQuery(
   	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
@@ -41,17 +41,26 @@ public interface LinkDao {
     "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
     "  and l.status_group = :statusGroup " +
-    "  and l.checked_at <= (now() - interval <interval> <period>) " +
+    "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findScrappingLinks(@Bind("statusGroup") LinkStatusGroup statusGroup, @Define("retry") int retry,
-  		@Define("interval") int interval, @Define("period") String period, @Define("limit") int limit);
+  List<Link> findScrappingLinks(@Bind("statusGroup") LinkStatusGroup statusGroup, @Define("retry") int retry, @Define("limit") int limit);
 
   @Transaction
-  @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
-  void bulkUpdateCheckedAt(@BindList("linkIds") List<Long> linkIds);
+  @SqlUpdate(
+		"update link set checked_at=now() " +
+		"where id in (" +
+			"select lid from (" +
+				"select l.id as lid from link as l " +
+				"inner join account as a on a.id = l.account_id " + 
+				"where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+				"  and l.url_hash in (<linkHashes>)" +
+			") AS x " +
+		")"
+	)
+  void bulkUpdateCheckedAt(@BindList("linkHashes") Set<String> linkHashes);
 
   @SqlUpdate("update link set platform_id=:platformId, status=:status where id=:linkId")
   void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);
