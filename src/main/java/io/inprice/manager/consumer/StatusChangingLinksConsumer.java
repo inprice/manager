@@ -95,7 +95,6 @@ class StatusChangingLinksConsumer {
 			          	continue;
 			          }
 
-			          int retry = 0;
 			          List<String> queries = new ArrayList<>();
 								
 			          switch (linkFromParser.getStatus().getGroup()) {
@@ -110,13 +109,11 @@ class StatusChangingLinksConsumer {
 									}
 			
 			          	case TRYING: {
-			            	if (linkFromDb.getRetry() < 3) {
+			          		willPriceBeRefreshed = false;
+			          		linkFromParser.setRetry(linkFromParser.getRetry()+1);
+		            		if (linkFromParser.getRetry() < 3) {
 			            		hasStatusChanged = false;
-			            		willPriceBeRefreshed = false;
 			                queries.add(queryIncreaseRetry(linkFromDb, linkFromParser));
-			        			} else {
-			        				hasStatusChanged = true;
-			        				retry = 3;
 			        			}
 										break;
 									}
@@ -129,7 +126,7 @@ class StatusChangingLinksConsumer {
 			
 			        	if (hasStatusChanged) {
 			        		if (linkFromParser.getStatus().getGroup().equals(LinkStatusGroup.ACTIVE) == false) { //already handled above
-			        			queries.add(queryUpdateLinkStatus(linkFromParser, retry));
+			        			queries.add(queryUpdateLinkStatus(linkFromParser));
 			        		}
 			      			queries.add(queryAddStatusHistory(linkFromDb, linkFromParser));
 			          }
@@ -228,7 +225,7 @@ class StatusChangingLinksConsumer {
         "update link " + 
         "set retry=%d, parse_code='%s', parse_problem=%s, checked_at=now(), updated_at=now() " +
         "where id=%d",
-        linkFromDb.getRetry()+1,
+        linkFromParser.getRetry(),
         (linkFromParser.getParseCode() != null ? linkFromParser.getParseCode() : "OK"),
         (linkFromParser.getParseProblem() != null ? "'"+linkFromParser.getParseProblem()+"'" : "null"),
         linkFromDb.getId()
@@ -246,18 +243,18 @@ class StatusChangingLinksConsumer {
       );
   }
 
-  private static String queryUpdateLinkStatus(Link link, int retry) {
+  private static String queryUpdateLinkStatus(Link link) {
   	return
 			String.format(
 				"update link " + 
 					"set retry=%d, parse_code='%s', parse_problem=%s, pre_status=status, status='%s', status_group='%s', checked_at=now(), updated_at=now(), " + 
 					" platform_id= " + (link.getPlatformId() != null ? link.getPlatformId() : "null") +
 					" where id=%d",
-					retry,
+					link.getRetry(),
 	        (link.getParseCode() != null ? link.getParseCode() : "OK"),
 	        (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
 					link.getStatus(),
-					(retry < 3 ? link.getStatus().getGroup() : LinkStatusGroup.PROBLEM),
+					(link.getRetry() < 3 ? link.getStatus().getGroup() : LinkStatusGroup.PROBLEM),
 					link.getId()
 				);
   }
