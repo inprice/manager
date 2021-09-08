@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.rabbitmq.client.Channel;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.meta.LinkStatus;
@@ -33,7 +33,7 @@ abstract class AbstractLinkPublisher implements Task {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractLinkPublisher.class);
 
-  private ScheduleDef schedule;
+  private SchedulerDef schedule;
 
   private Channel scrappingLinksChannel;
   private Channel statusChangingLinksChannel;
@@ -41,14 +41,14 @@ abstract class AbstractLinkPublisher implements Task {
   abstract String getTaskName();
   abstract List<Link> findLinks(LinkDao linkDao);
 
-  public AbstractLinkPublisher(ScheduleDef schedule, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+  public AbstractLinkPublisher(SchedulerDef schedule, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
   	this.schedule = schedule;
   	this.scrappingLinksChannel = scrappingLinksChannel;
   	this.statusChangingLinksChannel = statusChangingLinksChannel;
 	}
 
   @Override
-  public ScheduleDef getSchedule() {
+  public SchedulerDef getScheduler() {
   	return schedule;
   }
 

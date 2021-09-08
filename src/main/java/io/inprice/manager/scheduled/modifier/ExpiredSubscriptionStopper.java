@@ -3,7 +3,7 @@ package io.inprice.manager.scheduled.modifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
@@ -22,8 +22,8 @@ public class ExpiredSubscriptionStopper implements Task {
   private final String clazz = getClass().getSimpleName();
 
   @Override
-  public ScheduleDef getSchedule() {
-  	return Props.getConfig().SCHEDULES.EXPIRED_SUBSCRIPTION_STOPPER;
+  public SchedulerDef getScheduler() {
+  	return Props.getConfig().SCHEDULERS.EXPIRED_SUBSCRIPTION_STOPPER;
   }
 
   @Override

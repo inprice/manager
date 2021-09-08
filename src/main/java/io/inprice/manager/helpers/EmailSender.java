@@ -1,23 +1,23 @@
 package io.inprice.manager.helpers;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
+
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sendgrid.Method;
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
 
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.EmailTemplate;
@@ -42,6 +42,12 @@ public class EmailSender {
   }
 	
 	public static void send(EmailData emailData) {
+
+		if (emailData.getTo().equals("demo@inprice.io")) {
+			logger.info("Data for demo mail" + StringUtils.join(emailData.getData()));
+			return;
+		}
+
 		String body = contentCacheMap.get(emailData.getTemplate());
 		if (body == null) {
 			try {
@@ -81,29 +87,30 @@ public class EmailSender {
 				footer
 			);
 
-		Email emailFrom = new Email(emailData.getFrom());
-		Email emailTo = new Email(emailData.getTo());
-		Content emailContent = new Content("text/html", content);
-
-		Mail mail = new Mail(emailFrom, emailData.getSubject(), emailTo, emailContent);
-		
-		String from = StringUtils.defaultIfEmpty(emailData.getFrom(), Props.getConfig().MAIL.SENDER);
-
-		SendGrid sg = new SendGrid(Props.getConfig().MAIL.PASSWORD);
-		Request request = new Request();
-		try {
-			request.setMethod(Method.POST);
-			request.setEndpoint("mail/send");
-			request.setBody(mail.build());
-      Response response = sg.api(request);
-      if (response.getStatusCode() >= 400) {
-      	logger.warn("Problem sending email, to: {}, status: {}, body: {}", from, response.getStatusCode(), response.getBody());
-      } else {
-      	logger.info("Email sent to: {}", emailTo.getEmail());
+    Properties prop = System.getProperties();
+    prop.put("mail.smtp.host", Props.getConfig().MAIL.HOST);
+    prop.put("mail.smtp.port", Props.getConfig().MAIL.PORT);
+    prop.put("mail.smtp.auth", Props.getConfig().MAIL.AUTH);
+    prop.put("mail.smtp.starttls.enable", Props.getConfig().MAIL.TLS_ENABLED);
+    
+    Session session = Session.getDefaultInstance(prop, new javax.mail.Authenticator() {
+      protected PasswordAuthentication getPasswordAuthentication() {
+        return new PasswordAuthentication(Props.getConfig().MAIL.USERNAME, Props.getConfig().MAIL.PASSWORD);
       }
-		} catch (IOException e) {
+    });
+
+    String from = StringUtils.defaultIfBlank(emailData.getFrom(), Props.getConfig().MAIL.DEFAULT_SENDER);
+		try {
+			Message message = new MimeMessage(session);
+			message.setFrom(new InternetAddress(from));
+			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailData.getTo()));
+			message.setSubject(emailData.getSubject());
+			message.setContent(content, "text/html");
+
+			Transport.send(message);
+		} catch (MessagingException e) {
 			logger.error("Failed to send email, to: {}, body: {}", from, content, e);
-		}
+		}		
 	}
 	
 }

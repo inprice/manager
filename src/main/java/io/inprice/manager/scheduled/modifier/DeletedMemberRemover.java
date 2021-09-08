@@ -8,7 +8,7 @@ import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AccountDao;
@@ -29,8 +29,8 @@ public class DeletedMemberRemover implements Task {
   private final String clazz = getClass().getSimpleName();
 
   @Override
-  public ScheduleDef getSchedule() {
-  	return Props.getConfig().SCHEDULES.DELETED_MEMBER_REMOVER;
+  public SchedulerDef getScheduler() {
+  	return Props.getConfig().SCHEDULERS.DELETED_MEMBER_REMOVER;
   }
 
   @Override

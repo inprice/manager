@@ -88,13 +88,6 @@ class StatusChangingLinksConsumer {
 			          	willPriceBeRefreshed = (linkFromParser.getStatus().equals(LinkStatus.AVAILABLE) && linkFromParser.getPrice().compareTo(linkFromDb.getPrice()) != 0);
 			          }
 
-			          if (hasStatusChanged == false && willPriceBeRefreshed == false) {
-			          	if (linkFromParser.getId().equals(linkFromDb.getId()) == false) {
-			          		commonDao.refreshCheckedAt(linkFromDb.getId());
-			          	}
-			          	continue;
-			          }
-
 			          List<String> queries = new ArrayList<>();
 								
 			          switch (linkFromParser.getStatus().getGroup()) {
@@ -104,14 +97,16 @@ class StatusChangingLinksConsumer {
 				            	queries.addAll(queryRefreshSpecList(linkFromDb, linkFromParser));
 				          	} else if (willPriceBeRefreshed) {
 				          		queries.add(queryUpdatePrice(linkFromDb.getId(), linkFromParser.getPrice()));
+				          	} else if (linkFromDb.getParseCode().equals(linkFromParser.getParseCode()) == false) {
+				          		queries.add(queryClearActiveLink(linkFromDb.getId()));
 				          	}
 										break;
 									}
 			
 			          	case TRYING: {
 			          		willPriceBeRefreshed = false;
-			          		linkFromParser.setRetry(linkFromParser.getRetry()+1);
-		            		if (linkFromParser.getRetry() < 3) {
+			          		linkFromDb.setRetry(linkFromDb.getRetry()+1);
+		            		if (linkFromDb.getRetry() < 3) {
 			            		hasStatusChanged = false;
 			                queries.add(queryIncreaseRetry(linkFromDb, linkFromParser));
 			        			}
@@ -160,7 +155,7 @@ class StatusChangingLinksConsumer {
 	              	if (linkFromDb.getPrice().compareTo(BigDecimal.ZERO) != 0) {
 	  	            	diffAmount = linkFromParser.getPrice().subtract(linkFromDb.getPrice()).setScale(2, RoundingMode.HALF_UP);
 	  	            	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
-	  	            		diffRate = diffAmount.divide(linkFromDb.getPrice()).multiply(A_HUNDRED).setScale(2, RoundingMode.HALF_UP);
+	  	            		diffRate = diffAmount.divide(linkFromDb.getPrice(), 6, RoundingMode.HALF_UP).multiply(A_HUNDRED).setScale(2, RoundingMode.HALF_UP);
 	  	            	}
 	              	}
 
@@ -225,7 +220,7 @@ class StatusChangingLinksConsumer {
         "update link " + 
         "set retry=%d, parse_code='%s', parse_problem=%s, checked_at=now(), updated_at=now() " +
         "where id=%d",
-        linkFromParser.getRetry(),
+        linkFromDb.getRetry(),
         (linkFromParser.getParseCode() != null ? linkFromParser.getParseCode() : "OK"),
         (linkFromParser.getParseProblem() != null ? "'"+linkFromParser.getParseProblem()+"'" : "null"),
         linkFromDb.getId()
@@ -239,6 +234,16 @@ class StatusChangingLinksConsumer {
         "set price=%f, retry=0, parse_code='OK', parse_problem=null, checked_at=now(), updated_at=now() " +
         "where id=%d",
         price,
+        id
+      );
+  }
+
+  private static String queryClearActiveLink(Long id) {
+    return
+      String.format(
+        "update link " + 
+        "set retry=0, parse_code='OK', parse_problem=null, checked_at=now(), updated_at=now() " +
+        "where id=%d",
         id
       );
   }

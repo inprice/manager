@@ -25,6 +25,8 @@
 		<commons-text.version>1.9</commons-text.version>
 		<jsoup.version>1.14.2</jsoup.version>
 		<cssparser.version>0.9.29</cssparser.version>
+		<mailer.version>1.6.2</mailer.version>
+		<quartz.version>2.3.2</quartz.version>
 	</properties>
 
 	<dependencies>
@@ -63,11 +65,10 @@
       <version>${cssparser.version}</version>
     </dependency>
 
-		<!-- TODO: bunu yerine apache-email kullanilacak!  -->
 		<dependency>
-			<groupId>com.sendgrid</groupId>
-			<artifactId>sendgrid-java</artifactId>
-			<version>4.6.5</version>
+	    <groupId>com.sun.mail</groupId>
+	    <artifactId>javax.mail</artifactId>
+	    <version>${mailer.version}</version>
 		</dependency>
 	</dependencies>
 

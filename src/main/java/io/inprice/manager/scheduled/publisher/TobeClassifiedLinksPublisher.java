@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.rabbitmq.client.Channel;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
@@ -13,7 +13,7 @@ public class TobeClassifiedLinksPublisher extends AbstractLinkPublisher {
 
 	private int retry;
 
-	public TobeClassifiedLinksPublisher(ScheduleDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+	public TobeClassifiedLinksPublisher(SchedulerDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
 		super(scheduler, scrappingLinksChannel, statusChangingLinksChannel);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
 	}

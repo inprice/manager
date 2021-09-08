@@ -15,7 +15,7 @@ public class Config extends BaseConfig {
 	@JsonProperty("queues")
 	public Queues QUEUES;
 
-	@JsonProperty("schedules")
-	public Schedules SCHEDULES;
+	@JsonProperty("schedulers")
+	public Schedulers SCHEDULERS;
 	
 }

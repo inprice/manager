@@ -1,9 +1,9 @@
 package io.inprice.manager.scheduled;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 
 public interface Task extends Runnable {
 
-	public ScheduleDef getSchedule();
+	public SchedulerDef getScheduler();
 
 }

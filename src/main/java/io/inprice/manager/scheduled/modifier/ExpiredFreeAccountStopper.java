@@ -10,7 +10,7 @@ import org.jdbi.v3.core.Handle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.inprice.common.config.ScheduleDef;
+import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.AccountStatus;
@@ -40,8 +40,8 @@ public class ExpiredFreeAccountStopper implements Task {
   private final String clazz = getClass().getSimpleName();
 
   @Override
-  public ScheduleDef getSchedule() {
-  	return Props.getConfig().SCHEDULES.EXPIRED_FREE_ACCOUNT_STOPPER;
+  public SchedulerDef getScheduler() {
+  	return Props.getConfig().SCHEDULERS.EXPIRED_FREE_ACCOUNT_STOPPER;
   }
 
   @Override

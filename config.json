@@ -34,7 +34,7 @@
       { "name": "active.links.queue.cap3", "capacity": 3 }
     ]
   },
-  "schedules": {
+  "schedulers": {
   	"deletedMemberRemover": { "active": false, "every": 3, "period": "MINUTES" },
   	"expiredFreeAccountStopper": { "active": false, "every": 1, "period": "MINUTES" },
   	"expiredSubscriptionStopper": { "active": false, "every": 43, "period": "SECONDS" },
