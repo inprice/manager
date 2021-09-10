@@ -19,8 +19,13 @@
     "password": "guest"
   },
   "mail": {
-    "sender": "account@inprice.io",
-    "password": "?R2>2~At~Btun,A^"
+    "host": "smtp.sendgrid.net",
+    "port": 587,
+    "username": "apikey",
+    "password": "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",
+    "auth": true,
+    "tlsEnabled": true,
+    "defaultSender": "info@inprice.io"
   },
   "limits": {
   	"dbFetch": 50,

@@ -19,8 +19,13 @@
     "password": "guest"
   },
   "mail": {
-    "sender": "account@inprice.io",
-    "password": "?R2>2~At~Btun,A^"
+    "host": "127.0.0.1",
+    "port": 1025,
+    "username": "",
+    "password": "",
+    "auth": false,
+    "tlsEnabled": false,
+    "defaultSender": "info@inprice.io"
   },
   "limits": {
   	"dbFetch": 50,
@@ -51,7 +56,7 @@
   	],
   	"activeLinkPublishers": [
   		{ "every": 5, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
-  		{ "every":15, "period": "MINUTES", "delay": 1, "data": { "retry": "1" } },
+  		{ "every":15, "period": "MINUTES", "delay": 0, "data": { "retry": "1" } },
   		{ "every":30, "period": "MINUTES", "delay": 1, "data": { "retry": "2" } }
   	],
   	"failedLinkPublishers": [

@@ -89,7 +89,7 @@ class StatusChangingLinksConsumer {
 			          }
 
 			          List<String> queries = new ArrayList<>();
-								
+
 			          switch (linkFromParser.getStatus().getGroup()) {
 			          	case ACTIVE: {
 				          	if (hasStatusChanged) {
@@ -97,7 +97,7 @@ class StatusChangingLinksConsumer {
 				            	queries.addAll(queryRefreshSpecList(linkFromDb, linkFromParser));
 				          	} else if (willPriceBeRefreshed) {
 				          		queries.add(queryUpdatePrice(linkFromDb.getId(), linkFromParser.getPrice()));
-				          	} else if (linkFromDb.getParseCode().equals(linkFromParser.getParseCode()) == false) {
+				          	} else if (linkFromDb.getRetry() > 0 || linkFromDb.getParseCode().equals(linkFromParser.getParseCode()) == false) {
 				          		queries.add(queryClearActiveLink(linkFromDb.getId()));
 				          	}
 										break;
