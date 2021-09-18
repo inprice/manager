@@ -23,17 +23,17 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
 import io.inprice.common.config.QueueDef;
-import io.inprice.common.converters.GroupRefreshResultConverter;
+import io.inprice.common.converters.ProductRefreshResultConverter;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.helpers.RabbitMQ;
-import io.inprice.common.info.GroupRefreshResult;
+import io.inprice.common.info.ProductRefreshResult;
 import io.inprice.common.meta.AlarmSubject;
 import io.inprice.common.meta.LinkStatus;
-import io.inprice.common.meta.LinkStatusGroup;
+import io.inprice.common.meta.Grup;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.models.Link;
-import io.inprice.common.models.LinkGroup;
+import io.inprice.common.models.Product;
 import io.inprice.common.models.LinkSpec;
 import io.inprice.common.repository.AlarmDao;
 import io.inprice.common.repository.CommonDao;
@@ -71,7 +71,7 @@ class StatusChangingLinksConsumer {
           	CommonDao commonDao = handle.attach(CommonDao.class);
           	AlarmDao alarmDao = handle.attach(AlarmDao.class);
 
-          	Set<Long> alarmedGroups = new HashSet<>();
+          	Set<Long> alarmedProducts = new HashSet<>();
           	Set<Long> alarmedLinks = new HashSet<>();
 
 	        	List<Link> linksFromDb = commonDao.findActiveLinksByHash(linkFromParser.getUrlHash());
@@ -90,7 +90,7 @@ class StatusChangingLinksConsumer {
 
 			          List<String> queries = new ArrayList<>();
 
-			          switch (linkFromParser.getStatus().getGroup()) {
+			          switch (linkFromParser.getStatus().getGrup()) {
 			          	case ACTIVE: {
 				          	if (hasStatusChanged) {
 				              queries.add(queryMakeAvailable(linkFromDb.getId(), linkFromParser));
@@ -120,7 +120,7 @@ class StatusChangingLinksConsumer {
 								}
 			
 			        	if (hasStatusChanged) {
-			        		if (linkFromParser.getStatus().getGroup().equals(LinkStatusGroup.ACTIVE) == false) { //already handled above
+			        		if (linkFromParser.getStatus().getGrup().equals(Grup.ACTIVE) == false) { //already handled above
 			        			queries.add(queryUpdateLinkStatus(linkFromParser));
 			        		}
 			      			queries.add(queryAddStatusHistory(linkFromDb, linkFromParser));
@@ -147,7 +147,7 @@ class StatusChangingLinksConsumer {
 		        		}
 
 		        		//if price is changed then we need to calculate diff to insert price history
-		        		//and also, there may an alarm on the groups of those links sensitive for total (min/max/avg/total of links) changings
+		        		//and also, there may an alarm on the products of those links sensitive for total (min/max/avg/total of links) changings
 		            if (willPriceBeRefreshed) {
 	              	BigDecimal diffAmount = BigDecimal.ZERO;
 	              	BigDecimal diffRate = BigDecimal.ZERO;
@@ -156,29 +156,32 @@ class StatusChangingLinksConsumer {
 	  	            	diffAmount = linkFromParser.getPrice().subtract(linkFromDb.getPrice()).setScale(2, RoundingMode.HALF_UP);
 	  	            	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
 	  	            		diffRate = diffAmount.divide(linkFromDb.getPrice(), 6, RoundingMode.HALF_UP).multiply(A_HUNDRED).setScale(2, RoundingMode.HALF_UP);
-	  	            	}
+		            		}
 	              	}
 
-	              	commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getGroupId(), linkFromDb.getAccountId());
+	              	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
+	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getAccountId());
+	              	}
 
-	              	//group alarms
-	              	//to prevent redundant modifications and alarms for the same group
-	            		if (alarmedGroups.contains(linkFromDb.getGroupId()) == false) {
-		            		alarmedGroups.add(linkFromDb.getGroupId());
+	              	//product alarms
+	              	//to prevent redundant modifications and alarms for the same product
+	            		if (alarmedProducts.contains(linkFromDb.getProductId()) == false) {
+		            		alarmedProducts.add(linkFromDb.getProductId());
 		
-		            		//check if group is alarmed and conditions are suitable for firing an alarm.
-		          			GroupRefreshResult grr = GroupRefreshResultConverter.convert(commonDao.refreshGroup(linkFromDb.getGroupId()));
-		          			if (grr.getAlarmId() != null) {
-			        				LinkGroup group = alarmDao.findGroupAndAlarmById(linkFromDb.getGroupId());
-			        				if (group != null) {
-			                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForGroupAlarm(group);
+		            		//check if product is alarmed and conditions are suitable for firing an alarm.
+		          			ProductRefreshResult PRR = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
+		          			if (PRR.getAlarmId() != null) {
+			        				Product product = alarmDao.findProductAndAlarmById(linkFromDb.getProductId());
+			        				if (product != null) {
+			                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForProductAlarm(product);
 			                	if (alarmUpdatingQuery != null) {
 			                		handle.execute(alarmUpdatingQuery);
 			                	}
 			        				}
 			        			}
 	            		}
-	            	}
+		            
+		            }
 	            }
 	        	}
           	handle.commit();
@@ -198,7 +201,7 @@ class StatusChangingLinksConsumer {
     return
       String.format(
         "update link " + 
-        "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', status_group='%s', " +
+        "set sku='%s', name='%s', brand='%s', seller='%s', shipment='%s', price=%f, pre_status=status, status='%s', grup='%s', " +
         "platform_id=%d, retry=0, parse_code='OK', parse_problem=null, checked_at=now(), updated_at=now() " +
         "where id=%d",
         linkFromParser.getSku(),
@@ -208,7 +211,7 @@ class StatusChangingLinksConsumer {
         linkFromParser.getShipment(),
         linkFromParser.getPrice(),
         linkFromParser.getStatus(),
-        linkFromParser.getStatus().getGroup(),
+        linkFromParser.getStatus().getGrup(),
         linkFromParser.getPlatformId(),
         id
       );
@@ -252,14 +255,14 @@ class StatusChangingLinksConsumer {
   	return
 			String.format(
 				"update link " + 
-					"set retry=%d, parse_code='%s', parse_problem=%s, pre_status=status, status='%s', status_group='%s', checked_at=now(), updated_at=now(), " + 
+					"set retry=%d, parse_code='%s', parse_problem=%s, pre_status=status, status='%s', grup='%s', checked_at=now(), updated_at=now(), " + 
 					" platform_id= " + (link.getPlatformId() != null ? link.getPlatformId() : "null") +
 					" where id=%d",
 					link.getRetry(),
 	        (link.getParseCode() != null ? link.getParseCode() : "OK"),
 	        (link.getParseProblem() != null ? "'"+link.getParseProblem()+"'" : "null"),
 					link.getStatus(),
-					(link.getRetry() < 3 ? link.getStatus().getGroup() : LinkStatusGroup.PROBLEM),
+					(link.getRetry() < 3 ? link.getStatus().getGrup() : Grup.PROBLEM),
 					link.getId()
 				);
   }
@@ -267,12 +270,12 @@ class StatusChangingLinksConsumer {
 	private static String queryAddStatusHistory(Link linkFromDb, Link linkFromParser) {
   	return
       String.format(
-          "insert into link_history (status, parse_problem, link_id, group_id, account_id) " +
+          "insert into link_history (status, parse_problem, link_id, product_id, account_id) " +
           "values ('%s', %s, %d, %d, %d)",
           linkFromParser.getStatus(),
           (linkFromParser.getParseProblem() != null ? "'"+linkFromParser.getParseProblem()+"'" : "null"),
           linkFromDb.getId(),
-          linkFromDb.getGroupId(),
+          linkFromDb.getProductId(),
           linkFromDb.getAccountId()
         );
   }
@@ -289,12 +292,12 @@ class StatusChangingLinksConsumer {
       for (LinkSpec spec: specList) {
         list.add(
           String.format(
-            "insert into link_spec (_key, _value, link_id, group_id, account_id) " +
+            "insert into link_spec (_key, _value, link_id, product_id, account_id) " +
             "values (%s, %s, %d, %d, %d)",
             (spec.getKey() != null ? "'"+spec.getKey()+"'" : "null"),
             (spec.getValue() != null ? "'"+spec.getValue()+"'" : "null"),
             linkFromDb.getId(),
-            linkFromDb.getGroupId(),
+            linkFromDb.getProductId(),
             linkFromDb.getAccountId()
           )
         );
@@ -304,19 +307,19 @@ class StatusChangingLinksConsumer {
     return list;
   }
 
-  private static String checkAndGenerateUpdateQueryForGroupAlarm(LinkGroup group) {
+  private static String checkAndGenerateUpdateQueryForProductAlarm(Product product) {
   	boolean willBeUpdated = false;
   	
-  	Alarm alarm = group.getAlarm();
+  	Alarm alarm = product.getAlarm();
 
   	if (AlarmSubject.STATUS.equals(alarm.getSubject())) {
   		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
-  				willBeUpdated = group.getLevel().name().equals(alarm.getCertainStatus());
+  				willBeUpdated = product.getLevel().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			case NOT_EQUAL: {
-  				willBeUpdated = !group.getLevel().name().equals(alarm.getCertainStatus());
+  				willBeUpdated = !product.getLevel().name().equals(alarm.getCertainStatus());
   				break;
   			}
   			default: {
@@ -331,19 +334,19 @@ class StatusChangingLinksConsumer {
   	if (AlarmSubject.STATUS.equals(alarm.getSubject()) == false) {
   		switch (alarm.getSubject()) {
   			case MINIMUM: {
-  				newAmount = group.getMinPrice();
+  				newAmount = product.getMinPrice();
   				break;
   			}
   			case AVERAGE: {
-  				newAmount = group.getAvgPrice();
+  				newAmount = product.getAvgPrice();
   				break;
   			}
   			case MAXIMUM: {
-  				newAmount = group.getMaxPrice();
+  				newAmount = product.getMaxPrice();
   				break;
   			}
   			case TOTAL: {
-  				newAmount = group.getTotal();
+  				newAmount = product.getTotal();
   				break;
   			}
 				default: break;
@@ -385,10 +388,10 @@ class StatusChangingLinksConsumer {
   		return
         String.format(
           "update alarm set last_status='%s', last_amount=%f, %s updated_at=now() where id=%d ",
-          group.getLevel(),
+          product.getLevel(),
           newAmount,
           tobeNotifiedPart,
-          group.getAlarmId()
+          product.getAlarmId()
         );
   	}
 

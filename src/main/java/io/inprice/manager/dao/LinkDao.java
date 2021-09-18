@@ -13,7 +13,7 @@ import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
 import io.inprice.common.meta.LinkStatus;
-import io.inprice.common.meta.LinkStatusGroup;
+import io.inprice.common.meta.Grup;
 import io.inprice.common.models.Link;
 import io.inprice.common.repository.AlarmDao;
 import io.inprice.common.repository.PlatformDao;
@@ -40,13 +40,13 @@ public interface LinkDao {
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
     "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
-    "  and l.status_group = :statusGroup " +
+    "  and l.grup = :grup " +
     "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findScrappingLinks(@Bind("statusGroup") LinkStatusGroup statusGroup, @Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findScrappingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit);
 
   @Transaction
   @SqlUpdate(

@@ -5,7 +5,7 @@ import java.util.List;
 import com.rabbitmq.client.Channel;
 
 import io.inprice.common.config.SchedulerDef;
-import io.inprice.common.meta.LinkStatusGroup;
+import io.inprice.common.meta.Grup;
 import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
@@ -26,7 +26,7 @@ public class FailedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findScrappingLinks(LinkStatusGroup.TRYING, retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
+		return linkDao.findScrappingLinks(Grup.TRYING, retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
 	}
 
 }

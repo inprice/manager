@@ -26,7 +26,7 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Checks alarm table to find alarmed groups and links then send mails
+ * Checks alarm table to find alarmed products and links then send mails
  * 
  * @since 2021-06-21
  * @author mdpinar

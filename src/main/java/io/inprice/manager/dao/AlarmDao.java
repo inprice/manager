@@ -14,7 +14,7 @@ public interface AlarmDao {
 
 	@SqlQuery(
 		"select a.*, g.name as _name, u.email, u.name as username, acc.currency_format from alarm a " +
-	  "inner join link_group g on g.id = a.group_id " +
+	  "inner join product g on g.id = a.product_id " +
 	  "inner join account acc on acc.id = a.account_id " +
 	  "inner join user u on u.id = acc.admin_id " +
 	  "where tobe_notified=true " +
