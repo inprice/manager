@@ -15,16 +15,16 @@ public interface AlarmDao {
 	@SqlQuery(
 		"select a.*, g.name as _name, u.email, u.name as username, acc.currency_format from alarm a " +
 	  "inner join product g on g.id = a.product_id " +
-	  "inner join account acc on acc.id = a.account_id " +
+	  "inner join workspace acc on acc.id = a.workspace_id " +
 	  "inner join user u on u.id = acc.admin_id " +
 	  "where tobe_notified=true " +
 		"union " +
 		"select a.*, IFNULL(l.name, l.url) as _name, u.email, u.name as username, acc.currency_format from alarm a " +
 	  "inner join link l on l.id = a.link_id " +
-	  "inner join account acc on acc.id = a.account_id " +
+	  "inner join workspace acc on acc.id = a.workspace_id " +
 	  "inner join user u on u.id = acc.admin_id " +
 		"where tobe_notified=true " +
-		"order by account_id, topic"
+		"order by workspace_id, topic"
 	)
   @UseRowMapper(AlarmMapper.class)
 	List<Alarm> findTobeNotifiedLit();

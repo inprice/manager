@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.manager.config.Props;
-import io.inprice.manager.dao.AccountDao;
+import io.inprice.manager.dao.WorkspaceDao;
 import io.inprice.manager.dao.MembershipDao;
 import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
@@ -47,16 +47,16 @@ public class DeletedMemberRemover implements Task {
       try (Handle handle = Database.getHandle()) {
       	MembershipDao membershipDao = handle.attach(MembershipDao.class);
 
-      	Map<Long, Integer> accountInfoMap = membershipDao.findAccountInfoOfDeletedMembers();
-      	if (MapUtils.isNotEmpty(accountInfoMap)) {
+      	Map<Long, Integer> workspaceInfoMap = membershipDao.findWorkspaceInfoOfDeletedMembers();
+      	if (MapUtils.isNotEmpty(workspaceInfoMap)) {
         	handle.begin();
 
-        	AccountDao accountDao = handle.attach(AccountDao.class);
+        	WorkspaceDao workspaceDao = handle.attach(WorkspaceDao.class);
         	
         	int userCount = 0;
-        	for (Entry<Long, Integer> entry: accountInfoMap.entrySet()) {
+        	for (Entry<Long, Integer> entry: workspaceInfoMap.entrySet()) {
         		userCount += entry.getValue();
-        		accountDao.decreaseUserCount(entry.getKey(), entry.getValue());
+        		workspaceDao.decreaseUserCount(entry.getKey(), entry.getValue());
         	}
       		
           boolean isOK = membershipDao.deletePermenantly();

@@ -160,7 +160,7 @@ class StatusChangingLinksConsumer {
 	              	}
 
 	              	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
-	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getAccountId());
+	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
 	              	}
 
 	              	//product alarms
@@ -270,13 +270,13 @@ class StatusChangingLinksConsumer {
 	private static String queryAddStatusHistory(Link linkFromDb, Link linkFromParser) {
   	return
       String.format(
-          "insert into link_history (status, parse_problem, link_id, product_id, account_id) " +
+          "insert into link_history (status, parse_problem, link_id, product_id, workspace_id) " +
           "values ('%s', %s, %d, %d, %d)",
           linkFromParser.getStatus(),
           (linkFromParser.getParseProblem() != null ? "'"+linkFromParser.getParseProblem()+"'" : "null"),
           linkFromDb.getId(),
           linkFromDb.getProductId(),
-          linkFromDb.getAccountId()
+          linkFromDb.getWorkspaceId()
         );
   }
 
@@ -292,13 +292,13 @@ class StatusChangingLinksConsumer {
       for (LinkSpec spec: specList) {
         list.add(
           String.format(
-            "insert into link_spec (_key, _value, link_id, product_id, account_id) " +
+            "insert into link_spec (_key, _value, link_id, product_id, workspace_id) " +
             "values (%s, %s, %d, %d, %d)",
             (spec.getKey() != null ? "'"+spec.getKey()+"'" : "null"),
             (spec.getValue() != null ? "'"+spec.getValue()+"'" : "null"),
             linkFromDb.getId(),
             linkFromDb.getProductId(),
-            linkFromDb.getAccountId()
+            linkFromDb.getWorkspaceId()
           )
         );
       }

@@ -9,9 +9,9 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Stops SUBSCRIBED accounts after four days later from their subs renewal date expired.
+ * Stops SUBSCRIBED workspaces after four days later from their subs renewal date expired.
  * Normally, StripeService in api project will handle this properly. 
- * However, a communication problem with stripe may occur and we do not want to miss an expired account.
+ * However, a communication problem with stripe may occur and we do not want to miss an expired workspace.
  * 
  * @since 2020-12-06
  * @author mdpinar
@@ -42,12 +42,12 @@ public class ExpiredSubscriptionStopper implements Task {
       try (Handle handle = Database.getHandle()) {
       	handle.begin();
 
-        AccountDao accountDao = handle.attach(AccountDao.class);
-        List<AccountInfo> expiredAccountList = accountDao.findExpiredSubscriberAccountList();
+        WorkspaceDao workspaceDao = handle.attach(WorkspaceDao.class);
+        List<WorkspaceInfo> expiredWorkspaceList = workspaceDao.findExpiredSubscriberWorkspaceList();
         int affected = 0;
 
-        if (CollectionUtils.isNotEmpty(expiredAccountList)) {
-          for (AccountInfo accinfo: expiredAccountList) {
+        if (CollectionUtils.isNotEmpty(expiredWorkspaceList)) {
+          for (WorkspaceInfo accinfo: expiredWorkspaceList) {
 
             //we need to cancel stripe first
             try {
@@ -66,18 +66,18 @@ public class ExpiredSubscriptionStopper implements Task {
 
             SubscriptionDao subscriptionDao = handle.attach(SubscriptionDao.class);
 
-            //then account can be cancellable
-            boolean isOK = subscriptionDao.terminate(accinfo.getId(), AccountStatus.STOPPED.name());
+            //then workspace can be cancellable
+            boolean isOK = subscriptionDao.terminate(accinfo.getId(), WorkspaceStatus.STOPPED.name());
 
-            AccountTrans trans = new AccountTrans();
-            trans.setAccountId(accinfo.getId());
+            WorkspaceTrans trans = new WorkspaceTrans();
+            trans.setWorkspaceId(accinfo.getId());
             trans.setEvent(SubsEvent.SUBSCRIPTION_STOPPED);
             trans.setSuccessful(Boolean.TRUE);
             trans.setDescription(("Stopped! Final payment failed."));
 
             isOK = subscriptionDao.insertTrans(trans, trans.getEvent().getEventDesc());
             if (isOK) {
-              isOK = accountDao.insertStatusHistory(accinfo.getId(), AccountStatus.STOPPED.name());
+              isOK = workspaceDao.insertStatusHistory(accinfo.getId(), WorkspaceStatus.STOPPED.name());
             }
 
             if (isOK) {
@@ -90,9 +90,9 @@ public class ExpiredSubscriptionStopper implements Task {
         }
 
         if (affected > 0) {
-          logger.info("{} subscribed account in total stopped!", affected);
+          logger.info("{} subscribed workspace in total stopped!", affected);
         } else {
-          logger.info("No subscribed account to be stopped was found!");
+          logger.info("No subscribed workspace to be stopped was found!");
         }
 
         if (affected > 0)

@@ -10,14 +10,14 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 public interface MembershipDao {
 	
 	@SqlQuery(
-		"select account_id, count(1) as counter from membership " +
+		"select workspace_id, count(1) as counter from membership " +
 		"where status='DELETED' " +
 		"  and updated_at <= now() - interval 3 hour " +
-		"group by account_id"
+		"group by workspace_id"
 	)
-  @KeyColumn("account_id")
+  @KeyColumn("workspace_id")
   @ValueColumn("counter")
-  Map<Long, Integer> findAccountInfoOfDeletedMembers();
+  Map<Long, Integer> findWorkspaceInfoOfDeletedMembers();
 
   @SqlUpdate("delete from membership where status='DELETED' and updated_at <= now() - interval 3 hour")
   boolean deletePermenantly();

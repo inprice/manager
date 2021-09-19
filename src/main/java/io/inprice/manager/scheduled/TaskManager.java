@@ -19,11 +19,11 @@ import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.scheduled.modifier.DeletedMemberRemover;
-import io.inprice.manager.scheduled.modifier.ExpiredFreeAccountStopper;
+import io.inprice.manager.scheduled.modifier.ExpiredFreeWorkspaceStopper;
 import io.inprice.manager.scheduled.modifier.ExpiredSubscriptionStopper;
 import io.inprice.manager.scheduled.modifier.PendingCheckoutCloser;
 import io.inprice.manager.scheduled.notifier.AlarmNotifier;
-import io.inprice.manager.scheduled.notifier.FreeAccountExpirationReminder;
+import io.inprice.manager.scheduled.notifier.FreeWorkspaceExpirationReminder;
 import io.inprice.manager.scheduled.publisher.ActiveLinksPublisher;
 import io.inprice.manager.scheduled.publisher.FailedLinksPublisher;
 import io.inprice.manager.scheduled.publisher.TobeClassifiedLinksPublisher;
@@ -64,14 +64,14 @@ public class TaskManager {
 
   private static void loadModifiers() {
     taskList.add(new DeletedMemberRemover());
-    taskList.add(new ExpiredFreeAccountStopper());
+    taskList.add(new ExpiredFreeWorkspaceStopper());
     taskList.add(new ExpiredSubscriptionStopper());
     taskList.add(new PendingCheckoutCloser());
   }
 
   private static void loadNotifiers() {
     taskList.add(new AlarmNotifier());
-    taskList.add(new FreeAccountExpirationReminder());
+    taskList.add(new FreeWorkspaceExpirationReminder());
   }
 
   private static void loadPublishers() {

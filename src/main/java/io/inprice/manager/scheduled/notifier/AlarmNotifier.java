@@ -60,14 +60,14 @@ public class AlarmNotifier implements Task {
 
         if (CollectionUtils.isNotEmpty(list)) {
         	
-        	Long lastAccountId = list.get(0).getAccountId();
+        	Long lastWorkspaceId = list.get(0).getWorkspaceId();
 
         	List<Alarm> alarms = new ArrayList<>();
         	for (Alarm alarm: list) {
         		
         		idList.add(alarm.getId());
         		
-        		if (lastAccountId.equals(alarm.getAccountId())) {
+        		if (lastWorkspaceId.equals(alarm.getWorkspaceId())) {
         			alarms.add(alarm);
         		} else {
         			sendEmail(list);

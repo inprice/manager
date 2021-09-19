@@ -11,8 +11,8 @@ public class Schedulers {
 	@JsonProperty("deletedMemberRemover")
 	public SchedulerDef DELETED_MEMBER_REMOVER;
 
-	@JsonProperty("expiredFreeAccountStopper")
-	public SchedulerDef EXPIRED_FREE_ACCOUNT_STOPPER;
+	@JsonProperty("expiredFreeWorkspaceStopper")
+	public SchedulerDef EXPIRED_FREE_WORKSPACE_STOPPER;
 
 	@JsonProperty("expiredSubscriptionStopper")
 	public SchedulerDef EXPIRED_SUBSCRIPTION_STOPPER;
@@ -23,8 +23,8 @@ public class Schedulers {
 	@JsonProperty("alarmNotifier")
 	public SchedulerDef ALARM_NOTIFIER;
 	
-	@JsonProperty("freeAccountExpirationReminder")
-	public SchedulerDef FREE_ACCOUNT_EXPIRATION_REMINDER;
+	@JsonProperty("freeWorkspaceExpirationReminder")
+	public SchedulerDef FREE_WORKSPACE_EXPIRATION_REMINDER;
 
 	@JsonProperty("newlyAddedLinkPublisher")
 	public SchedulerDef NEWLY_ADDED_LINK_PUBLISHER;

@@ -14,7 +14,7 @@ public class EmailTest {
   	final String APP_EMAIL_SENDER = System.getenv().getOrDefault("APP_EMAIL_SENDER", "support@inprice.io");
 
   	Map<String, Object> mailMap = Map.of(
-	  	"account", "Deneme firması",
+	  	"workspace", "Deneme firması",
 	  	"user", "Mahmut Bey",
 	  	"plan", "Professional Plan",
 	  	"subsRenewalAt", "2021-04-12 18:10:21",
