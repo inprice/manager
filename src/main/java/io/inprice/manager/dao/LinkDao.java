@@ -25,7 +25,7 @@ public interface LinkDao {
     "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+    "where a.status in ('FREE', 'CREDITED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
     "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
     "  and l.retry = <retry> " +
@@ -39,7 +39,7 @@ public interface LinkDao {
     "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+    "where a.status in ('FREE', 'CREDITED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
     "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
@@ -55,7 +55,7 @@ public interface LinkDao {
 			"select lid from (" +
 				"select l.id as lid from link as l " +
 				"inner join workspace as a on a.id = l.workspace_id " + 
-				"where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+				"where a.status in ('FREE', 'CREDITED', 'SUBSCRIBED') " +
 				"  and l.url_hash in (<linkHashes>)" +
 			") AS x " +
 		")"
