@@ -28,7 +28,7 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Stops workspaces whose statuses are either FREE or CREDITED and subs renewal date expired.
+ * Stops workspaces whose statuses are either FREE or VOUCHERED and subs renewal date expired.
  * Please note that stopping a regular subscriber is subject to another stopper see #SubscribedWorkspaceStopper
  * 
  * @since 2020-10-25
@@ -63,7 +63,7 @@ public class ExpiredFreeWorkspaceStopper implements Task {
           workspaceDao.findExpiredFreeWorkspaceList(
             Arrays.asList(
               WorkspaceStatus.FREE.name(),
-              WorkspaceStatus.CREDITED.name()
+              WorkspaceStatus.VOUCHERED.name()
             )
           );
 
@@ -85,7 +85,7 @@ public class ExpiredFreeWorkspaceStopper implements Task {
               if (WorkspaceStatus.FREE.equals(workspace.getStatus()))
                 trans.setEvent(SubsEvent.FREE_USE_STOPPED);
               else
-                trans.setEvent(SubsEvent.CREDIT_USE_STOPPED);
+                trans.setEvent(SubsEvent.VOUCHER_USE_STOPPED);
     
               isOK = subscriptionDao.insertTrans(trans, trans.getEvent().getEventDesc());
               if (isOK) {

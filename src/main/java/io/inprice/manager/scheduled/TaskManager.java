@@ -47,6 +47,10 @@ public class TaskManager {
 
     int taskCount = 0;
     for (Task task: taskList) {
+    	if (task.getScheduler() == null) {
+    		logger.error("Task scheduler is null! Task no: {}", taskCount);
+    		continue;
+    	}
     	if (task.getScheduler().ACTIVE) taskCount++;
     }
 
@@ -54,7 +58,7 @@ public class TaskManager {
 
     for (Task task: taskList) {
     	SchedulerDef schedule = task.getScheduler();
-    	if (schedule.ACTIVE) {
+    	if (schedule != null && schedule.ACTIVE) {
     		scheduler.scheduleAtFixedRate(task, schedule.DELAY, schedule.EVERY, TimeUnit.valueOf(schedule.PERIOD));
     	}
     }
@@ -100,6 +104,7 @@ public class TaskManager {
 	    for (SchedulerDef flp: failedLinkPublishers) {
 	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, statusChangingFailedLinksChannel));
 	    }
+
   	} catch (IOException e) {
   		logger.error("Failed to load publishers.", e);
   	}

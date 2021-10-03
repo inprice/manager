@@ -26,7 +26,7 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Sends emails to the workspaces whose statuses are either FREE or CREDITED 
+ * Sends emails to the workspaces whose statuses are either FREE or VOUCHERED 
  * and there is less than four days to renewal date.
  * 
  * @since 2020-12-06
@@ -60,7 +60,7 @@ public class FreeWorkspaceExpirationReminder implements Task {
           workspaceDao.findAboutToExpiredFreeWorkspaceList(
             Arrays.asList(
               WorkspaceStatus.FREE.name(),
-              WorkspaceStatus.CREDITED.name()
+              WorkspaceStatus.VOUCHERED.name()
             )
           );
 
@@ -93,9 +93,9 @@ public class FreeWorkspaceExpirationReminder implements Task {
         }
 
         if (affected > 0) {
-          logger.info("Reminder emails sent to {} workspaces which are using free or a credit!", affected);
+          logger.info("Reminder emails sent to {} workspaces which are using free or a voucher!", affected);
         } else {
-          logger.info("No remainder sent to free or credited workspaces!");
+          logger.info("No remainder sent to free or vouchered workspaces!");
         }
       } catch (Exception e) {
         logger.error("Failed to trigger " + clazz , e);
