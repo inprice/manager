@@ -98,8 +98,8 @@ public class ExpiredFreeWorkspaceStopper implements Task {
               String workspaceName = StringUtils.isNotBlank(workspace.getTitle()) ? workspace.getTitle() : workspace.getName();
 
               Map<String, Object> mailMap = Map.of(
-              	"user", user.getEmail(),
-              	"workspace", workspaceName
+              	"fullName", user.getFullName(),
+              	"workspaceName", workspaceName
           		);
 
               EmailSender.send(

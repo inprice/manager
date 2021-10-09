@@ -105,7 +105,7 @@ abstract class AbstractLinkPublisher implements Task {
               	link.setSeller(sample.getSeller());
               	link.setShipment(sample.getShipment());
               	link.setPrice(sample.getPrice());
-              	link.setLevel(sample.getLevel());
+              	link.setPosition(sample.getPosition());
                 link.setPreStatus(link.getStatus());
                 link.setStatus(sample.getStatus());
                 link.setPlatformId(sample.getPlatformId());

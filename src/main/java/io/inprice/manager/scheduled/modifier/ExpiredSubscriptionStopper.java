@@ -81,7 +81,7 @@ public class ExpiredSubscriptionStopper implements Task {
             }
 
             if (isOK) {
-              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, Map.of("user", accinfo.getEmail()));
+              String message = templateRenderer.render(EmailTemplate.SUBSCRIPTION_STOPPED, Map.of("fullName", accinfo.getFullName()));
               emailSender.send(Props.APP_EMAIL_SENDER, "The last notification for your subscription to inprice.", accinfo.getEmail(), message);
 
               affected++;

@@ -96,7 +96,7 @@ class StatusChangingLinksConsumer {
 				              queries.add(queryMakeAvailable(linkFromDb.getId(), linkFromParser));
 				            	queries.addAll(queryRefreshSpecList(linkFromDb, linkFromParser));
 				          	} else if (willPriceBeRefreshed) {
-				          		queries.add(queryUpdatePrice(linkFromDb.getId(), linkFromParser.getPrice()));
+				          		queries.add(queryUpdatePrice(linkFromDb.getId(), linkFromParser.getPrice(), linkFromParser.getPrice().compareTo(linkFromDb.getPrice())));
 				          	} else if (linkFromDb.getRetry() > 0 || linkFromDb.getParseCode().equals(linkFromParser.getParseCode()) == false) {
 				          		queries.add(queryClearActiveLink(linkFromDb.getId()));
 				          	}
@@ -147,7 +147,7 @@ class StatusChangingLinksConsumer {
 		        		}
 
 		        		//if price is changed then we need to calculate diff to insert price history
-		        		//and also, there may an alarm on the products of those links sensitive for total (min/max/avg/total of links) changings
+		        		//and also, there may an alarm on the products of those links sensitive for changings like min/max/avg
 		            if (willPriceBeRefreshed) {
 	              	BigDecimal diffAmount = BigDecimal.ZERO;
 	              	BigDecimal diffRate = BigDecimal.ZERO;
@@ -230,13 +230,14 @@ class StatusChangingLinksConsumer {
       );
   }
 
-  private static String queryUpdatePrice(Long id, BigDecimal price) {
+  private static String queryUpdatePrice(Long id, BigDecimal price, int priceDirection) {
     return
       String.format(
         "update link " + 
-        "set price=%f, retry=0, parse_code='OK', parse_problem=null, checked_at=now(), updated_at=now() " +
+        "set price=%f, price_direction=%d, retry=0, parse_code='OK', parse_problem=null, checked_at=now(), updated_at=now() " +
         "where id=%d",
         price,
+        priceDirection,
         id
       );
   }
@@ -312,14 +313,14 @@ class StatusChangingLinksConsumer {
   	
   	Alarm alarm = product.getAlarm();
 
-  	if (AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  	if (AlarmSubject.POSITION.equals(alarm.getSubject())) {
   		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
-  				willBeUpdated = product.getLevel().name().equals(alarm.getCertainStatus());
+  				willBeUpdated = product.getPosition().name().equals(alarm.getCertainPosition());
   				break;
   			}
   			case NOT_EQUAL: {
-  				willBeUpdated = !product.getLevel().name().equals(alarm.getCertainStatus());
+  				willBeUpdated = product.getPosition().name().equals(alarm.getCertainPosition()) == false;
   				break;
   			}
   			default: {
@@ -331,7 +332,7 @@ class StatusChangingLinksConsumer {
 
   	BigDecimal newAmount = null;
 
-  	if (AlarmSubject.STATUS.equals(alarm.getSubject()) == false) {
+  	if (AlarmSubject.POSITION.equals(alarm.getSubject()) == false) {
   		switch (alarm.getSubject()) {
   			case MINIMUM: {
   				newAmount = product.getMinPrice();
@@ -343,10 +344,6 @@ class StatusChangingLinksConsumer {
   			}
   			case MAXIMUM: {
   				newAmount = product.getMaxPrice();
-  				break;
-  			}
-  			case TOTAL: {
-  				newAmount = product.getTotal();
   				break;
   			}
 				default: break;
@@ -387,8 +384,8 @@ class StatusChangingLinksConsumer {
 
   		return
         String.format(
-          "update alarm set last_status='%s', last_amount=%f, %s updated_at=now() where id=%d ",
-          product.getLevel(),
+          "update alarm set last_position='%s', last_amount=%f, %s updated_at=now() where id=%d ",
+          product.getPosition(),
           newAmount,
           tobeNotifiedPart,
           product.getAlarmId()
@@ -403,14 +400,14 @@ class StatusChangingLinksConsumer {
 
   	Alarm alarm = linkFromDb.getAlarm();
 
-  	if (linkFromDb.getStatus().equals(linkFromParser.getStatus()) == false && AlarmSubject.STATUS.equals(alarm.getSubject())) {
+  	if (linkFromDb.getStatus().equals(linkFromParser.getStatus()) == false && AlarmSubject.POSITION.equals(alarm.getSubject())) {
   		switch (alarm.getSubjectWhen()) {
   			case EQUAL: {
-  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainStatus());
+  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainPosition());
   				break;
   			}
   			case NOT_EQUAL: {
-  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainStatus()) == false;
+  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainPosition()) == false;
   				break;
   			}
   			default: {
@@ -454,7 +451,7 @@ class StatusChangingLinksConsumer {
 
       return
         String.format(
-          "update alarm set last_status='%s', last_amount=%f, %s updated_at=now() where id=%d ",
+          "update alarm set last_position='%s', last_amount=%f, %s updated_at=now() where id=%d ",
           linkFromParser.getStatus(),
           linkFromParser.getPrice(),
           tobeNotifiedPart,

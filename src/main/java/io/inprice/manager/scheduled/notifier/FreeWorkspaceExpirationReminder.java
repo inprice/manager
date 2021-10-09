@@ -73,7 +73,7 @@ public class FreeWorkspaceExpirationReminder implements Task {
             User user = userDao.findById(workspace.getAdminId());
 
             Map<String, Object> mailMap = Map.of(
-            	"user", user.getName(),
+            	"fullName", user.getFullName(),
             	"model", workspace.getStatus(),
             	"days", DateUtils.findDayDiff(workspace.getSubsRenewalAt(), new Date()),
             	"subsRenewalAt", DateUtils.formatReverseDate(workspace.getSubsRenewalAt())

@@ -114,7 +114,7 @@ public class AlarmNotifier implements Task {
   		Map<String, String> dataMap = Map.of(
   			"topic", alarm.getTopic().name().substring(0, 1),
   			"name", alarm.getName(),
-  			"status", alarm.getLastStatus(),
+  			"position", alarm.getLastPosition(),
   			"amount", df.format(alarm.getLastAmount()),
   			"time", DateUtils.formatTimeStandart(alarm.getUpdatedAt())
 			);
@@ -125,7 +125,7 @@ public class AlarmNotifier implements Task {
   	sb.append("</table>");
   	
     Map<String, Object> mailMap = Map.of(
-    	"user", alarms.get(0).getUsername(),
+    	"fullName", alarms.get(0).getFullName(),
     	"table", sb.toString()
 		);
     
