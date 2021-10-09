@@ -1,6 +1,6 @@
-Dear <strong>${user}</strong>,
+Dear <strong>${fullName}</strong>,
 
-<p>You have just requested to register ${account} on Inprice</p>
+<p>You have just requested to register ${workspaceName} on Inprice</p>
 
 <p>
   In order to complete your process,
@@ -8,6 +8,11 @@ Dear <strong>${user}</strong>,
 </p>
 
 <h2 style="color: green" >${token}</h2>
+
+<p>
+  In case you close the form, here is the link:
+  <div>${url}</div>
+</p>
 
 <p>
   <strong>Please note</strong>, this code will expire after 10 minutes from this mailing time.

@@ -8,7 +8,7 @@ public interface CheckoutDao {
   @Transaction
   @SqlUpdate(
     "update checkout " +
-    "set status='EXPIRED', description='Expired by system.', updated_at=now() " +
+    "set status='EXPIRED', description='Expired by the platform.', updated_at=now() " +
     "where status = 'PENDING' " + 
     "  and created_at <= now() - interval 2 hour"
   )

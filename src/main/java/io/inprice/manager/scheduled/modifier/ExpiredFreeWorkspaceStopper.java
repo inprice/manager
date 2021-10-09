@@ -13,14 +13,14 @@ import org.slf4j.LoggerFactory;
 import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.info.EmailData;
-import io.inprice.common.meta.AccountStatus;
+import io.inprice.common.meta.WorkspaceStatus;
 import io.inprice.common.meta.EmailTemplate;
 import io.inprice.common.meta.SubsEvent;
-import io.inprice.common.models.Account;
-import io.inprice.common.models.AccountTrans;
+import io.inprice.common.models.Workspace;
+import io.inprice.common.models.WorkspaceTrans;
 import io.inprice.common.models.User;
 import io.inprice.manager.config.Props;
-import io.inprice.manager.dao.AccountDao;
+import io.inprice.manager.dao.WorkspaceDao;
 import io.inprice.manager.dao.SubscriptionDao;
 import io.inprice.manager.dao.UserDao;
 import io.inprice.manager.helpers.EmailSender;
@@ -28,20 +28,20 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Stops accounts whose statuses are either FREE or COUPONED and subs renewal date expired.
- * Please note that stopping a regular subscriber is subject to another stopper see #SubscribedAccountStopper
+ * Stops workspaces whose statuses are either FREE or VOUCHERED and subs renewal date expired.
+ * Please note that stopping a regular subscriber is subject to another stopper see #SubscribedWorkspaceStopper
  * 
  * @since 2020-10-25
  * @author mdpinar
  */
-public class ExpiredFreeAccountStopper implements Task {
+public class ExpiredFreeWorkspaceStopper implements Task {
 
-  private static final Logger logger = LoggerFactory.getLogger(ExpiredFreeAccountStopper.class);
+  private static final Logger logger = LoggerFactory.getLogger(ExpiredFreeWorkspaceStopper.class);
   private final String clazz = getClass().getSimpleName();
 
   @Override
   public SchedulerDef getScheduler() {
-  	return Props.getConfig().SCHEDULERS.EXPIRED_FREE_ACCOUNT_STOPPER;
+  	return Props.getConfig().SCHEDULERS.EXPIRED_FREE_WORKSPACE_STOPPER;
   }
 
   @Override
@@ -58,53 +58,53 @@ public class ExpiredFreeAccountStopper implements Task {
       try (Handle handle = Database.getHandle()) {
       	handle.begin();
 
-        AccountDao accountDao = handle.attach(AccountDao.class);
-        List<Account> expiredAccountList = 
-          accountDao.findExpiredFreeAccountList(
+        WorkspaceDao workspaceDao = handle.attach(WorkspaceDao.class);
+        List<Workspace> expiredWorkspaceList = 
+          workspaceDao.findExpiredFreeWorkspaceList(
             Arrays.asList(
-              AccountStatus.FREE.name(),
-              AccountStatus.COUPONED.name()
+              WorkspaceStatus.FREE.name(),
+              WorkspaceStatus.VOUCHERED.name()
             )
           );
 
         int affected = 0;
 
-        if (CollectionUtils.isNotEmpty(expiredAccountList)) {
+        if (CollectionUtils.isNotEmpty(expiredWorkspaceList)) {
           UserDao userDao = handle.attach(UserDao.class);
           SubscriptionDao subscriptionDao = handle.attach(SubscriptionDao.class);
 
-          for (Account account: expiredAccountList) {
-            boolean isOK = subscriptionDao.terminate(account.getId(), AccountStatus.STOPPED.name());
+          for (Workspace workspace: expiredWorkspaceList) {
+            boolean isOK = subscriptionDao.terminate(workspace.getId(), WorkspaceStatus.STOPPED.name());
             if (isOK) {
 
-              AccountTrans trans = new AccountTrans();
-              trans.setAccountId(account.getId());
+              WorkspaceTrans trans = new WorkspaceTrans();
+              trans.setWorkspaceId(workspace.getId());
               trans.setSuccessful(Boolean.TRUE);
               trans.setDescription(("End of period!"));
 
-              if (AccountStatus.FREE.equals(account.getStatus()))
+              if (WorkspaceStatus.FREE.equals(workspace.getStatus()))
                 trans.setEvent(SubsEvent.FREE_USE_STOPPED);
               else
-                trans.setEvent(SubsEvent.COUPON_USE_STOPPED);
+                trans.setEvent(SubsEvent.VOUCHER_USE_STOPPED);
     
               isOK = subscriptionDao.insertTrans(trans, trans.getEvent().getEventDesc());
               if (isOK) {
-                isOK = accountDao.insertStatusHistory(account.getId(), AccountStatus.STOPPED);
+                isOK = workspaceDao.insertStatusHistory(workspace.getId(), WorkspaceStatus.STOPPED);
               }
             }
 
             if (isOK) {
-              User user = userDao.findById(account.getId());
-              String accountName = StringUtils.isNotBlank(account.getTitle()) ? account.getTitle() : account.getName();
+              User user = userDao.findById(workspace.getId());
+              String workspaceName = StringUtils.isNotBlank(workspace.getTitle()) ? workspace.getTitle() : workspace.getName();
 
               Map<String, Object> mailMap = Map.of(
-              	"user", user.getEmail(),
-              	"account", accountName
+              	"fullName", user.getFullName(),
+              	"workspaceName", workspaceName
           		);
 
               EmailSender.send(
           			EmailData.builder()
-            			.template(EmailTemplate.FREE_ACCOUNT_STOPPED)
+            			.template(EmailTemplate.FREE_WORKSPACE_STOPPED)
             			.to(user.getEmail())
             			.subject("Your inprice subscription is stopped.")
             			.data(mailMap)
@@ -117,9 +117,9 @@ public class ExpiredFreeAccountStopper implements Task {
         }
 
         if (affected > 0) {
-          logger.info("{} free account in total stopped!", affected);
+          logger.info("{} free workspace in total stopped!", affected);
         } else {
-          logger.info("No free account to be stopped was found!");
+          logger.info("No free workspace to be stopped was found!");
         }
         
         if (affected > 0)

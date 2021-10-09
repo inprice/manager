@@ -22,10 +22,10 @@ public interface LinkDao {
 
   @SqlQuery(
   	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
-    "inner join account as a on a.id = l.account_id " + 
+    "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+    "where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
     "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
     "  and l.retry = <retry> " +
@@ -36,10 +36,10 @@ public interface LinkDao {
 
   @SqlQuery(
   	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
-    "inner join account as a on a.id = l.account_id " + 
+    "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+    "where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
     "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
@@ -54,8 +54,8 @@ public interface LinkDao {
 		"where id in (" +
 			"select lid from (" +
 				"select l.id as lid from link as l " +
-				"inner join account as a on a.id = l.account_id " + 
-				"where a.status in ('FREE', 'COUPONED', 'SUBSCRIBED') " +
+				"inner join workspace as a on a.id = l.workspace_id " + 
+				"where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
 				"  and l.url_hash in (<linkHashes>)" +
 			") AS x " +
 		")"

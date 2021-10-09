@@ -41,13 +41,13 @@
   },
   "schedulers": {
   	"deletedMemberRemover": { "active": false, "every": 3, "period": "MINUTES" },
-  	"expiredFreeAccountStopper": { "active": false, "every": 1, "period": "MINUTES" },
+  	"expiredFreeWorkspaceStopper": { "active": false, "every": 1, "period": "MINUTES" },
   	"expiredSubscriptionStopper": { "active": false, "every": 43, "period": "SECONDS" },
 
   	"pendingCheckoutCloser": { "active": false, "every": 31, "period": "SECONDS" },
 
   	"alarmNotifier": { "active": false, "every": 5, "period": "SECONDS", "delay": 1 },
-  	"freeAccountExpirationReminder": { "active": false, "every": 13, "period": "SECONDS", "delay": 1 },
+  	"freeWorkspaceExpirationReminder": { "active": false, "every": 13, "period": "SECONDS", "delay": 1 },
 
   	"tobeClassifiedLinkPublishers": [
   		{ "every": 1, "period": "MINUTES", "delay": 0, "data": { "retry": "0" } },
