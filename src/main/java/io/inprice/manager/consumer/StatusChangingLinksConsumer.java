@@ -5,9 +5,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.jdbi.v3.core.Handle;
@@ -24,19 +22,21 @@ import com.rabbitmq.client.Envelope;
 
 import io.inprice.common.config.QueueDef;
 import io.inprice.common.converters.ProductRefreshResultConverter;
+import io.inprice.common.formula.EvaluationResult;
+import io.inprice.common.formula.FormulaHelper;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.common.info.ProductRefreshResult;
 import io.inprice.common.meta.AlarmSubject;
-import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.Grup;
+import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.models.Link;
-import io.inprice.common.models.Product;
 import io.inprice.common.models.LinkSpec;
-import io.inprice.common.repository.AlarmDao;
+import io.inprice.common.models.Product;
 import io.inprice.common.repository.CommonDao;
+import io.inprice.common.repository.ProductPriceDao;
 import io.inprice.common.utils.DateUtils;
 
 /**
@@ -69,12 +69,9 @@ class StatusChangingLinksConsumer {
           	handle.begin();
 
           	CommonDao commonDao = handle.attach(CommonDao.class);
-          	AlarmDao alarmDao = handle.attach(AlarmDao.class);
+          	ProductPriceDao priceDao = handle.attach(ProductPriceDao.class);
 
-          	Set<Long> alarmedProducts = new HashSet<>();
-          	Set<Long> alarmedLinks = new HashSet<>();
-
-	        	List<Link> linksFromDb = commonDao.findActiveLinksByHash(linkFromParser.getUrlHash());
+	        	List<Link> linksFromDb = commonDao.findAllLinksByHash(linkFromParser.getUrlHash());
 
 	        	if (CollectionUtils.isNotEmpty(linksFromDb)) {
 	        		for (Link linkFromDb: linksFromDb) {
@@ -135,18 +132,14 @@ class StatusChangingLinksConsumer {
 		            }
 
 		            //check if link is alarmed and conditions are suitable for firing an alarm.
-		            if (hasStatusChanged && alarmedLinks.contains(linkFromDb.getId()) == false) {
-	            		alarmedLinks.add(linkFromDb.getId());
-
-	            		if (linkFromDb.getAlarmId() != null) {
-			            	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(linkFromDb, linkFromParser);
-			            	if (alarmUpdatingQuery != null) {
-			            		handle.execute(alarmUpdatingQuery);
-			            	}
+		            if ((hasStatusChanged || willPriceBeRefreshed) && linkFromDb.getAlarmId() != null) {
+		            	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(linkFromDb, linkFromParser);
+		            	if (alarmUpdatingQuery != null) {
+		            		handle.execute(alarmUpdatingQuery);
 	            		}
 		        		}
 
-		        		//if price is changed then we need to calculate diff to insert price history
+		        		//if price is changed then we need to calculate diff to add a new row in to price history
 		        		//and also, there may an alarm on the products of those links sensitive for changings like min/max/avg
 		            if (willPriceBeRefreshed) {
 	              	BigDecimal diffAmount = BigDecimal.ZERO;
@@ -161,26 +154,28 @@ class StatusChangingLinksConsumer {
 
 	              	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
 	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
+	              	} else if (hasStatusChanged) {
+	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromParser.getPrice(), linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
 	              	}
 
-	              	//product alarms
-	              	//to prevent redundant modifications and alarms for the same product
-	            		if (alarmedProducts.contains(linkFromDb.getProductId()) == false) {
-		            		alarmedProducts.add(linkFromDb.getProductId());
-		
-		            		//check if product is alarmed and conditions are suitable for firing an alarm.
-		          			ProductRefreshResult PRR = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
-		          			if (PRR.getAlarmId() != null) {
-			        				Product product = alarmDao.findProductAndAlarmById(linkFromDb.getProductId());
-			        				if (product != null) {
-			                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForProductAlarm(product);
-			                	if (alarmUpdatingQuery != null) {
-			                		handle.execute(alarmUpdatingQuery);
-			                	}
-			        				}
-			        			}
-	            		}
-		            
+	              	//alarming
+	              	if (linkFromDb.getProductAlarmId() != null) {
+	              		Product product = priceDao.findProductAndAlarmById(linkFromDb.getProductId());
+	                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForProductAlarm(product);
+	                	if (alarmUpdatingQuery != null) {
+	                		handle.execute(alarmUpdatingQuery);
+	                	}
+	              	}
+
+	              	//smart pricing
+	              	if (linkFromDb.getProductSmartPriceId() != null) {
+		              	ProductRefreshResult prr = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
+		              	Product product = priceDao.findProductAndSmartPriceById(linkFromDb.getProductId());
+	                	String smartPriceUpdatingQuery = generateUpdateQueryForSmartPrice(product, prr);
+	                	if (smartPriceUpdatingQuery != null) {
+	                		handle.execute(smartPriceUpdatingQuery);
+	                	}
+	              	}
 		            }
 	            }
 	        	}
@@ -307,7 +302,7 @@ class StatusChangingLinksConsumer {
 
     return list;
   }
-
+  
   private static String checkAndGenerateUpdateQueryForProductAlarm(Product product) {
   	boolean willBeUpdated = false;
   	
@@ -475,5 +470,16 @@ class StatusChangingLinksConsumer {
   	}
 		return false;
   }
-  
+
+  private static String generateUpdateQueryForSmartPrice(Product product, ProductRefreshResult prr) {
+  	EvaluationResult result = FormulaHelper.evaluate(product.getSmartPriceModel(), prr);
+    return
+      String.format(
+        "update product set smart_price=%f, smart_price_problem=%s where id=%d ",
+        result.getValue(),
+        (result.getProblem() != null ? "'"+result.getProblem()+"'" : "null"),
+        product.getId()
+      );
+  }
+
 }

@@ -15,13 +15,13 @@ import io.inprice.common.mappers.LinkMapper;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.Grup;
 import io.inprice.common.models.Link;
-import io.inprice.common.repository.AlarmDao;
+import io.inprice.common.repository.ProductPriceDao;
 import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
@@ -35,7 +35,7 @@ public interface LinkDao {
   List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
     "inner join workspace as a on a.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as p on p.id = l.platform_id " + 
