@@ -171,7 +171,7 @@ class StatusChangingLinksConsumer {
 	              	if (linkFromDb.getProductSmartPriceId() != null) {
 		              	ProductRefreshResult prr = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
 		              	Product product = priceDao.findProductAndSmartPriceById(linkFromDb.getProductId());
-	                	String smartPriceUpdatingQuery = generateUpdateQueryForSmartPrice(product, prr);
+	                	String smartPriceUpdatingQuery = generateUpdateQueryForSuggestedPrice(product, prr);
 	                	if (smartPriceUpdatingQuery != null) {
 	                		handle.execute(smartPriceUpdatingQuery);
 	                	}
@@ -471,11 +471,11 @@ class StatusChangingLinksConsumer {
 		return false;
   }
 
-  private static String generateUpdateQueryForSmartPrice(Product product, ProductRefreshResult prr) {
-  	EvaluationResult result = FormulaHelper.evaluate(product.getSmartPriceModel(), prr);
+  private static String generateUpdateQueryForSuggestedPrice(Product product, ProductRefreshResult prr) {
+  	EvaluationResult result = FormulaHelper.evaluate(product.getSmartPrice(), prr);
     return
       String.format(
-        "update product set smart_price=%f, smart_price_problem=%s where id=%d ",
+        "update product set suggested_price=%f, suggested_price_problem=%s where id=%d ",
         result.getValue(),
         (result.getProblem() != null ? "'"+result.getProblem()+"'" : "null"),
         product.getId()

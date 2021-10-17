@@ -21,7 +21,7 @@ public interface AlarmDao {
 		"union " +
 		"select a.*, IFNULL(l.name, l.url) as _name, u.email, u.full_name, w.currency_format from alarm a " +
 	  "inner join link l on l.id = a.link_id " +
-	  "inner join workspace acc on w.id = a.workspace_id " +
+	  "inner join workspace w on w.id = a.workspace_id " +
 	  "inner join user u on u.id = w.admin_id " +
 		"where tobe_notified=true " +
 		"order by workspace_id, topic"
