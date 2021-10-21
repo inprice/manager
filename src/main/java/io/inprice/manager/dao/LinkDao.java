@@ -15,17 +15,17 @@ import io.inprice.common.mappers.LinkMapper;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.Grup;
 import io.inprice.common.models.Link;
-import io.inprice.common.repository.AlarmDao;
+import io.inprice.common.repository.ProductPriceDao;
 import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
-    "inner join workspace as a on a.id = l.workspace_id " + 
+  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+    "inner join workspace as w on w.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
-    "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
+    "left join platform as pl on pl.id = l.platform_id " + 
+    "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
     "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
     "  and l.retry = <retry> " +
@@ -35,11 +35,11 @@ public interface LinkDao {
   List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
 
   @SqlQuery(
-  	"select l.*" + AlarmDao.FIELDS + PlatformDao.FIELDS + " from link as l " + 
-    "inner join workspace as a on a.id = l.workspace_id " + 
+  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+    "inner join workspace as w on w.id = l.workspace_id " + 
     "left join alarm as al on al.id = l.alarm_id " + 
-    "left join platform as p on p.id = l.platform_id " + 
-    "where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
+    "left join platform as pl on pl.id = l.platform_id " + 
+    "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
     "  and l.checked_at <= (now() - interval 30 minute) " +
     "  and l.retry = <retry> " +
@@ -54,8 +54,8 @@ public interface LinkDao {
 		"where id in (" +
 			"select lid from (" +
 				"select l.id as lid from link as l " +
-				"inner join workspace as a on a.id = l.workspace_id " + 
-				"where a.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
+				"inner join workspace as w on w.id = l.workspace_id " + 
+				"where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
 				"  and l.url_hash in (<linkHashes>)" +
 			") AS x " +
 		")"
@@ -67,7 +67,7 @@ public interface LinkDao {
 
   @SqlQuery(
 		"select l.*" + PlatformDao.FIELDS + " from link as l " +
-    "left join platform as p on p.id = l.platform_id " + 
+    "left join platform as pl on pl.id = l.platform_id " + 
 		"where l.url=:url " +
     "  and l.platform_id is not null " +
 		"order by l.updated_at desc " +
