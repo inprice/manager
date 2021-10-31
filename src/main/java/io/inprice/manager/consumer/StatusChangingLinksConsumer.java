@@ -158,8 +158,10 @@ class StatusChangingLinksConsumer {
 	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromParser.getPrice(), linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
 	              	}
 
+	              	ProductRefreshResult prr = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
+	              	
 	              	//alarming
-	              	if (linkFromDb.getProductAlarmId() != null) {
+	              	if (prr.getAlarmId() != null) {
 	              		Product product = priceDao.findProductAndAlarmById(linkFromDb.getProductId());
 	                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForProductAlarm(product);
 	                	if (alarmUpdatingQuery != null) {
@@ -168,8 +170,7 @@ class StatusChangingLinksConsumer {
 	              	}
 
 	              	//smart pricing
-	              	if (linkFromDb.getProductSmartPriceId() != null) {
-		              	ProductRefreshResult prr = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
+	              	if (prr.getSmartPriceId() != null) {
 		              	Product product = priceDao.findProductAndSmartPriceById(linkFromDb.getProductId());
 	                	String smartPriceUpdatingQuery = generateUpdateQueryForSuggestedPrice(product, prr);
 	                	if (smartPriceUpdatingQuery != null) {
