@@ -27,12 +27,12 @@ public interface LinkDao {
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
-    "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
+    "  and (l.checked_at is null OR l.checked_at <= (now() - interval <reviewPeriod> minute)) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
   @SqlQuery(
   	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
@@ -41,12 +41,12 @@ public interface LinkDao {
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
-    "  and l.checked_at <= (now() - interval 30 minute) " +
+    "  and l.checked_at <= (now() - interval <reviewPeriod> minute) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findScrappingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findScrappingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
   @Transaction
   @SqlUpdate(
@@ -66,14 +66,14 @@ public interface LinkDao {
   void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);
 
   @SqlQuery(
-		"select l.*" + PlatformDao.FIELDS + " from link as l " +
-    "left join platform as pl on pl.id = l.platform_id " + 
-		"where l.url=:url " +
-    "  and l.platform_id is not null " +
-		"order by l.updated_at desc " +
+		"select * from link " +
+		"where url_hash=:urlHash " +
+		"  and status != 'TOBE_CLASSIFIED' " +
+		"  and checked_at >= (now() - interval 7 day) " +
+		"order by checked_at desc, platform_id, grup " +
     "limit 1"
 	)
   @UseRowMapper(LinkMapper.class)
-  Link findTheSameLinkByUrl(@Bind("url") String url);
+  Link findSameLinkByUrlHash(@Bind("urlHash") String urlHash);
 
 }

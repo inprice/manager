@@ -26,7 +26,12 @@ public class ActiveLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findScrappingLinks(Grup.ACTIVE, retry, Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB);
+		return linkDao.findScrappingLinks(
+			Grup.ACTIVE, 
+			retry, 
+			Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB,
+			Props.getConfig().APP.LINK_REVIEW_PERIOD
+		);
 	}
 
 }

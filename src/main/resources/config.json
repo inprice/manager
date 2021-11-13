@@ -1,6 +1,7 @@
 {
   "app": {
-		"env": "dev"
+		"env": "dev",
+		"linkReviewPeriod": 30
 	},
   "mysql": {
 		"driver": "mysql",

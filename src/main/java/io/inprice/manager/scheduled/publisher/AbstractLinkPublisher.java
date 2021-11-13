@@ -15,9 +15,11 @@ import com.rabbitmq.client.Channel;
 import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
+import io.inprice.common.meta.Grup;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.Platform;
+import io.inprice.common.repository.CommonDao;
 import io.inprice.common.repository.PlatformRepository;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
@@ -58,7 +60,7 @@ abstract class AbstractLinkPublisher implements Task {
       logger.warn("{} is already triggered!", getTaskName());
       return;
     }
-
+    
     int counter = 0;
     long startTime = System.currentTimeMillis();
 
@@ -77,9 +79,9 @@ abstract class AbstractLinkPublisher implements Task {
           Set<String> linkHashes = new HashSet<>(links.size());
           for (Link link: links) {
 
-          	//if a link is published within 30 min then no need to send it again!
+          	//if a link is published within reviewPeriod (specified in config.json) min then no need to send it again!
           	if (PublishedLinkChecker.hasAlreadyPublished(link.getUrlHash())) {
-          		logger.info("{} already published in 30 mins!", link.getUrl());
+          		logger.info("{} already published in {} mins!", link.getUrl(), Props.getConfig().APP.LINK_REVIEW_PERIOD);
           		continue;
           	}
           	PublishedLinkChecker.published(link.getUrlHash()); //for the check just above
@@ -92,49 +94,44 @@ abstract class AbstractLinkPublisher implements Task {
           	 * some of the links may have special statuses now, like being blocked or parked.
           	 * so the controls placed below are for checking special situations.
           	 */
-
             LinkStatus oldStatus = link.getStatus();
 
             //no platform has been specified yet then try to search for the same url in db to clone it
+            boolean isCloned = false;
             if (link.getPlatformId() == null) {
-              Link sample = linkDao.findTheSameLinkByUrl(link.getUrl());
-              if (sample != null) {
-              	link.setSku(sample.getSku());
-              	link.setName(sample.getName());
-              	link.setBrand(sample.getBrand());
-              	link.setSeller(sample.getSeller());
-              	link.setShipment(sample.getShipment());
-              	link.setPrice(sample.getPrice());
-              	link.setPosition(sample.getPosition());
-                link.setPreStatus(link.getStatus());
-                link.setStatus(sample.getStatus());
-                link.setPlatformId(sample.getPlatformId());
-                link.setPlatform(sample.getPlatform());
+              Link source = linkDao.findSameLinkByUrlHash(link.getUrlHash());
+              if (source != null) {
+                //we do not push the link to StatusChangingLinkConsumer because it will try to unnecessarily update similar links once more
+                //we have to handle all the clone operation here!
+              	isCloned = true;
+              	cloneLink(source, link);
               }
             }
 
-            //not found! try to find the platform by url
-            if (link.getPlatformId() == null) {
-              Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
-              if (platform != null) {
-              	link.setPlatformId(platform.getId());
-              	link.setPlatform(platform);
-              } else {
-              	//still not found then it must be implemented
-              	link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
-              }
-            }
-
-            //check if it is parked or blocked
-            if (link.getPlatform() != null) {
-            	if (link.getPlatform().getParked()) continue;
-            	if (link.getPlatform().getBlocked()) link.setStatus(LinkStatus.NOT_ALLOWED);
-          	}
-
-            if (link.getStatus().equals(oldStatus)) {
-            	publishForScrapping(link);
-            } else {
-            	publishForStatusChanging(link);
+            if (isCloned == false) {
+	            //not found! try to find the platform by url
+	            if (link.getPlatformId() == null) {
+	              Platform platform = PlatformRepository.findByUrl(handle, link.getUrl());
+	              if (platform != null) {
+	              	link.setPlatformId(platform.getId());
+	              	link.setPlatform(platform);
+	              } else {
+	              	//still not found then it must be implemented
+	              	link.setStatus(LinkStatus.TOBE_IMPLEMENTED);
+	              }
+	            }
+	
+	            //check if it is parked or blocked
+	            if (link.getPlatform() != null) {
+	            	if (link.getPlatform().getParked()) continue;
+	            	if (link.getPlatform().getBlocked()) link.setStatus(LinkStatus.NOT_ALLOWED);
+	          	}
+	
+	            if (link.getStatus().equals(oldStatus)) {
+	            	publishForScrapping(link);
+	            } else {
+	            	publishForStatusChanging(link);
+	            }
             }
           }
           if (linkHashes.size() > 0) linkDao.bulkUpdateCheckedAt(linkHashes);
@@ -179,6 +176,81 @@ abstract class AbstractLinkPublisher implements Task {
   	} catch (IOException e) {
       logger.error("Failed to publish status changing link", e);
 		}
+  }
+
+  /**
+   * Cloning must be handled here since StatusChangingConsumer will unnecessarily try to update all the same links
+   * 
+   * @param source link
+   * @param target link
+   */
+  private void cloneLink(Link source, Link target) {
+    try (Handle handle = Database.getHandle()) {
+    	handle.begin();
+
+    	//copy each value from source to target link
+			handle.execute(
+				"update link " + 
+				"set sku=?, name=?, brand=?, seller=?, shipment=?, price=?, price_direction=?, platform_id=?, " +
+				"parse_code=?, parse_problem=?, pre_status=status, status=?, grup=?, checked_at=now(), updated_at=now() " + 
+				"where id=?",
+				source.getSku(), source.getName(), source.getBrand(), source.getSeller(), source.getShipment(),
+				source.getPrice(), source.getPriceDirection(), source.getPlatformId(), source.getParseCode(), 
+				source.getParseProblem(), source.getStatus(), source.getGrup(), 
+				target.getId()
+			);
+
+    	//derive new history row for target
+			handle.execute(
+				"insert into link_history (link_id, status, parse_problem, product_id, workspace_id) " + 
+				"select ?, status, parse_problem, ?, ? from link_history " +
+				"where link_id=? " +
+				"order by created_at desc " +
+		    "limit 1",
+				target.getId(), target.getProductId(), target.getWorkspaceId(),
+				source.getId()
+			);
+
+    	//derive new price row
+			handle.execute(
+				"insert into link_price (link_id, old_price, new_price, diff_amount, diff_rate, product_id, workspace_id) " + 
+				"select ?, old_price, new_price, diff_amount, diff_rate, ?, ? from link_price " +
+				"where link_id=? " +
+				"order by created_at desc " +
+		    "limit 1",
+				target.getId(), target.getProductId(), target.getWorkspaceId(),
+				source.getId()
+			);
+
+    	//copy each spec row for target
+			handle.execute(
+				"insert into link_spec (link_id, _key, _value, product_id, workspace_id) " + 
+				"select ?, _key, _value, ?, ? from link_spec " +
+				"where link_id=? " +
+				"order by _key ",
+				target.getId(), target.getProductId(), target.getWorkspaceId(),
+				source.getId()
+			);
+
+			//to refresh sums and indicators
+			if (Grup.ACTIVE.equals(source.getGrup())) {
+				//updates sums
+				handle.attach(CommonDao.class).refreshProduct(target.getProductId());
+			} else {
+				//adjusts the indicators
+				String newGrup = source.getGrup().name().toLowerCase() + "s";
+				handle.execute(
+					"update product " + 
+					"set waitings=waitings-1, " + 
+						newGrup + "=" + newGrup + "+1 " +
+					"where id= " + target.getProductId()
+				);
+			}
+
+			handle.commit();
+  	} catch (Exception e) {
+  		logger.error("Failed to clone Source Id: "+source.getId()+", Target Id: " + target.getId(), e);
+  	}
   }
 
 }
