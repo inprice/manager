@@ -10,11 +10,11 @@ import io.inprice.common.models.Link;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.LinkDao;
 
-public class FailedLinksPublisher extends AbstractLinkPublisher {
+public class TryingLinksPublisher extends AbstractLinkPublisher {
 
 	private int retry;
 
-	public FailedLinksPublisher(SchedulerDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
+	public TryingLinksPublisher(SchedulerDef scheduler, Channel scrappingLinksChannel, Channel statusChangingLinksChannel) {
 		super(scheduler, scrappingLinksChannel, statusChangingLinksChannel);
 		this.retry = Integer.valueOf(scheduler.DATA.get("retry").toString());
 	}
@@ -26,7 +26,7 @@ public class FailedLinksPublisher extends AbstractLinkPublisher {
 
 	@Override
 	List<Link> findLinks(LinkDao linkDao) {
-		return linkDao.findScrappingLinks(
+		return linkDao.findActiveOrTryingLinks(
 			Grup.TRYING, 
 			retry, 
 			Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB,

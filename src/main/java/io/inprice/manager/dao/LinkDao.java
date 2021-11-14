@@ -46,7 +46,7 @@ public interface LinkDao {
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findScrappingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
+  List<Link> findActiveOrTryingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
   @Transaction
   @SqlUpdate(
