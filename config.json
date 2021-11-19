@@ -47,7 +47,7 @@
 
   	"pendingCheckoutCloser": { "active": false, "every": 31, "period": "SECONDS" },
 
-  	"alarmNotifier": { "active": false, "every": 5, "period": "SECONDS", "delay": 1 },
+  	"alarmNotifier": { "every": 20, "period": "SECONDS", "delay": 1 },
   	"freeWorkspaceExpirationReminder": { "active": false, "every": 13, "period": "SECONDS", "delay": 1 },
 
   	"tobeClassifiedLinkPublishers": [

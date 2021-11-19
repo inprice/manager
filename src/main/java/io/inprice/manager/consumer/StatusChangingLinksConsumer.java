@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -23,26 +22,26 @@ import io.inprice.common.config.QueueDef;
 import io.inprice.common.converters.ProductRefreshResultConverter;
 import io.inprice.common.formula.EvaluationResult;
 import io.inprice.common.formula.FormulaHelper;
+import io.inprice.common.helpers.AlarmHelper;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.helpers.JsonConverter;
 import io.inprice.common.helpers.RabbitMQ;
 import io.inprice.common.info.ProductRefreshResult;
-import io.inprice.common.meta.AlarmSubject;
 import io.inprice.common.meta.Grup;
 import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Alarm;
 import io.inprice.common.models.Link;
 import io.inprice.common.models.LinkSpec;
 import io.inprice.common.models.Product;
+import io.inprice.common.models.SmartPrice;
 import io.inprice.common.repository.CommonDao;
-import io.inprice.common.repository.ProductPriceDao;
-import io.inprice.common.utils.DateUtils;
+import io.inprice.manager.dao.AlarmDao;
 
 /**
  * This is the most important class to mange links' statuses, prices and alarms.
  *
- * The main reason for the complexity in sql clauses here is
- * each update/insert/delete for a link is made for all the other links having the same url so that no need to handle the same urls again and again
+ * The main reason for the complexity in sql clauses here is that
+ * each update/insert/delete for a link is also applied on all the other links having the same url so that no need to handle the same urls again and again
  * 
  * @author mdpinar
  * @since 2020-10-18
@@ -67,7 +66,7 @@ class StatusChangingLinksConsumer {
           try (Handle zhandle = Database.getHandle()) {
           	zhandle.useTransaction(trans -> { 
             	CommonDao commonDao = trans.attach(CommonDao.class);
-            	ProductPriceDao priceDao = trans.attach(ProductPriceDao.class);
+            	AlarmDao alarmDao = trans.attach(AlarmDao.class);
 
   	        	List<Link> linksFromDb = commonDao.findAllLinksByHash(linkFromParser.getUrlHash());
 
@@ -125,7 +124,8 @@ class StatusChangingLinksConsumer {
 
   		            //check if link is alarmed and conditions are suitable for firing an alarm.
   		            if ((hasStatusChanged || willPriceBeRefreshed) && linkFromDb.getAlarmId() != null) {
-  		            	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForLinkAlarm(linkFromDb, linkFromParser);
+  		            	Alarm alarm = alarmDao.findById(linkFromDb.getAlarmId());
+  		            	String alarmUpdatingQuery = AlarmHelper.generateAlarmUpdateQueryForLink(linkFromDb, linkFromParser, alarm);
   		            	if (alarmUpdatingQuery != null) {
   		            		trans.execute(alarmUpdatingQuery);
   	            		}
@@ -150,12 +150,13 @@ class StatusChangingLinksConsumer {
   	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromParser.getPrice(), linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
   	              	}
 
+  	              	Product oldProduct = commonDao.findProductById(linkFromDb.getProductId());
   	              	ProductRefreshResult prr = ProductRefreshResultConverter.convert(commonDao.refreshProduct(linkFromDb.getProductId()));
-  	              	
+
   	              	//alarming
-  	              	if (prr.getAlarmId() != null) {
-  	              		Product product = priceDao.findProductAndAlarmById(linkFromDb.getProductId());
-  	                	String alarmUpdatingQuery = checkAndGenerateUpdateQueryForProductAlarm(product);
+  	              	if (oldProduct.getAlarmId() != null) {
+  	              		Alarm alarm = alarmDao.findById(oldProduct.getAlarmId());
+  	                	String alarmUpdatingQuery = AlarmHelper.generateAlarmUpdateQueryForProduct(oldProduct, prr, alarm);
   	                	if (alarmUpdatingQuery != null) {
   	                		trans.execute(alarmUpdatingQuery);
   	                	}
@@ -163,8 +164,8 @@ class StatusChangingLinksConsumer {
 
   	              	//smart pricing
   	              	if (prr.getSmartPriceId() != null) {
-  		              	Product product = priceDao.findProductAndSmartPriceById(linkFromDb.getProductId());
-  	                	String smartPriceUpdatingQuery = generateUpdateQueryForSuggestedPrice(product, prr);
+  	              		SmartPrice smartPrice = commonDao.findById(oldProduct.getSmartPriceId());
+  	                	String smartPriceUpdatingQuery = generateUpdateQueryForSuggestedPrice(oldProduct.getId(), smartPrice, prr);
   	                	if (smartPriceUpdatingQuery != null) {
   	                		trans.execute(smartPriceUpdatingQuery);
   	                	}
@@ -302,183 +303,15 @@ class StatusChangingLinksConsumer {
 
     return list;
   }
-  
-  private static String checkAndGenerateUpdateQueryForProductAlarm(Product product) {
-  	boolean willBeUpdated = false;
-  	
-  	Alarm alarm = product.getAlarm();
 
-  	if (AlarmSubject.POSITION.equals(alarm.getSubject())) {
-  		switch (alarm.getSubjectWhen()) {
-  			case EQUAL: {
-  				willBeUpdated = product.getPosition().name().equals(alarm.getCertainPosition());
-  				break;
-  			}
-  			case NOT_EQUAL: {
-  				willBeUpdated = product.getPosition().name().equals(alarm.getCertainPosition()) == false;
-  				break;
-  			}
-  			default: {
-  				willBeUpdated = true;
-  				break;
-  			}
-			}
-  	}
-
-  	BigDecimal newAmount = null;
-
-  	if (AlarmSubject.POSITION.equals(alarm.getSubject()) == false) {
-  		switch (alarm.getSubject()) {
-  			case MINIMUM: {
-  				newAmount = product.getMinPrice();
-  				break;
-  			}
-  			case AVERAGE: {
-  				newAmount = product.getAvgPrice();
-  				break;
-  			}
-  			case MAXIMUM: {
-  				newAmount = product.getMaxPrice();
-  				break;
-  			}
-				default: break;
-			}
-
-  		if (newAmount != null) {
-    		switch (alarm.getSubjectWhen()) {
-    			case INCREASED: {
-    				willBeUpdated = newAmount.compareTo(alarm.getLastAmount()) > 0;
-    				break;
-    			}
-    			case DECREASED: {
-    				willBeUpdated = newAmount.compareTo(alarm.getLastAmount()) < 0;
-    				break;
-    			}
-    			case OUT_OF_LIMITS: {
-  					willBeUpdated = checkIfPriceIsOutOfLimits(newAmount, alarm.getAmountLowerLimit(), alarm.getAmountUpperLimit());
-    				break;
-    			}
-    			default: {
-    				willBeUpdated = true;
-    				break;
-    			}
-    		}
-  		}
-  	}
-
-  	if (willBeUpdated) {
-  		String tobeNotifiedPart = "tobe_notified=true, ";
-
-    	//checks if it is already notified within 5 mins. if so, no need to disturb the customer!
-    	if (willBeUpdated && alarm.getNotifiedAt() != null) {
-        long diff = DateUtils.findMinuteDiff(alarm.getNotifiedAt(), new Date());
-        if (diff <= 5) {
-        	tobeNotifiedPart = "";
-        }
-    	}
-
-  		return
-        String.format(
-          "update alarm set last_position='%s', last_amount=%f, %s updated_at=now() where id=%d ",
-          product.getPosition(),
-          newAmount,
-          tobeNotifiedPart,
-          product.getAlarmId()
-        );
-  	}
-
-  	return null;
-  }
-
-  private static String checkAndGenerateUpdateQueryForLinkAlarm(Link linkFromDb, Link linkFromParser) {
-  	boolean willBeUpdated = false;
-
-  	Alarm alarm = linkFromDb.getAlarm();
-
-  	if (linkFromDb.getStatus().equals(linkFromParser.getStatus()) == false && AlarmSubject.POSITION.equals(alarm.getSubject())) {
-  		switch (alarm.getSubjectWhen()) {
-  			case EQUAL: {
-  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainPosition());
-  				break;
-  			}
-  			case NOT_EQUAL: {
-  				willBeUpdated = linkFromParser.getStatus().name().equals(alarm.getCertainPosition()) == false;
-  				break;
-  			}
-  			default: {
-  				willBeUpdated = true;
-  				break;
-  			}
-			}
-  	}
-  	
-  	if (linkFromDb.getPrice().compareTo(linkFromParser.getPrice()) != 0 && AlarmSubject.PRICE.equals(alarm.getSubject())) {
-  		switch (alarm.getSubjectWhen()) {
-  			case INCREASED: {
-  				willBeUpdated = linkFromParser.getPrice().compareTo(alarm.getLastAmount()) > 0;
-  				break;
-  			}
-  			case DECREASED: {
-  				willBeUpdated = linkFromParser.getPrice().compareTo(alarm.getLastAmount()) < 0;
-  				break;
-  			}
-  			case OUT_OF_LIMITS: {
-  				willBeUpdated = checkIfPriceIsOutOfLimits(linkFromParser.getPrice(), alarm.getAmountLowerLimit(), alarm.getAmountUpperLimit());
-  				break;
-  			}
-  			default: {
-  				willBeUpdated = true;
-  				break;
-  			}
-  		}
-  	}
-
-  	if (willBeUpdated) {
-  		String tobeNotifiedPart = "tobe_notified=true, ";
-
-    	//checks if it is already notified within 5 mins. if so, no need to disturb the user frequently!
-    	if (willBeUpdated && alarm.getNotifiedAt() != null) {
-        long diff = DateUtils.findMinuteDiff(alarm.getNotifiedAt(), new Date());
-        if (diff <= 5) {
-        	tobeNotifiedPart = "";
-        }
-    	}
-
-      return
-        String.format(
-          "update alarm set last_position='%s', last_amount=%f, %s updated_at=now() where id=%d ",
-          linkFromParser.getStatus(),
-          linkFromParser.getPrice(),
-          tobeNotifiedPart,
-          linkFromDb.getAlarmId()
-        );
-  	}
-
-  	return null;
-  }
-
-  private static boolean checkIfPriceIsOutOfLimits(BigDecimal price, BigDecimal lowerLimit, BigDecimal upperLimit) {
-  	if (price.compareTo(BigDecimal.ZERO) > 0) {
-  		if (lowerLimit.compareTo(BigDecimal.ZERO) > 0) {
-  			boolean yes = price.compareTo(lowerLimit) < 0;
-  			if (yes) return true;
-  		}
-    	if (upperLimit.compareTo(BigDecimal.ZERO) > 0) {
-  			boolean yes = price.compareTo(upperLimit) > 0;
-  			if (yes) return true;
-  		}
-  	}
-		return false;
-  }
-
-  private static String generateUpdateQueryForSuggestedPrice(Product product, ProductRefreshResult prr) {
-  	EvaluationResult result = FormulaHelper.evaluate(product.getSmartPrice(), prr);
+  private static String generateUpdateQueryForSuggestedPrice(long productId, SmartPrice smartPrice, ProductRefreshResult prr) {
+  	EvaluationResult result = FormulaHelper.evaluate(smartPrice, prr);
     return
       String.format(
         "update product set suggested_price=%f, suggested_price_problem=%s where id=%d ",
         result.getValue(),
         (result.getProblem() != null ? "'"+result.getProblem()+"'" : "null"),
-        product.getId()
+        productId
       );
   }
 

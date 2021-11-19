@@ -12,18 +12,20 @@ import org.jdbi.v3.sqlobject.statement.UseRowMapper;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
-import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.Grup;
+import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
-import io.inprice.common.repository.ProductPriceDao;
 import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
+	//used for alarm checks in StatusChanginLinks
+	static final String PRODUCT_FIELDS = ", p.position as product_position, p.price as product_price, p.base_price as product_base_price ";
+
   @SqlQuery(
-  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + PRODUCT_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+		"inner join product as p on p.id = l.product_id " + 
     "inner join workspace as w on w.id = l.workspace_id " + 
-    "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
@@ -35,9 +37,9 @@ public interface LinkDao {
   List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
   @SqlQuery(
-  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + PRODUCT_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+		"inner join product as p on p.id = l.product_id " + 
     "inner join workspace as w on w.id = l.workspace_id " + 
-    "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
