@@ -76,7 +76,7 @@ abstract class AbstractLinkPublisher implements Task {
         while (links.size() > 0) {
           counter += links.size();
 
-          Set<String> linkHashes = new HashSet<>(links.size());
+          Set<Long> linkIds = new HashSet<>(links.size());
           for (Link link: links) {
 
           	//if a link is published within reviewPeriod (specified in config.json) min then no need to send it again!
@@ -86,7 +86,7 @@ abstract class AbstractLinkPublisher implements Task {
           	}
           	PublishedLinkChecker.published(link.getUrlHash()); //for the check just above
 
-          	linkHashes.add(link.getUrlHash());
+          	linkIds.add(link.getId());
 
           	/*
           	 * Please note:
@@ -134,7 +134,7 @@ abstract class AbstractLinkPublisher implements Task {
 	            }
             }
           }
-          if (linkHashes.size() > 0) linkDao.bulkUpdateCheckedAt(linkHashes);
+          if (linkIds.size() > 0) linkDao.bulkUpdateCheckedAt(linkIds);
 
           if (links.size() >= Props.getConfig().LIMITS.LINK_LIMIT_FETCHING_FROM_DB) {
             try {

@@ -9,7 +9,6 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jdbi.v3.sqlobject.statement.UseRowMapper;
-import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
 import io.inprice.common.meta.Grup;
@@ -50,19 +49,8 @@ public interface LinkDao {
   @UseRowMapper(LinkMapper.class)
   List<Link> findActiveOrTryingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
-  @Transaction
-  @SqlUpdate(
-		"update link set checked_at=now() " +
-		"where id in (" +
-			"select lid from (" +
-				"select l.id as lid from link as l " +
-				"inner join workspace as w on w.id = l.workspace_id " + 
-				"where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
-				"  and l.url_hash in (<linkHashes>)" +
-			") AS x " +
-		")"
-	)
-  void bulkUpdateCheckedAt(@BindList("linkHashes") Set<String> linkHashes);
+  @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
+  void bulkUpdateCheckedAt(@BindList("linkIds") Set<Long> linkIds);
 
   @SqlUpdate("update link set platform_id=:platformId, status=:status where id=:linkId")
   void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);

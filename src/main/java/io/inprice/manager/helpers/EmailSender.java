@@ -107,7 +107,7 @@ public class EmailSender {
 			message.setFrom(new InternetAddress(from));
 			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailData.getTo()));
 			message.setSubject(emailData.getSubject());
-			message.setContent(content, "text/html");
+			message.setContent(content, "text/html; charset=UTF-8");
 
 			Transport.send(message);
 		} catch (MessagingException e) {

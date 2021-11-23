@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -86,8 +87,8 @@ public class AlarmNotifier implements Task {
           }
 
           handle.begin();
-          alarmDao.setAlarmsOFF("product", productIdList);
-          alarmDao.setAlarmsOFF("link", linkIdList);
+          if (CollectionUtils.isNotEmpty(productIdList)) alarmDao.setAlarmsOFF("product", productIdList);
+          if (CollectionUtils.isNotEmpty(linkIdList)) alarmDao.setAlarmsOFF("link", linkIdList);
           handle.commit();
           logger.info("{} product and {} link alarm(s) notified!", productIdList.size(), linkIdList.size());
         }
@@ -118,17 +119,14 @@ public class AlarmNotifier implements Task {
 
   	StringBuilder sb = new StringBuilder(tableHeader);
   	for (Alarm alarm: alarms) {
-
-  		Map<String, String> dataMap = Map.of(
-  			"topic", alarm.getTopic().name(),
-  			"sku", alarm.getEntitySku(),
-  			"name", alarm.getEntityName(),
-  			"subject", alarm.getSubject().name(),
-  			"when", alarm.getSubjectWhen().name(),
-  			"position", alarm.getEntityPosition().name(),
-  			"amount", df.format(findAmount(alarm))
-			);
-
+  		Map<String, String> dataMap = new HashMap<>(7);
+  		dataMap.put("entitySku", alarm.getEntitySku());
+  		dataMap.put("entityName", alarm.getEntityName());
+  		dataMap.put("alarmName", alarm.getName());
+  		dataMap.put("when", alarm.getSubjectWhen().name());
+  		dataMap.put("position", alarm.getEntityPosition().name());
+  		dataMap.put("amount", df.format(findAmount(alarm)));
+  		
   		StringSubstitutor st = new StringSubstitutor(dataMap);
   		sb.append(st.replace(tableRow));
   	}
