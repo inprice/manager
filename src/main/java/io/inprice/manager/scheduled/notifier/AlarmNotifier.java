@@ -1,8 +1,10 @@
 package io.inprice.manager.scheduled.notifier;
 
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,9 +18,9 @@ import org.slf4j.LoggerFactory;
 import io.inprice.common.config.SchedulerDef;
 import io.inprice.common.helpers.Database;
 import io.inprice.common.info.EmailData;
+import io.inprice.common.meta.AlarmTopic;
 import io.inprice.common.meta.EmailTemplate;
 import io.inprice.common.models.Alarm;
-import io.inprice.common.utils.DateUtils;
 import io.inprice.manager.config.Props;
 import io.inprice.manager.dao.AlarmDao;
 import io.inprice.manager.helpers.EmailSender;
@@ -26,7 +28,7 @@ import io.inprice.manager.scheduled.Task;
 import io.inprice.manager.scheduled.TaskManager;
 
 /**
- * Checks alarm table to find alarmed products and links then send mails
+ * Checks alarm table to find alarmed products and links
  * 
  * @since 2021-06-21
  * @author mdpinar
@@ -55,8 +57,9 @@ public class AlarmNotifier implements Task {
       try (Handle handle = Database.getHandle()) {
         AlarmDao alarmDao = handle.attach(AlarmDao.class);
         
-        List<Alarm> list = alarmDao.findTobeNotifiedLit();
-        List<Long> idList = new ArrayList<>(list.size());
+        List<Alarm> list = alarmDao.findTobeAlarmedList();
+        List<Long> productIdList = new ArrayList<>(list.size());
+        List<Long> linkIdList = new ArrayList<>(list.size());
 
         if (CollectionUtils.isNotEmpty(list)) {
         	
@@ -64,8 +67,12 @@ public class AlarmNotifier implements Task {
 
         	List<Alarm> alarms = new ArrayList<>();
         	for (Alarm alarm: list) {
-        		
-        		idList.add(alarm.getId());
+
+        		if (AlarmTopic.PRODUCT.equals(alarm.getTopic())) {
+        			productIdList.add(alarm.getEntityId());
+        		} else {
+        			linkIdList.add(alarm.getEntityId());
+        		}
         		
         		if (lastWorkspaceId.equals(alarm.getWorkspaceId())) {
         			alarms.add(alarm);
@@ -78,9 +85,12 @@ public class AlarmNotifier implements Task {
           if (list.size() > 0) {
       			sendEmail(list);
           }
-          
-          alarmDao.setNotified(idList);
-          logger.info("{} alarm notified!", idList.size());
+
+          handle.begin();
+          if (CollectionUtils.isNotEmpty(productIdList)) alarmDao.setAlarmsOFF("product", productIdList);
+          if (CollectionUtils.isNotEmpty(linkIdList)) alarmDao.setAlarmsOFF("link", linkIdList);
+          handle.commit();
+          logger.info("{} product and {} link alarm(s) notified!", productIdList.size(), linkIdList.size());
         }
 
       } catch (Exception e) {
@@ -93,8 +103,6 @@ public class AlarmNotifier implements Task {
   }
   
   private void sendEmail(List<Alarm> alarms) {
-  	//String format = alarms.get(0).getCurrencyFormat();
-  	//if (StringUtils.isBlank(format)) format = "#,###0.00";
   	String format = "#,###0.00";
   	DecimalFormat df = new DecimalFormat(format);
   	
@@ -108,17 +116,17 @@ public class AlarmNotifier implements Task {
 			e.printStackTrace();
 			return;
 		}
-		
+
   	StringBuilder sb = new StringBuilder(tableHeader);
   	for (Alarm alarm: alarms) {
-  		Map<String, String> dataMap = Map.of(
-  			"topic", alarm.getTopic().name().substring(0, 1),
-  			"name", alarm.getName(),
-  			"position", alarm.getLastPosition(),
-  			"amount", df.format(alarm.getLastAmount()),
-  			"time", DateUtils.formatTimeStandart(alarm.getUpdatedAt())
-			);
-
+  		Map<String, String> dataMap = new HashMap<>(7);
+  		dataMap.put("entitySku", alarm.getEntitySku());
+  		dataMap.put("entityName", alarm.getEntityName());
+  		dataMap.put("alarmName", alarm.getName());
+  		dataMap.put("when", alarm.getSubjectWhen().name());
+  		dataMap.put("position", alarm.getEntityPosition().name());
+  		dataMap.put("amount", df.format(findAmount(alarm)));
+  		
   		StringSubstitutor st = new StringSubstitutor(dataMap);
   		sb.append(st.replace(tableRow));
   	}
@@ -137,6 +145,29 @@ public class AlarmNotifier implements Task {
   			.data(mailMap)
   		.build()	
 		);
+  }
+  
+  private BigDecimal findAmount(Alarm alarm) {
+		BigDecimal amount = alarm.getEntityPrice();
+		if (AlarmTopic.PRODUCT.equals(alarm.getTopic())) {
+			switch (alarm.getSubject()) {
+				case MINIMUM: {
+					amount = alarm.getEntityMinPrice();
+					break;
+				}
+				case AVERAGE: {
+					amount = alarm.getEntityAvgPrice();
+					break;
+				}
+				case MAXIMUM: {
+					amount = alarm.getEntityMaxPrice();
+					break;
+				}
+				default: break;
+			}
+			
+		}
+		return amount;
   }
 
 }

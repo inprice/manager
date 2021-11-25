@@ -58,28 +58,30 @@ public class EmailSender {
 				return;
 			}
 		}
-		
+
+		Map<String, Object> newMap = new HashMap<>(emailData.getData().size()+2);
+		newMap.putAll(emailData.getData());
+
 		//standard stylings
-		emailData.getData().put("table-border", "border: 1px solid #ccc;"); 
+		newMap.put("table-border", "border: 1px solid #ccc;"); 
 
-		emailData.getData()
-			.put("normal-button-style", 
-  				"display: block; " +
-  				"width: 200px; " +
-  				"height: 25px; " +
-  				"background: #4E9CAF; " +
-  				"padding: 5px; " +
-  				"text-align: center; " +
-  				"border-radius: 3px; " +
-  				"color: white; " +
-  				"font-weight: bold; " +
-  				"font-size: bold; " +
-  				"line-height: 25px; " +
-  				"font-size: 18px; " +
-  				"text-decoration: none;"
-  			);
+		newMap.put("normal-button-style", 
+			"display: block; " +
+			"width: 200px; " +
+			"height: 25px; " +
+			"background: #4E9CAF; " +
+			"padding: 5px; " +
+			"text-align: center; " +
+			"border-radius: 3px; " +
+			"color: white; " +
+			"font-weight: bold; " +
+			"font-size: bold; " +
+			"line-height: 25px; " +
+			"font-size: 18px; " +
+			"text-decoration: none;"
+		);
 
-		StringSubstitutor st = new StringSubstitutor(emailData.getData());
+		StringSubstitutor st = new StringSubstitutor(newMap);
 		String content = 
 			st.replace(
 				header +
@@ -105,7 +107,7 @@ public class EmailSender {
 			message.setFrom(new InternetAddress(from));
 			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailData.getTo()));
 			message.setSubject(emailData.getSubject());
-			message.setContent(content, "text/html");
+			message.setContent(content, "text/html; charset=UTF-8");
 
 			Transport.send(message);
 		} catch (MessagingException e) {

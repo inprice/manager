@@ -26,16 +26,13 @@ public class Schedulers {
 	@JsonProperty("freeWorkspaceExpirationReminder")
 	public SchedulerDef FREE_WORKSPACE_EXPIRATION_REMINDER;
 
-	@JsonProperty("newlyAddedLinkPublisher")
-	public SchedulerDef NEWLY_ADDED_LINK_PUBLISHER;
-
 	@JsonProperty("tobeClassifiedLinkPublishers")
 	public List<SchedulerDef> TOBE_CLASSIFIED_LINK_PUBLISHERS;
 
 	@JsonProperty("activeLinkPublishers")
 	public List<SchedulerDef> ACTIVE_LINK_PUBLISHERS;
 
-	@JsonProperty("failedLinkPublishers")
-	public List<SchedulerDef> FAILED_LINK_PUBLISHERS;
+	@JsonProperty("tryingLinkPublishers")
+	public List<SchedulerDef> TRYING_LINK_PUBLISHERS;
 	
 }

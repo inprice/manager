@@ -1,6 +1,7 @@
 {
   "app": {
-		"env": "dev"
+		"env": "dev",
+		"linkReviewPeriod": 30
 	},
   "mysql": {
 		"driver": "mysql",
@@ -59,7 +60,7 @@
   		{ "every": 3, "period": "HOURS", "delay": 1, "data": { "retry": "1" } },
   		{ "every": 6, "period": "HOURS", "delay": 1, "data": { "retry": "2" } }
   	],
-  	"failedLinkPublishers": [
+  	"tryingLinkPublishers": [
   		{ "every": 2, "period": "HOURS", "delay": 0, "data": { "retry": "0" } },
   		{ "every": 7, "period": "HOURS", "delay": 1, "data": { "retry": "1" } },
   		{ "every":11, "period": "HOURS", "delay": 1, "data": { "retry": "2" } }

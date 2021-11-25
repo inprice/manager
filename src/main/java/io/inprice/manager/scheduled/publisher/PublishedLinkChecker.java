@@ -2,6 +2,7 @@ package io.inprice.manager.scheduled.publisher;
 
 import io.inprice.common.lib.ExpiringHashSet;
 import io.inprice.common.lib.ExpiringSet;
+import io.inprice.manager.config.Props;
 
 /**
  * A kind of helper class for all link publishers to avoid sending the same url successively
@@ -11,7 +12,11 @@ import io.inprice.common.lib.ExpiringSet;
  */
 public class PublishedLinkChecker {
 
-	private static final ExpiringSet<String> expiringSet = new ExpiringHashSet<>(28 * 60 * 1000); //28 minutes
+	private static final ExpiringSet<String> expiringSet;
+	
+	static {
+		expiringSet = new ExpiringHashSet<>(Props.getConfig().APP.LINK_REVIEW_PERIOD * 59 * 1000);
+	}
 
 	static boolean hasAlreadyPublished(String hash) {
 		return expiringSet.contains(hash);

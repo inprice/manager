@@ -6,6 +6,9 @@ import io.inprice.common.config.BaseConfig;
 
 public class Config extends BaseConfig {
 
+	@JsonProperty("app")
+	public App APP;
+
 	@JsonProperty("mail")
 	public Mail MAIL;
 
@@ -17,5 +20,5 @@ public class Config extends BaseConfig {
 
 	@JsonProperty("schedulers")
 	public Schedulers SCHEDULERS;
-	
+
 }

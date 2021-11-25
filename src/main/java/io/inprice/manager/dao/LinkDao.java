@@ -9,71 +9,61 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jdbi.v3.sqlobject.statement.UseRowMapper;
-import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import io.inprice.common.mappers.LinkMapper;
-import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.meta.Grup;
+import io.inprice.common.meta.LinkStatus;
 import io.inprice.common.models.Link;
-import io.inprice.common.repository.ProductPriceDao;
 import io.inprice.common.repository.PlatformDao;
 
 public interface LinkDao {
 
+	//used for alarm checks in StatusChanginLinks
+	static final String PRODUCT_FIELDS = ", p.position as product_position, p.price as product_price, p.base_price as product_base_price ";
+
   @SqlQuery(
-  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + PRODUCT_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+		"inner join product as p on p.id = l.product_id " + 
     "inner join workspace as w on w.id = l.workspace_id " + 
-    "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.status = 'TOBE_CLASSIFIED' " +
-    "  and (l.checked_at is null OR l.checked_at <= (now() - interval 30 minute)) " +
+    "  and (l.checked_at is null OR l.checked_at <= (now() - interval <reviewPeriod> minute)) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findTobeClassifiedLinks(@Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
   @SqlQuery(
-  	"select l.*" + ProductPriceDao.ALARM_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+  	"select l.*" + PRODUCT_FIELDS + PlatformDao.FIELDS + " from link as l " + 
+		"inner join product as p on p.id = l.product_id " + 
     "inner join workspace as w on w.id = l.workspace_id " + 
-    "left join alarm as al on al.id = l.alarm_id " + 
     "left join platform as pl on pl.id = l.platform_id " + 
     "where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
     "  and l.grup = :grup " +
-    "  and l.checked_at <= (now() - interval 30 minute) " +
+    "  and l.checked_at <= (now() - interval <reviewPeriod> minute) " +
     "  and l.retry = <retry> " +
     "limit <limit>"
   )
   @UseRowMapper(LinkMapper.class)
-  List<Link> findScrappingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit);
+  List<Link> findActiveOrTryingLinks(@Bind("grup") Grup grup, @Define("retry") int retry, @Define("limit") int limit, @Define("reviewPeriod") int reviewPeriod);
 
-  @Transaction
-  @SqlUpdate(
-		"update link set checked_at=now() " +
-		"where id in (" +
-			"select lid from (" +
-				"select l.id as lid from link as l " +
-				"inner join workspace as w on w.id = l.workspace_id " + 
-				"where w.status in ('FREE', 'VOUCHERED', 'SUBSCRIBED') " +
-				"  and l.url_hash in (<linkHashes>)" +
-			") AS x " +
-		")"
-	)
-  void bulkUpdateCheckedAt(@BindList("linkHashes") Set<String> linkHashes);
+  @SqlUpdate("update link set checked_at=now() where id in (<linkIds>)")
+  void bulkUpdateCheckedAt(@BindList("linkIds") Set<Long> linkIds);
 
   @SqlUpdate("update link set platform_id=:platformId, status=:status where id=:linkId")
   void setPlatform(@Bind("linkId") Long linkId, @Bind("platformId") Long platformId, @Bind("status") LinkStatus status);
 
   @SqlQuery(
-		"select l.*" + PlatformDao.FIELDS + " from link as l " +
-    "left join platform as pl on pl.id = l.platform_id " + 
-		"where l.url=:url " +
-    "  and l.platform_id is not null " +
-		"order by l.updated_at desc " +
+		"select * from link " +
+		"where url_hash=:urlHash " +
+		"  and status != 'TOBE_CLASSIFIED' " +
+		"  and checked_at >= (now() - interval 7 day) " +
+		"order by checked_at desc, platform_id, grup " +
     "limit 1"
 	)
   @UseRowMapper(LinkMapper.class)
-  Link findTheSameLinkByUrl(@Bind("url") String url);
+  Link findSameLinkByUrlHash(@Bind("urlHash") String urlHash);
 
 }

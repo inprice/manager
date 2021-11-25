@@ -1,14 +1,20 @@
 package io.inprice.manager;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Test {
 
 	public static void main(String[] args) {
-		String s = java.time.format.DateTimeFormatter.ofPattern("MMM dd, HH:mm").withZone(java.time.ZoneId.of("Europe/Berlin")).format(new java.util.Date().toInstant());
-  	
-  	System.out.println(s);
+		Map<String, Long> brandMap = new HashMap<>();
+		addNewValues(brandMap);
+		System.out.println(brandMap.size());
 	}
-	
+
+	private static void addNewValues(Map<String, Long> brandMap) {
+		brandMap.put("Ahmet", 1L);
+		brandMap.put("Mehmet", 2L);
+		brandMap.put("Hasan", 3L);
+	}
+
 }

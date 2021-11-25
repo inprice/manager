@@ -25,7 +25,7 @@ import io.inprice.manager.scheduled.modifier.PendingCheckoutCloser;
 import io.inprice.manager.scheduled.notifier.AlarmNotifier;
 import io.inprice.manager.scheduled.notifier.FreeWorkspaceExpirationReminder;
 import io.inprice.manager.scheduled.publisher.ActiveLinksPublisher;
-import io.inprice.manager.scheduled.publisher.FailedLinksPublisher;
+import io.inprice.manager.scheduled.publisher.TryingLinksPublisher;
 import io.inprice.manager.scheduled.publisher.TobeClassifiedLinksPublisher;
 
 public class TaskManager {
@@ -82,27 +82,27 @@ public class TaskManager {
   	try {
 	  	//for active and tobe classified links
 	  	Connection activeLinksConn = RabbitMQ.createConnection("MAN-PUB: active-publisher");
-	  	Channel scrappingActiveLinksChannel = activeLinksConn.createChannel();
+	  	Channel activeLinksChannel = activeLinksConn.createChannel();
 	  	Channel statusChangingActiveLinksChannel = activeLinksConn.createChannel();
 
-	  	//for failed links
-	  	Connection failedLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
-	  	Channel scrappingFailedLinksChannel = failedLinksConn.createChannel();
-	  	Channel statusChangingFailedLinksChannel = failedLinksConn.createChannel();
+	  	//for trying links
+	  	Connection tryingLinksConn = RabbitMQ.createConnection("MAN-PUB: failed-publisher");
+	  	Channel tryingLinksChannel = tryingLinksConn.createChannel();
+	  	Channel statusChangingLinksChannel = tryingLinksConn.createChannel();
 
 	    List<SchedulerDef> tobeClassifiedLinkPublishers = Props.getConfig().SCHEDULERS.TOBE_CLASSIFIED_LINK_PUBLISHERS;
 	    for (SchedulerDef tlp: tobeClassifiedLinkPublishers) {
-	    	taskList.add(new TobeClassifiedLinksPublisher(tlp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
+	    	taskList.add(new TobeClassifiedLinksPublisher(tlp, activeLinksChannel, statusChangingActiveLinksChannel));
 	    }
 
 	    List<SchedulerDef> activeLinkPublishers = Props.getConfig().SCHEDULERS.ACTIVE_LINK_PUBLISHERS;
 	    for (SchedulerDef alp: activeLinkPublishers) {
-	    	taskList.add(new ActiveLinksPublisher(alp, scrappingActiveLinksChannel, statusChangingActiveLinksChannel));
+	    	taskList.add(new ActiveLinksPublisher(alp, activeLinksChannel, statusChangingActiveLinksChannel));
 	    }
 
-	    List<SchedulerDef> failedLinkPublishers = Props.getConfig().SCHEDULERS.FAILED_LINK_PUBLISHERS;
-	    for (SchedulerDef flp: failedLinkPublishers) {
-	    	taskList.add(new FailedLinksPublisher(flp, scrappingFailedLinksChannel, statusChangingFailedLinksChannel));
+	    List<SchedulerDef> tryingLinkPublishers = Props.getConfig().SCHEDULERS.TRYING_LINK_PUBLISHERS;
+	    for (SchedulerDef flp: tryingLinkPublishers) {
+	    	taskList.add(new TryingLinksPublisher(flp, tryingLinksChannel, statusChangingLinksChannel));
 	    }
 
   	} catch (IOException e) {
