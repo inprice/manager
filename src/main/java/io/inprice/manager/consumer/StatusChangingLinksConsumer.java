@@ -141,12 +141,9 @@ class StatusChangingLinksConsumer {
   	  	            	diffAmount = linkFromParser.getPrice().subtract(linkFromDb.getPrice()).setScale(2, RoundingMode.HALF_UP);
   	  	            	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
   	  	            		diffRate = diffAmount.divide(linkFromDb.getPrice(), 6, RoundingMode.HALF_UP).multiply(A_HUNDRED).setScale(2, RoundingMode.HALF_UP);
-  		            		}
-  	              	}
-
-  	              	if (diffAmount.compareTo(BigDecimal.ZERO) != 0) {
-  	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
-  	              	} else if (hasStatusChanged) {
+    	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromDb.getPrice(), linkFromParser.getPrice(), diffAmount, diffRate, linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
+  	  	            	}
+  	              	} else if (linkFromParser.getPrice().compareTo(BigDecimal.ZERO) != 0) {
   	              		commonDao.insertLinkPrice(linkFromDb.getId(), linkFromParser.getPrice(), linkFromDb.getProductId(), linkFromDb.getWorkspaceId());
   	              	}
 
