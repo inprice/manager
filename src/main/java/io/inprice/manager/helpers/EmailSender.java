@@ -19,6 +19,7 @@ import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.inprice.common.helpers.GlobalConsts;
 import io.inprice.common.info.EmailData;
 import io.inprice.common.meta.EmailTemplate;
 import io.inprice.manager.config.Props;
@@ -43,7 +44,7 @@ public class EmailSender {
 	
 	public static void send(EmailData emailData) {
 
-		if (emailData.getTo().equals("demo@inprice.io")) {
+		if (emailData.getTo().equals(GlobalConsts.DEMO_ACCOUNT)) {
 			logger.info("Data for demo mail" + StringUtils.join(emailData.getData()));
 			return;
 		}
