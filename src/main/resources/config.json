@@ -9,7 +9,7 @@
     "port": 3306,
     "database": "inprice",
     "username": "root",
-    "password": "1234",
+    "password": "***",
     "additions": "?useSSL=false",
     "showQueries": false
   },
@@ -17,13 +17,13 @@
     "host": "127.0.0.1",
     "port": 5672,
     "username": "guest",
-    "password": "guest"
+    "password": "***"
   },
   "mail": {
     "host": "smtp.sendgrid.net",
     "port": 587,
     "username": "apikey",
-    "password": "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",
+    "password": "***",
     "auth": true,
     "tlsEnabled": true,
     "defaultSender": "info@inprice.io"
